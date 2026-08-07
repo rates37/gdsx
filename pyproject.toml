@@ -1,0 +1,27 @@
+[project]
+name = "gdsx"
+version = "0.1.0"
+description = "GDS Extractor"
+readme = "README.md"
+authors = [
+    { name = "Satya Jhaveri", email = "satyajhaveri@protonmail.ch" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "klayout>=0.30.10",
+    "networkx>=3.6.1",
+    "pyyaml>=6.0.3",
+    "typer>=0.27.1",
+]
+
+[project.scripts]
+gdsx = "gdsx:main"
+
+[build-system]
+requires = ["uv_build>=0.8.9,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
