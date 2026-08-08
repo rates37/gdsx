@@ -41,6 +41,35 @@ def test_solutions_are_verified_by_simulation(sample_netlist):
         assert verified
 
 
+def test_sum_bus_is_recovered(sample_netlist):
+    registers = [r for r in analyse.find_registers(sample_netlist) if r.width > 1]
+    bus, adder, comparator = analyse.split_datapath(
+        sample_netlist, registers, "S", {"en": 1, "rst_n": 1}
+    )
+    assert bus.width == 9  # 8-bit adder operands -> 9-bit sum
+    assert len(set(bus.nets)) == 9
+    assert not any(bus.inverted)
+    assert len(adder) == 41
+    # 496 == 9'b111110000 so equality is two and4bb plus one and3
+    assert len(comparator) == 3
+    assert not (adder & comparator)
+
+
+def test_blocks_account_for_every_cell(sample_netlist):
+    result = analyse.analyse(sample_netlist)
+    covered = [i for b in result.blocks for i in b.instances]
+    assert len(covered) == len(set(covered)), "a cell was claimed by two blocks"
+    assert set(covered) == {i.name for i in sample_netlist.instances}
+
+
+def test_blocks_are_named(sample_netlist):
+    result = analyse.analyse(sample_netlist)
+    described = {b.name: b.description for b in result.blocks}
+    assert described["reg_A"].startswith("8-bit shift register")
+    assert described["sum"].startswith("9-bit adder")
+    assert "comparator" in described["cmp_S"]
+
+
 def test_support_stops_at_flops_and_ports(sample_netlist):
     deps = analyse.support(sample_netlist, "S")
     flops = {d for d in deps if d.startswith("dfrtp")}

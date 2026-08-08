@@ -31,8 +31,18 @@ class Register:
 
 
 @dataclass
+class Block:
+    """A named piece of the design, with the gates that make it up"""
+
+    name: str
+    description: str
+    instances: set[str] = field(default_factory=set)
+
+
+@dataclass
 class Analysis:
     registers: list[Register] = field(default_factory=list)
+    blocks: list[Block] = field(default_factory=list)
     operators: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -272,6 +282,117 @@ def solve(nl: Netlist, output: str, limit: int = 10):
     return mode, solutions
 
 
+# datapath recovery functions (ignore)
+
+
+@dataclass
+class Bus:
+    """An internal multi-bit value"""
+
+    name: str
+    nets: list[str]  # uses LSB first
+    inverted: list[bool]  # per bit
+    description: str
+
+    @property
+    def width(self) -> int:
+        return len(self.nets)
+
+
+def truth_vectors(
+    simulator: Simulator, registers: list[Register], inputs: dict[str, int]
+):
+    """Every net's behaviour over the whole register state space
+
+    Returns (combos, {net: bytes}) where each byte string is the net's value at
+    the matching entry of `combos`.
+    """
+    combos = list(product(*(range(1 << r.width) for r in registers)))
+    nets = sorted(simulator.netlist.nets)
+    columns = {net: bytearray(len(combos)) for net in nets}
+    for i, values in enumerate(combos):
+        for reg, value in zip(registers, values):
+            load_state(simulator, reg, value)
+        settled = simulator.settle(inputs)
+        for net in nets:
+            columns[net][i] = settled.get(net, 0)
+    return combos, {net: bytes(col) for net, col in columns.items()}
+
+
+def find_bus(
+    combos, vectors, bit_value, width: int, name: str, description: str
+) -> Bus | None:
+    """Look for nets behaving like bits [0..width-1] of `bit_value(values, k)`"""
+    nets, inverted = [], []
+    for k in range(width):
+        want = bytes(bit_value(values, k) for values in combos)
+        anti = bytes(1 - b for b in want)
+        match = next((n for n, v in sorted(vectors.items()) if v == want), None)
+        if match is not None:
+            nets.append(match)
+            inverted.append(False)
+            continue
+        match = next((n for n, v in sorted(vectors.items()) if v == anti), None)
+        if match is None:
+            return None
+        nets.append(match)
+        inverted.append(True)
+    return Bus(name, nets, inverted, description)
+
+
+def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
+    """Instances driving `nets`, walking back but never through `stop`"""
+    drivers = _drivers(nl)
+    by_name = {i.name: i for i in nl.instances}
+    seen: set[str] = set()
+    found: set[str] = set()
+    stack = list(nets)
+    while stack:
+        net = stack.pop()
+        if net in seen or net in stop or net in nl.power_nets or net not in drivers:
+            continue
+        seen.add(net)
+        inst = by_name[drivers[net][0]]
+        found.add(inst.name)
+        if is_sequential(inst.cell):
+            continue
+        fn = lookup(inst.cell)
+        stack.extend(inst.connections[p] for p in fn.inputs)
+    return found
+
+
+def split_datapath(
+    nl: Netlist, registers: list[Register], output: str, inputs: dict[str, int]
+):
+    # heavily hard coded to the warmup puzzle
+    if len(registers) != 2 or sum(r.width for r in registers) > 20:
+        return None
+
+    simulator = Simulator(nl)
+    combos, vectors = truth_vectors(simulator, registers, inputs)
+
+    width = max(r.width for r in registers) + 1
+    bus = find_bus(
+        combos,
+        vectors,
+        lambda values, k: (sum(values) >> k) & 1,
+        width,
+        "sum",
+        f"{registers[0].name} + {registers[1].name}",
+    )
+    if bus is None:
+        return None
+
+    flop_outputs = {
+        inst.connections[lookup(inst.cell).output]
+        for inst in nl.instances
+        if is_sequential(inst.cell)
+    }
+    adder = cone_instances(nl, set(bus.nets), flop_outputs)
+    comparator = cone_instances(nl, {output}, set(bus.nets) | flop_outputs) - adder
+    return bus, adder, comparator
+
+
 def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
     result = Analysis()
     result.registers = find_registers(nl)
@@ -279,12 +400,55 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
     simulator = Simulator(nl)
     inputs = inputs or {p: 0 for p, d in nl.ports.items() if d == "input"}
 
+    by_name = {i.name: i for i in nl.instances}
+    flop_outputs = {
+        by_name[f].connections[lookup(by_name[f].cell).output]
+        for reg in result.registers
+        for f in reg.flops
+    }
+    for reg in result.registers:
+        data_nets = {
+            by_name[f].connections[lookup(by_name[f].cell).data] for f in reg.flops
+        }
+        support_gates = cone_instances(nl, data_nets, flop_outputs)
+        result.blocks.append(
+            Block(
+                reg.name,
+                f"{reg.width}-bit shift register",
+                set(reg.flops) | support_gates,
+            )
+        )
+
+    clock_nets = {
+        by_name[f].connections[lookup(by_name[f].cell).clock]
+        for reg in result.registers
+        for f in reg.flops
+    }
+    clock_tree = cone_instances(nl, clock_nets, flop_outputs)
+    if clock_tree:
+        result.blocks.append(
+            Block("clock_tree", "buffers driving the flop clocks", clock_tree)
+        )
+
     outputs = [p for p, d in nl.ports.items() if d == "output"]
-    inputs_to_sweep = [r for r in result.registers if r.width > 1]
+    datapath = [r for r in result.registers if r.width > 1]
     for out in outputs:
-        described, note = identify(simulator, inputs_to_sweep, out, inputs)
+        described, note = identify(simulator, datapath, out, inputs)
         if described:
             result.operators.append(described)
         if note:
             result.notes.append(note)
+
+        split = split_datapath(nl, datapath, out, inputs)
+        if split is None:
+            continue
+        bus, adder, comparator = split
+        result.blocks.append(
+            Block(bus.name, f"{bus.width}-bit adder -> {bus.description}", adder)
+        )
+        result.blocks.append(
+            Block(
+                f"cmp_{out}", f"equality comparator on {bus.name} -> {out}", comparator
+            )
+        )
     return result

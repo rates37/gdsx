@@ -506,3 +506,10 @@ equivalent -- Induction step proven: SUCCESS!
 ```
 
 As of right now, all prior mentioned limitations are still present.
+
+
+Committed at 996911b
+
+Added some even more heavily overfitted functions to identify adder and comparator. Useless for the real puzzle but good coding exercise.
+
+

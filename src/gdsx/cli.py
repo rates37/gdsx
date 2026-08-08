@@ -125,11 +125,21 @@ def analyse(
         console.print(f"  {reg.name}: {reg.width}-bit shift register{source}")
         console.print(f"    [dim]{' -> '.join(reg.flops)}[/]")
 
-    console.print("\n[bold]operators[/]")
+    console.print("\n[bold]blocks[/] (functional match, with the gates backing each call)")
+    for block in result.blocks:
+        console.print(f"  {block.name}: {block.description}  [dim]({len(block.instances)} cells)[/]")
+
+    console.print("\n[bold]operators[/] (proven over the full input space)")
     for op in result.operators:
         console.print(f"  [green]{op}[/]")
     for note in result.notes:
         console.print(f"  [yellow]{note}[/]")
+
+    covered = {i for b in result.blocks for i in b.instances}
+    rest = sorted({i.name for i in nl.instances} - covered)
+    if rest:
+        console.print(f"\n[dim]not attributed to a block: {len(rest)} cells "
+                      f"({', '.join(sorted({r.rsplit('_', 1)[0] for r in rest}))})[/]")
 
 
 @app.command()
