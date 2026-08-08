@@ -8,7 +8,7 @@ prep -top adder_demo -flatten
 async2sync
 design -stash gold
 
-read_verilog /tmp/prims.v out/adder_demo.generic.v
+read_verilog out/primitives.v out/adder_demo.generic.v
 prep -top adder_demo -flatten
 async2sync
 design -stash gate
