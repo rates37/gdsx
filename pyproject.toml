@@ -9,7 +9,6 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "klayout>=0.30.10",
-    "networkx>=3.6.1",
     "pyyaml>=6.0.3",
     "typer>=0.27.1",
 ]
