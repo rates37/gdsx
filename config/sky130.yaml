@@ -1,0 +1,40 @@
+# Layer map for the sky130 standard-cell flow
+#
+# Only the layers we trace in gdsx are listed: the routing stack, the vias,
+# and the pin/label purposes where cell pins are named
+# Everything else in the GDS is deliberately ignored , we don't need to inspect
+# individual cells here
+#
+# Numbers are (layer, datatype) pairs. Note tests/test_config.py checks them against
+# what is in the sample (warmup) GDS
+
+pdk: sky130A
+library: sky130_fd_sc_hd
+
+# Bottom to top. `pin` is where the text labels live. The geometry itself is on
+# `drawing`, so a pin is resolved by finding the drawing shape under its label
+routing:
+  - {name: li1,  drawing: [67, 20], pin: [67, 5], label: [67, 16]}
+  - {name: met1, drawing: [68, 20], pin: [68, 5], label: [68, 16]}
+  - {name: met2, drawing: [69, 20], pin: [69, 5], label: [69, 16]}
+  - {name: met3, drawing: [70, 20], pin: [70, 5], label: [70, 16]}
+  - {name: met4, drawing: [71, 20], pin: [71, 5], label: [71, 16]}
+  - {name: met5, drawing: [72, 20], pin: [72, 5], label: [72, 16]}
+
+vias:
+  - {name: mcon, layer: [67, 44], below: li1,  above: met1}
+  - {name: via,  layer: [68, 44], below: met1, above: met2}
+  - {name: via2, layer: [69, 44], below: met2, above: met3}
+  - {name: via3, layer: [70, 44], below: met3, above: met4}
+  - {name: via4, layer: [71, 44], below: met4, above: met5}
+
+power_pins: [VPWR, VGND, VPB, VNB]
+
+# Cells that carry no signal function. They still have the common prefix,
+# but they should not show up as gates in the netlist
+nonlogic_prefixes:
+  - sky130_fd_sc_hd__fill
+  - sky130_fd_sc_hd__decap
+  - sky130_fd_sc_hd__tap
+  - sky130_fd_sc_hd__diode
+  - sky130_fd_sc_hd__fakediode

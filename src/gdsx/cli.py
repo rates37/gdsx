@@ -1,0 +1,112 @@
+"""Command line surface for library: `gdsx inspect|pins|extract`."""
+
+from __future__ import annotations
+from pathlib import Path
+from typing import Optional
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from . import config, connectivity, loader, netlist
+from .pins import PinOracle
+
+app = typer.Typer(
+    add_completion=False, help="Extract a gate-level netlist from a standard-cell GDS."
+)
+console = Console()
+
+GdsArg = typer.Argument(..., exists=True, dir_okay=False, help="input GDS file")
+TechOpt = typer.Option(
+    None, "--tech", help="layer-map YAML (default: config/sky130.yaml)"
+)
+TopOpt = typer.Option(None, "--top", help="top cell name (default: auto-detect)")
+
+
+def _load(gds: Path, tech: Optional[Path], top: Optional[str]) -> loader.Design:
+    return loader.load(gds, config.load(tech), top)
+
+
+@app.command()
+def inspect(
+    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+):
+    """Report hierarchy, layers, cell mix and whether the GDS is self-contained"""
+    design = _load(gds, tech, top)
+    report = loader.inspect(design)
+
+    console.print(
+        f"[bold]{report.top}[/]  dbu={report.dbu}  layers={len(report.layers)}"
+    )
+    console.print(
+        "pin source: [green]in-GDS labels[/]"
+        if report.self_contained
+        else "pin source: [red]unavailable[/] (cells are abstract, need PDK LEF)"
+    )
+
+    table = Table("kind", "cells", "instances")
+    for kind, counter in (
+        ("logic", report.logic_cells),
+        ("non-logic (tap/decap/fill)", report.nonlogic_cells),
+        ("other (via/unknown)", report.unknown_cells),
+    ):
+        table.add_row(kind, str(len(counter)), str(sum(counter.values())))
+    console.print(table)
+
+    console.print("\n[bold]logic cells[/]")
+    for name, n in sorted(report.logic_cells.items(), key=lambda kv: -kv[1]):
+        console.print(f"  {n:>4} x {name}")
+
+    console.print("\n[bold]top-level labels[/]")
+    for text, layer in report.top_labels:
+        console.print(f"  {text}  ({layer})")
+
+
+@app.command()
+def pins(
+    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+):
+    """Dump the pin oracle for every logic cell used in the design"""
+    design = _load(gds, tech, top)
+    oracle = PinOracle(design)
+    used = {name for name, _ in design.instances() if design.tech.is_logic_cell(name)}
+    for cell in sorted(used):
+        names = sorted({p.name for p in oracle.pins(cell)})
+        console.print(f"[bold]{cell}[/]: {', '.join(names)}")
+
+
+@app.command()
+def extract(
+    gds: Path = GdsArg,
+    out: Path = typer.Option(Path("out"), "-o", "--out", help="output directory"),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+):
+    """Trace the routing and write the netlist (Verilog + JSON + dot)"""
+    design = _load(gds, tech, top)
+    conn = connectivity.trace(design)
+    nl = netlist.build(design, conn)
+
+    console.print(
+        f"{len(nl.instances)} instances, {len(nl.nets)} nets "
+        f"({conn.n_clusters} clusters merged by {len(conn.nets)} nets)"
+    )
+    if conn.dangling_vias:
+        console.print(f"[yellow]{len(conn.dangling_vias)} vias landed on nothing[/]")
+    if nl.floating:
+        console.print(
+            f"[yellow]{len(nl.floating)} floating pins[/]: {', '.join(nl.floating[:8])}"
+        )
+    if nl.conflicts:
+        console.print(
+            f"[red]{len(nl.conflicts)} pins on multiple nets[/]: {', '.join(nl.conflicts[:8])}"
+        )
+    console.print(
+        "ports: " + ", ".join(f"{p} ({d})" for p, d in sorted(nl.ports.items()))
+    )
+
+    for path in netlist.write_all(nl, out):
+        console.print(f"  wrote {path}")
+
+
+def main() -> None:
+    app()
