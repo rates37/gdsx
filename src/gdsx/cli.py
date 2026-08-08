@@ -9,6 +9,7 @@ from rich.table import Table
 
 from . import config, connectivity, loader, netlist
 from . import analyse as analysis
+from . import verify as equiv
 from .pins import PinOracle
 
 app = typer.Typer(
@@ -156,6 +157,38 @@ def solve(
         loaded = ", ".join(f"{r.serial_input}={v}" for r, v in zip(registers, values))
         mark = "[green]verified[/]" if verified else "[red]FAILED[/]"
         console.print(f"  {loaded}   {mark}")
+
+
+@app.command()
+def verify(
+    gds: Path = GdsArg,
+    ref: Path = typer.Option(
+        ..., "--ref", exists=True, help="reference RTL to prove against"
+    ),
+    out: Path = typer.Option(
+        Path("out"), "-o", "--out", help="where to put the yosys artifacts"
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+):
+    """Prove the extracted netlist equivalent to a reference RTL (needs yosys installed)"""
+    nl = netlist.build(_load(gds, tech, top))
+    paths = netlist.write_all(nl, out)
+    generic = next(p for p in paths if p.name.endswith(".generic.v"))
+
+    console.print(f"proving {generic} == {ref} ...")
+    try:
+        result = equiv.equivalence(generic, ref, nl.top, out)
+    except equiv.YosysMissing as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+
+    if result.proven:
+        console.print(f"[green]equivalent[/] -- {result.summary}")
+    else:
+        console.print(f"[red]not proven[/] -- {result.summary}")
+        console.print(f"[dim]full log: {out / 'equiv.log'}[/]")
+        raise typer.Exit(1)
 
 
 def main() -> None:

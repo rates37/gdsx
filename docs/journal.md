@@ -441,3 +441,68 @@ Listing limitations to come back to later (either to laugh at or to fix):
 - small input space (much past 20 bit registers and brute force is too slow)
 - only supports minimal, known operators (add/sub)
 - no FSM support
+
+Committed up to here at c6fb802
+
+## Verification
+
+Next I want to verify that the netlist I extracted from the GDS is the same as the original design. `yosys` has good equivalence checking support, so I'll use that.
+
+### Primitives
+
+Before anything, we need implement the primitives. Instead of implementing primitives for the sky130 cells, I created functions to generate the abstract/general primitives using the existing function definitions from `src/gdsx/functions.py`. This way the primitives are automatically generated and consistent with the simulator.
+
+Using the lambdas in the lookup tables from `functions.py`, I can generate a verilog expression to create the sum of minterms equation:
+
+```py
+def _minterms(fn: CellFunction) -> str:
+    terms = []
+    for combo in product((0, 1), repeat=len(fn.inputs)):
+        values = dict(zip(fn.inputs, combo))
+        if fn.evaluate(values):
+            terms.append("(" + " & ".join(f"{'' if v else '~'}{p}" for p, v in values.items()) + ")")
+    if not terms:
+        return "1'b0"
+    if len(terms) == 1 << len(fn.inputs):
+        return "1'b1"
+    return " | ".join(terms)  # Sum of minterms
+```
+
+Then generate the verilog module text:
+
+```py
+def _combinational_module(name: str, fn: CellFunction) -> str:
+    ports = ", ".join(fn.inputs)
+    return (
+        f"module {name} ({ports}, {fn.output});\n"
+        f"  input {ports};\n"
+        f"  output {fn.output};\n"
+        f"  assign {fn.output} = {_minterms(fn)};\n"
+        f"endmodule\n"
+    )
+```
+
+Similar approach for sequential cells too^
+
+This approach is a bit janky, since it generates a bunch of basically trivial modules. But it ensures the simulator and the equivalence checking are using the same function (lambda) definitions.
+
+### Verify
+
+`src/gdsx/verify.py` bridges yosys and the library. The high level process is:
+
+- Read the reference RTL
+- Read the extracted netlist
+- Create a "miter" circuit that asserts the two always agree
+- Asks the SAT solver to find a counterexample. If it finds one, the two circuits are not equivalent. If it can't find one, they are equivalent.
+
+### CLI
+
+Then added CLI support for verification:
+
+```bash
+$ uv run gdsx verify samples/sample.gds --ref samples/sample.v -o out
+proving out/adder_demo.generic.v == samples/sample.v ...
+equivalent -- Induction step proven: SUCCESS!
+```
+
+As of right now, all prior mentioned limitations are still present.
