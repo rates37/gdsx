@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# use temporal induction (tempinduct) to try to prove the property for an arbitrary number of cycles
+
+cat > /tmp/eq.ys <<'EOF'
+read_verilog samples/sample.v
+prep -top adder_demo -flatten
+async2sync
+design -stash gold
+
+read_verilog /tmp/prims.v out/adder_demo.generic.v
+prep -top adder_demo -flatten
+async2sync
+design -stash gate
+
+design -copy-from gold -as gold adder_demo
+design -copy-from gate -as gate adder_demo
+miter -equiv -flatten -make_assert gold gate miter
+hierarchy -top miter
+sat -verify -prove-asserts -tempinduct -set-init-zero -seq 4 miter
+
+EOF
+
+yosys /tmp/eq.ys 
