@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from . import config, connectivity, loader, netlist
+from . import analyse as analysis
 from .pins import PinOracle
 
 app = typer.Typer(
@@ -106,6 +107,55 @@ def extract(
 
     for path in netlist.write_all(nl, out):
         console.print(f"  wrote {path}")
+
+
+@app.command()
+def analyse(
+    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+):
+    """Recover registers and identify what the logic computes"""
+
+    nl = netlist.build(_load(gds, tech, top))
+    result = analysis.analyse(nl)
+
+    console.print("[bold]registers[/]")
+    for reg in result.registers:
+        source = f" <- {reg.serial_input}" if reg.serial_input else ""
+        console.print(f"  {reg.name}: {reg.width}-bit shift register{source}")
+        console.print(f"    [dim]{' -> '.join(reg.flops)}[/]")
+
+    console.print("\n[bold]operators[/]")
+    for op in result.operators:
+        console.print(f"  [green]{op}[/]")
+    for note in result.notes:
+        console.print(f"  [yellow]{note}[/]")
+
+
+@app.command()
+def solve(
+    gds: Path = GdsArg,
+    output: str = typer.Option("S", "--output", help="the output port to assert"),
+    limit: int = typer.Option(10, "--limit", help="how many solutions to report"),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+):
+    """Work out how to drive the design so an output goes high"""
+
+    nl = netlist.build(_load(gds, tech, top))
+    mode, solutions = analysis.solve(nl, output, limit)
+    if mode is None:
+        console.print("[red]could not work out how to load the registers[/]")
+        raise typer.Exit(1)
+
+    console.print(f"drive: [bold]{mode.description}[/]")
+    registers = [
+        r for r in analysis.find_registers(nl) if r.serial_input and r.width > 1
+    ]
+    console.print(f"\nshowing {len(solutions)} input(s) that assert {output}:")
+    for values, verified in solutions:
+        loaded = ", ".join(f"{r.serial_input}={v}" for r, v in zip(registers, values))
+        mark = "[green]verified[/]" if verified else "[red]FAILED[/]"
+        console.print(f"  {loaded}   {mark}")
 
 
 def main() -> None:

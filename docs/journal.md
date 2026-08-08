@@ -261,3 +261,183 @@ ports: A (input), B (input), S (output), clk (input), en (input), rst_n (input)
 ```
 
 Cleaned up formatting and styling of output using Claude Haiku, I'm proudly not a design expert.
+
+Committed up to here at ca28cab
+
+## Simulating netlist
+
+I mentioned before that I wanted to simulate the verilog, but instead I think I'll simulate in Python. I already have the netlist, and the functions of each gate are all trivial, so no need to drag in a Verilator or iverilog dependency.
+
+In `src/gdsx/functions.py`, made a lookup table of cell behaviours, with a subset of the sky130 hd cells([link](https://sky130-unofficial.readthedocs.io/en/latest/contents/libraries/sky130_fd_sc_hd/README.html)) . Again this is hard-coded to the sky130 conventions, and is something I want to come back to later.
+
+The cell names are stripped of library prefix and drive variant. So `sky130_fd_sc_hd__nand2_2` becomes `nand2` (that's all you need for the simulator, and likely all I need for solving the puzzle).
+
+Then in `src/gdsx/sim.py`, the `Simulator` class can use these to simulate the circuit. Not going into much detail here, as I've done a lot of work on this sort of thing in another project for simulating the XC2064 FPGA, and the ideas are very similar, so don't need to remind myself of the details as much as the other sections.
+
+```py
+class Simulator:
+    # some detail omitted..
+
+    def settle(self, inputs: dict[str, int]) -> dict[str, int]:
+        values = {}
+        for inst, fn in self.combinational:
+            # Look up the gate's behavior, evaluate its inputs, set its output
+            pins = {p: values[inst.connections[p]] for p in fn.inputs}
+            values[inst.connections[fn.output]] = fn.evaluate(pins)
+        return values
+
+    def step(self, inputs: dict[str, int]) -> dict[str, int]:
+        values = self.settle(inputs)
+        # Flops sample simultaneously
+        nxt = {}
+        for inst, fn in self.flops:
+            nxt[inst.name] = values[inst.connections[fn.data]]
+        self.state = nxt
+        return self.settle(inputs)
+```
+
+Choosing to ignore undriven inputs (treated as 0 by the simulator, but floating in reality).
+
+### Combinational Loops / Dependency Order
+
+In simulation, the evaluation order of gates needs to be done in topological order. Otherwise results may be wrong, or gates need to be re-evaluated multiple times. Also raises the issue of combinational loops, which should not occur in a well designed circuit.
+
+I'm assuming the puzzle circuit was synthesised from real, legal Verilog, meaning I assume no combinational loops exist. But still check for them since it's trivial from within the topological sort function:
+
+```py
+def _topological(gates, sources: set[str]):
+    """Order combinational gates so every gate runs after its drivers."""
+    pending = list(gates)
+    known = set(sources)
+    ordered = []
+    while pending:
+        ready = [g for g in pending if all(g[0].connections[p] in known for p in g[1].inputs)]
+        if not ready:
+            stuck = ", ".join(f"{i.name}" for i, _ in pending[:5])
+            raise ValueError(f"combinational loop or undriven input near: {stuck}")
+        for gate in ready:
+            known.add(gate[0].connections[gate[1].output])
+        ordered += ready
+        pending = [g for g in pending if g not in ready]
+    return ordered
+```
+
+## Finding Registers
+
+The warmup design has 79 'gates', and 16 of those are flip flops. One step toward understanding the design is to group registers together. Since otherwise there would effectively be one massive register with wildly intertwined wiring to other logic within the circuit.
+
+For now, I'm over-adapting the code to the warmup design since we know what it is. Later should be able to generalise it.
+
+in the warmup design, the flips flops shift together to form two 8-bit shift registers. Following data dependencies (in `src/gdsx/analyse.py`):
+
+```py
+def find_registers(nl: Netlist) -> list[Register]:
+    flops = [i for i in nl.instances if is_sequential(i.cell)]
+
+    # For each flop, what feeds its D input:
+    feeder: dict[str, str | None] = {}
+    for f in flops:
+        fn = lookup(f.cell)
+        deps = support(nl, f.connections[fn.data])
+        # Exclude self-loops (enable/hold paths)
+        upstream = (deps & names) - {f.name}
+        feeder[f.name] = next(iter(upstream)) if len(upstream) == 1 else None
+
+    # Build chains: if A feeds B and B feeds C, that's one 3-bit shift register
+    followers: dict[str, list[str]] = {}
+    for name, src in feeder.items():
+        if src:
+            followers.setdefault(src, []).append(name)
+
+    heads = [f.name for f in flops if feeder[f.name] is None]
+    registers = []
+    for head in heads:
+        chain = [head]
+        while len(followers.get(chain[-1], [])) == 1:
+            chain.append(followers[chain[-1]][0])
+        registers.append(Register(name=..., flops=chain))
+    return registers
+```
+
+The `support()` function in analyse.py traces backwards through gates but stops at flip flop outputs. So only look at flip-flop-to-flip-flop chains, not combinational logic.
+
+### Checking what register contents cause output to go high
+
+Once grouped registers together, we can check what value in the register contents causes the output to go high. This is just brute force, likely not super helpful for the real puzzle (I don't even know if the real puzzle uses a shift-register-based input capturing). But it's a start for the warmup at least.
+
+In simplified terms:
+
+```py
+def sweep(simulator: Simulator, registers: list[Register], output: str, inputs):
+    """Every combination of register values -> the output bit it produces."""
+    widths = [r.width for r in registers]
+    for values in product(*(range(1 << w) for w in widths)):
+        for reg, value in zip(registers, values):
+            load_state(simulator, reg, value)
+        yield values, simulator.settle(inputs)[output]
+```
+
+Then we can check if it matches a known pattern. For now, it's just addition and subtraction. Simplified again:
+
+```py
+def identify(simulator: Simulator, registers, output: str, inputs):
+    truth = dict(sweep(simulator, registers, output, inputs))
+    hits = {k for k, v in truth.items() if v == 1}
+
+    # Is this output true when register_a + register_b equals some constant?
+    if len(registers) == 2:
+        sums = {a + b for a, b in hits}
+        if len(sums) == 1:
+            k = sums.pop()
+            expected = {(a, b) for a, b in truth if a + b == k}
+            if hits == expected:
+                return f"{output} = ({registers[0].name} + {registers[1].name} == {k})"
+        # same for subtraction...
+```
+
+For the sample: register values that produce output S=1 are those where A + B == 496. The code doesn't know 496 in advance, it dynamically discovers this by looking at which register states light up the output.
+
+```py
+from gdsx import config, loader, netlist, analyse
+
+nl = netlist.build(loader.load("samples/sample.gds", config.load()))
+a = analyse.analyse(nl)
+for r in a.registers:
+    print(r.name, r.width, r.serial_input, r.flops)
+print(a.operators, a.notes)
+```
+
+The output:
+
+```
+reg_A 8 A ['dfrtp_2_12', 'dfrtp_2_10', 'dfrtp_2_15', 'dfrtp_2_11', 'dfrtp_2_14', 'dfrtp_2_13', 'dfrtp_2_16', 'dfrtp_2_9']
+reg_B 8 B ['dfrtp_2_2', 'dfrtp_2_5', 'dfrtp_2_4', 'dfrtp_2_6', 'dfrtp_2_1', 'dfrtp_2_8', 'dfrtp_2_3', 'dfrtp_2_7']
+['S = (reg_A + reg_B == 496)'] []
+```
+
+Here the bit ordering in the register chain can be identified. As if they were read backward, then different numbers would cause the output to go high, whereas with this ordering, the SAME sum causes the output to go high.
+
+Again noting (and hitting myself in the head) that this is Extremely overfit to the warmup puzzle. But I guess (hope) that the real puzzle might use something similar in some way, so hopefully this effort isn't a red herring.
+
+This brute force works here because there's only 16 registers -> 65536 combinations to test. The real puzzle will probably have a number of registers that makes this infeasible.
+
+For now, it's a neat little set of functions to work perfectly with the sample, and probably completely meaningless for everything else:
+
+```
+$ uv run gdsx analyse samples/sample.gds
+registers
+  reg_A: 8-bit shift register <- A
+    dfrtp_2_12 -> dfrtp_2_10 -> dfrtp_2_15 -> dfrtp_2_11 -> dfrtp_2_14 -> dfrtp_2_13 -> dfrtp_2_16 -> dfrtp_2_9
+  reg_B: 8-bit shift register <- B
+    dfrtp_2_2 -> dfrtp_2_5 -> dfrtp_2_4 -> dfrtp_2_6 -> dfrtp_2_1 -> dfrtp_2_8 -> dfrtp_2_3 -> dfrtp_2_7
+
+operators
+  S = (reg_A + reg_B == 496)
+```
+
+Listing limitations to come back to later (either to laugh at or to fix):
+
+- only works with shift registers
+- small input space (much past 20 bit registers and brute force is too slow)
+- only supports minimal, known operators (add/sub)
+- no FSM support
