@@ -1,0 +1,4182 @@
+{
+ "cells": {
+  "a2111o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "D1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2) | (B1) | (C1) | (D1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a2111o_1"
+  },
+  "a2111oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "D1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1&!C1&!D1) | (!A2&!B1&!C1&!D1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a2111oi_0"
+  },
+  "a211o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2) | (B1) | (C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a211o_1"
+  },
+  "a211oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1&!C1) | (!A2&!B1&!C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a211oi_1"
+  },
+  "a21bo": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1_N": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2) | (!B1_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a21bo_1"
+  },
+  "a21boi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1_N": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&B1_N) | (!A2&B1_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a21boi_0"
+  },
+  "a21o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2) | (B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a21o_1"
+  },
+  "a21oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1) | (!A2&!B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a21oi_1"
+  },
+  "a221o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(B1&B2) | (A1&A2) | (C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a221o_1"
+  },
+  "a221oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1&!C1) | (!A1&!B2&!C1) | (!A2&!B1&!C1) | (!A2&!B2&!C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a221oi_1"
+  },
+  "a222oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "C2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1&!C1) | (!A1&!B1&!C2) | (!A1&!B2&!C1) | (!A2&!B1&!C1) | (!A1&!B2&!C2) | (!A2&!B1&!C2) | (!A2&!B2&!C1) | (!A2&!B2&!C2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a222oi_1"
+  },
+  "a22o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(B1&B2) | (A1&A2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a22o_1"
+  },
+  "a22oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1) | (!A1&!B2) | (!A2&!B1) | (!A2&!B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a22oi_1"
+  },
+  "a2bb2o": {
+   "pins": {
+    "A1_N": {
+     "direction": "input"
+    },
+    "A2_N": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(B1&B2) | (!A1_N&!A2_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a2bb2o_1"
+  },
+  "a2bb2oi": {
+   "pins": {
+    "A1_N": {
+     "direction": "input"
+    },
+    "A2_N": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(A1_N&!B1) | (A1_N&!B2) | (A2_N&!B1) | (A2_N&!B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a2bb2oi_1"
+  },
+  "a311o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2&A3) | (B1) | (C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a311o_1"
+  },
+  "a311oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1&!C1) | (!A2&!B1&!C1) | (!A3&!B1&!C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a311oi_1"
+  },
+  "a31o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2&A3) | (B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a31o_1"
+  },
+  "a31oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1) | (!A2&!B1) | (!A3&!B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a31oi_1"
+  },
+  "a32o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2&A3) | (B1&B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a32o_1"
+  },
+  "a32oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1) | (!A1&!B2) | (!A2&!B1) | (!A3&!B1) | (!A2&!B2) | (!A3&!B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a32oi_1"
+  },
+  "a41o": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "A4": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&A2&A3&A4) | (B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a41o_1"
+  },
+  "a41oi": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "A4": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!B1) | (!A2&!B1) | (!A3&!B1) | (!A4&!B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__a41oi_1"
+  },
+  "and2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and2_0"
+  },
+  "and2b": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!A_N&B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and2b_1"
+  },
+  "and3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&B&C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and3_1"
+  },
+  "and3b": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!A_N&B&C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and3b_1"
+  },
+  "and4": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&B&C&D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and4_1"
+  },
+  "and4b": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!A_N&B&C&D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and4b_1"
+  },
+  "and4bb": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B_N": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!A_N&!B_N&C&D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__and4bb_1"
+  },
+  "buf": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__buf_12"
+  },
+  "bufbuf": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__bufbuf_16"
+  },
+  "bufinv": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__bufinv_16"
+  },
+  "clkbuf": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkbuf_16"
+  },
+  "clkdlybuf4s15": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkdlybuf4s15_1"
+  },
+  "clkdlybuf4s18": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkdlybuf4s18_1"
+  },
+  "clkdlybuf4s25": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkdlybuf4s25_1"
+  },
+  "clkdlybuf4s50": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkdlybuf4s50_1"
+  },
+  "clkinv": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkinv_16"
+  },
+  "clkinvlp": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__clkinvlp_2"
+  },
+  "conb": {
+   "pins": {
+    "HI": {
+     "direction": "output",
+     "function": "1"
+    },
+    "LO": {
+     "direction": "output",
+     "function": "0"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__conb_1"
+  },
+  "decap": {
+   "pins": {},
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__decap_12"
+  },
+  "dfbbn": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clear_preset_var1": "H",
+    "clear_preset_var2": "L",
+    "clocked_on": "!CLK_N",
+    "next_state": "D",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK_N": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfbbn_1"
+  },
+  "dfbbp": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clear_preset_var1": "H",
+    "clear_preset_var2": "L",
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfbbp_1"
+  },
+  "dfrbp": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfrbp_1"
+  },
+  "dfrtn": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clocked_on": "!CLK_N",
+    "next_state": "D",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK_N": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfrtn_1"
+  },
+  "dfrtp": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfrtp_1"
+  },
+  "dfsbp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfsbp_1"
+  },
+  "dfstp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfstp_1"
+  },
+  "dfxbp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfxbp_1"
+  },
+  "dfxtp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "D",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dfxtp_1"
+  },
+  "diode": {
+   "pins": {
+    "DIODE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__diode_2"
+  },
+  "dlclkp": {
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "GATE": {
+     "direction": "input"
+    },
+    "GCLK": {
+     "direction": "output"
+    },
+    "M0": {
+     "direction": "internal"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlclkp_1"
+  },
+  "dlrbn": {
+   "latch": {
+    "clear": "!RESET_B",
+    "data_in": "D",
+    "enable": "!GATE_N",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE_N": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlrbn_1"
+  },
+  "dlrbp": {
+   "latch": {
+    "clear": "!RESET_B",
+    "data_in": "D",
+    "enable": "GATE",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlrbp_1"
+  },
+  "dlrtn": {
+   "latch": {
+    "clear": "!RESET_B",
+    "data_in": "D",
+    "enable": "!GATE_N",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE_N": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlrtn_1"
+  },
+  "dlrtp": {
+   "latch": {
+    "clear": "!RESET_B",
+    "data_in": "D",
+    "enable": "GATE",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "RESET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlrtp_1"
+  },
+  "dlxbn": {
+   "latch": {
+    "data_in": "D",
+    "enable": "!GATE_N",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE_N": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlxbn_1"
+  },
+  "dlxbp": {
+   "latch": {
+    "data_in": "D",
+    "enable": "GATE",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlxbp_1"
+  },
+  "dlxtn": {
+   "latch": {
+    "data_in": "D",
+    "enable": "!GATE_N",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE_N": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlxtn_1"
+  },
+  "dlxtp": {
+   "latch": {
+    "data_in": "D",
+    "enable": "GATE",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "GATE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlxtp_1"
+  },
+  "dlygate4sd1": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlygate4sd1_1"
+  },
+  "dlygate4sd2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlygate4sd2_1"
+  },
+  "dlygate4sd3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlygate4sd3_1"
+  },
+  "dlymetal6s2s": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlymetal6s2s_1"
+  },
+  "dlymetal6s4s": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlymetal6s4s_1"
+  },
+  "dlymetal6s6s": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__dlymetal6s6s_1"
+  },
+  "ebufn": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "TE_B": {
+     "direction": "input"
+    },
+    "Z": {
+     "direction": "output",
+     "function": "(A)",
+     "three_state": "(TE_B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__ebufn_1"
+  },
+  "edfxbp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&DE) | (IQ&!DE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "DE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__edfxbp_1"
+  },
+  "edfxtp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&DE) | (IQ&!DE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "DE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__edfxtp_1"
+  },
+  "einvn": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "TE_B": {
+     "direction": "input"
+    },
+    "Z": {
+     "direction": "output",
+     "function": "(!A)",
+     "three_state": "(TE_B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__einvn_0"
+  },
+  "einvp": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "TE": {
+     "direction": "input"
+    },
+    "Z": {
+     "direction": "output",
+     "function": "(!A)",
+     "three_state": "(TE')"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__einvp_1"
+  },
+  "fa": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "CIN": {
+     "direction": "input"
+    },
+    "COUT": {
+     "direction": "output",
+     "function": "(A&B) | (A&CIN) | (B&CIN)"
+    },
+    "SUM": {
+     "direction": "output",
+     "function": "(A&!B&!CIN) | (!A&B&!CIN) | (!A&!B&CIN) | (A&B&CIN)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__fa_1"
+  },
+  "fah": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "CI": {
+     "direction": "input"
+    },
+    "COUT": {
+     "direction": "output",
+     "function": "(A&B) | (A&CI) | (B&CI)"
+    },
+    "SUM": {
+     "direction": "output",
+     "function": "(A&!B&!CI) | (!A&B&!CI) | (!A&!B&CI) | (A&B&CI)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__fah_1"
+  },
+  "fahcin": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "CIN": {
+     "direction": "input"
+    },
+    "COUT": {
+     "direction": "output",
+     "function": "(A&!CIN) | (A&B) | (B&!CIN)"
+    },
+    "SUM": {
+     "direction": "output",
+     "function": "(!A&!B&!CIN) | (A&B&!CIN) | (A&!B&CIN) | (!A&B&CIN)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__fahcin_1"
+  },
+  "fahcon": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "CI": {
+     "direction": "input"
+    },
+    "COUT_N": {
+     "direction": "output",
+     "function": "(!A&!CI) | (!A&!B) | (!B&!CI)"
+    },
+    "SUM": {
+     "direction": "output",
+     "function": "(A&!B&!CI) | (!A&B&!CI) | (!A&!B&CI) | (A&B&CI)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__fahcon_1"
+  },
+  "ha": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "COUT": {
+     "direction": "output",
+     "function": "(A&B)"
+    },
+    "SUM": {
+     "direction": "output",
+     "function": "(A&!B) | (!A&B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__ha_1"
+  },
+  "inv": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__inv_12"
+  },
+  "lpflow_bleeder": {
+   "pins": {
+    "SHORT": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_bleeder_1"
+  },
+  "lpflow_clkbufkapwr": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "KAPWR",
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_clkbufkapwr_16"
+  },
+  "lpflow_clkinvkapwr": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A)"
+    }
+   },
+   "power": [
+    "KAPWR",
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_clkinvkapwr_16"
+  },
+  "lpflow_decapkapwr": {
+   "pins": {},
+   "power": [
+    "KAPWR",
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_decapkapwr_12"
+  },
+  "lpflow_inputiso0n": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "SLEEP_B": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(SLEEP_B&A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_inputiso0n_1"
+  },
+  "lpflow_inputiso0p": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "SLEEP": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!SLEEP&A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_inputiso0p_1"
+  },
+  "lpflow_inputiso1n": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "SLEEP_B": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (!SLEEP_B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_inputiso1n_1"
+  },
+  "lpflow_inputiso1p": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "SLEEP": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (SLEEP)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_inputiso1p_1"
+  },
+  "lpflow_inputisolatch": {
+   "latch": {
+    "data_in": "D",
+    "enable": "SLEEP_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "SLEEP_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_inputisolatch_1"
+  },
+  "lpflow_isobufsrc": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "SLEEP": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&!SLEEP)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_isobufsrc_16"
+  },
+  "lpflow_isobufsrckapwr": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "SLEEP": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&!SLEEP)"
+    }
+   },
+   "power": [
+    "KAPWR",
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_isobufsrckapwr_16"
+  },
+  "lpflow_lsbuf_lh_hl_isowell_tap": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VPB",
+    "VPWR",
+    "VPWRIN"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_lsbuf_lh_hl_isowell_tap_1"
+  },
+  "lpflow_lsbuf_lh_isowell": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "LOWLVPWR",
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_lsbuf_lh_isowell_4"
+  },
+  "lpflow_lsbuf_lh_isowell_tap": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "LOWLVPWR",
+    "VGND",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__lpflow_lsbuf_lh_isowell_tap_1"
+  },
+  "macro_sparecell": {
+   "pins": {
+    "LO": {
+     "direction": "output",
+     "function": "0"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__macro_sparecell"
+  },
+  "maj3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&B) | (A&C) | (B&C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__maj3_1"
+  },
+  "mux2": {
+   "pins": {
+    "A0": {
+     "direction": "input"
+    },
+    "A1": {
+     "direction": "input"
+    },
+    "S": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A0&!S) | (A1&S)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__mux2_1"
+  },
+  "mux2i": {
+   "pins": {
+    "A0": {
+     "direction": "input"
+    },
+    "A1": {
+     "direction": "input"
+    },
+    "S": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A0&!S) | (!A1&S)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__mux2i_1"
+  },
+  "mux4": {
+   "pins": {
+    "A0": {
+     "direction": "input"
+    },
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "S0": {
+     "direction": "input"
+    },
+    "S1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A0&!S0&!S1) | (A1&S0&!S1) | (A2&!S0&S1) | (A3&S0&S1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__mux4_1"
+  },
+  "nand2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A) | (!B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand2_1"
+  },
+  "nand2b": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(A_N) | (!B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand2b_1"
+  },
+  "nand3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A) | (!B) | (!C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand3_1"
+  },
+  "nand3b": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(A_N) | (!B) | (!C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand3b_1"
+  },
+  "nand4": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A) | (!B) | (!C) | (!D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand4_1"
+  },
+  "nand4b": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(A_N) | (!B) | (!C) | (!D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand4b_1"
+  },
+  "nand4bb": {
+   "pins": {
+    "A_N": {
+     "direction": "input"
+    },
+    "B_N": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(A_N) | (B_N) | (!C) | (!D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nand4bb_1"
+  },
+  "nor2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor2_1"
+  },
+  "nor2b": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B_N": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&B_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor2b_1"
+  },
+  "nor3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B&!C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor3_1"
+  },
+  "nor3b": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C_N": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B&C_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor3b_1"
+  },
+  "nor4": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B&!C&!D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor4_1"
+  },
+  "nor4b": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D_N": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B&!C&D_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor4b_1"
+  },
+  "nor4bb": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C_N": {
+     "direction": "input"
+    },
+    "D_N": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B&C_N&D_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__nor4bb_1"
+  },
+  "o2111a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "D1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1&C1&D1) | (A2&B1&C1&D1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o2111a_1"
+  },
+  "o2111ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "D1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2) | (!B1) | (!C1) | (!D1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o2111ai_1"
+  },
+  "o211a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1&C1) | (A2&B1&C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o211a_1"
+  },
+  "o211ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2) | (!B1) | (!C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o211ai_1"
+  },
+  "o21a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1) | (A2&B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o21a_1"
+  },
+  "o21ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2) | (!B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o21ai_0"
+  },
+  "o21ba": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1_N": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&!B1_N) | (A2&!B1_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o21ba_1"
+  },
+  "o21bai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1_N": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2) | (B1_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o21bai_1"
+  },
+  "o221a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1&C1) | (A2&B1&C1) | (A1&B2&C1) | (A2&B2&C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o221a_1"
+  },
+  "o221ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!B1&!B2) | (!A1&!A2) | (!C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o221ai_1"
+  },
+  "o22a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1) | (A2&B1) | (A1&B2) | (A2&B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o22a_1"
+  },
+  "o22ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!B1&!B2) | (!A1&!A2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o22ai_1"
+  },
+  "o2bb2a": {
+   "pins": {
+    "A1_N": {
+     "direction": "input"
+    },
+    "A2_N": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!A1_N&B1) | (!A2_N&B1) | (!A1_N&B2) | (!A2_N&B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o2bb2a_1"
+  },
+  "o2bb2ai": {
+   "pins": {
+    "A1_N": {
+     "direction": "input"
+    },
+    "A2_N": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!B1&!B2) | (A1_N&A2_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o2bb2ai_1"
+  },
+  "o311a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1&C1) | (A2&B1&C1) | (A3&B1&C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o311a_1"
+  },
+  "o311ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "C1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2&!A3) | (!B1) | (!C1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o311ai_0"
+  },
+  "o31a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1) | (A2&B1) | (A3&B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o31a_1"
+  },
+  "o31ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2&!A3) | (!B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o31ai_1"
+  },
+  "o32a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1) | (A1&B2) | (A2&B1) | (A3&B1) | (A2&B2) | (A3&B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o32a_1"
+  },
+  "o32ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "B2": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2&!A3) | (!B1&!B2)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o32ai_1"
+  },
+  "o41a": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "A4": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A1&B1) | (A2&B1) | (A3&B1) | (A4&B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o41a_1"
+  },
+  "o41ai": {
+   "pins": {
+    "A1": {
+     "direction": "input"
+    },
+    "A2": {
+     "direction": "input"
+    },
+    "A3": {
+     "direction": "input"
+    },
+    "A4": {
+     "direction": "input"
+    },
+    "B1": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A1&!A2&!A3&!A4) | (!B1)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__o41ai_1"
+  },
+  "or2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or2_0"
+  },
+  "or2b": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B_N": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (!B_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or2b_1"
+  },
+  "or3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (B) | (C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or3_1"
+  },
+  "or3b": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C_N": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (B) | (!C_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or3b_1"
+  },
+  "or4": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (B) | (C) | (D)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or4_1"
+  },
+  "or4b": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "D_N": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (B) | (C) | (!D_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or4b_1"
+  },
+  "or4bb": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C_N": {
+     "direction": "input"
+    },
+    "D_N": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A) | (B) | (!C_N) | (!D_N)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__or4bb_1"
+  },
+  "probe_p": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__probe_p_8"
+  },
+  "probec_p": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__probec_p_8"
+  },
+  "sdfbbn": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clear_preset_var1": "H",
+    "clear_preset_var2": "L",
+    "clocked_on": "!CLK_N",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK_N": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfbbn_1"
+  },
+  "sdfbbp": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clear_preset_var1": "H",
+    "clear_preset_var2": "L",
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfbbp_1"
+  },
+  "sdfrbp": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfrbp_1"
+  },
+  "sdfrtn": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clocked_on": "!CLK_N",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK_N": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfrtn_1"
+  },
+  "sdfrtp": {
+   "ff": {
+    "clear": "!RESET_B",
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "RESET_B": {
+     "direction": "input"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfrtp_1"
+  },
+  "sdfsbp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfsbp_1"
+  },
+  "sdfstp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "preset": "!SET_B",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    },
+    "SET_B": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfstp_1"
+  },
+  "sdfxbp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfxbp_1"
+  },
+  "sdfxtp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdfxtp_1"
+  },
+  "sdlclkp": {
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "GATE": {
+     "direction": "input"
+    },
+    "GCLK": {
+     "direction": "output"
+    },
+    "M0": {
+     "direction": "internal"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sdlclkp_1"
+  },
+  "sedfxbp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&DE&!SCE) | (IQ&!DE&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "DE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "Q_N": {
+     "direction": "output",
+     "function": "IQ_N"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sedfxbp_1"
+  },
+  "sedfxtp": {
+   "ff": {
+    "clocked_on": "CLK",
+    "next_state": "(D&DE&!SCE) | (IQ&!DE&!SCE) | (SCD&SCE)",
+    "state_vars": [
+     "IQ",
+     "IQ_N"
+    ]
+   },
+   "pins": {
+    "CLK": {
+     "direction": "input"
+    },
+    "D": {
+     "direction": "input"
+    },
+    "DE": {
+     "direction": "input"
+    },
+    "Q": {
+     "direction": "output",
+     "function": "IQ"
+    },
+    "SCD": {
+     "direction": "input"
+    },
+    "SCE": {
+     "direction": "input"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__sedfxtp_1"
+  },
+  "sky130_fd_sc_hd__tt_025C_1v80.lib.json": {
+   "pins": {},
+   "power": [],
+   "sampled_from": "sky130_fd_sc_hd"
+  },
+  "xnor2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "Y": {
+     "direction": "output",
+     "function": "(!A&!B) | (A&B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__xnor2_1"
+  },
+  "xnor3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(!A&!B&!C) | (A&B&!C) | (A&!B&C) | (!A&B&C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__xnor3_1"
+  },
+  "xor2": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&!B) | (!A&B)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__xor2_1"
+  },
+  "xor3": {
+   "pins": {
+    "A": {
+     "direction": "input"
+    },
+    "B": {
+     "direction": "input"
+    },
+    "C": {
+     "direction": "input"
+    },
+    "X": {
+     "direction": "output",
+     "function": "(A&!B&!C) | (!A&B&!C) | (!A&!B&C) | (A&B&C)"
+    }
+   },
+   "power": [
+    "VGND",
+    "VNB",
+    "VPB",
+    "VPWR"
+   ],
+   "sampled_from": "sky130_fd_sc_hd__xor3_1"
+  }
+ },
+ "corner": "__tt_025C_1v80.lib.json",
+ "library": "sky130_fd_sc_hd",
+ "source": "google/skywater-pdk-libs-sky130_fd_sc_hd"
+}
