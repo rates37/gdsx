@@ -190,40 +190,153 @@ Replacing adder_demo.$flatten\sr_b.$procdff$11 ($adff): ARST=\rst_n, D=$flatten\
 
 4. Executing Verilog-2005 frontend: out/primitives.v
 Parsing Verilog input from `out/primitives.v' to AST representation.
-Generating RTLIL representation for module `\AND2'.
-Generating RTLIL representation for module `\AND3'.
-Generating RTLIL representation for module `\AND4'.
-Generating RTLIL representation for module `\AND4BB'.
-Generating RTLIL representation for module `\OR2'.
-Generating RTLIL representation for module `\OR3'.
-Generating RTLIL representation for module `\NAND2'.
-Generating RTLIL representation for module `\NAND3'.
-Generating RTLIL representation for module `\NOR2'.
-Generating RTLIL representation for module `\NOR3'.
-Generating RTLIL representation for module `\XOR2'.
-Generating RTLIL representation for module `\XNOR2'.
-Generating RTLIL representation for module `\INV'.
-Generating RTLIL representation for module `\BUF'.
-Generating RTLIL representation for module `\MUX2'.
-Generating RTLIL representation for module `\MUX2I'.
-Generating RTLIL representation for module `\AO21'.
-Generating RTLIL representation for module `\AOI21'.
+Generating RTLIL representation for module `\A2111O'.
+Generating RTLIL representation for module `\A2111OI'.
+Generating RTLIL representation for module `\A211O'.
+Generating RTLIL representation for module `\A211OI'.
 Generating RTLIL representation for module `\AO21B'.
 Generating RTLIL representation for module `\AOI21B'.
-Generating RTLIL representation for module `\AO31'.
-Generating RTLIL representation for module `\AOI31'.
+Generating RTLIL representation for module `\AO21'.
+Generating RTLIL representation for module `\AOI21'.
+Generating RTLIL representation for module `\A221O'.
+Generating RTLIL representation for module `\A221OI'.
+Generating RTLIL representation for module `\A222OI'.
 Generating RTLIL representation for module `\AO22'.
 Generating RTLIL representation for module `\AOI22'.
+Generating RTLIL representation for module `\A2BB2O'.
+Generating RTLIL representation for module `\A2BB2OI'.
+Generating RTLIL representation for module `\A311O'.
+Generating RTLIL representation for module `\A311OI'.
+Generating RTLIL representation for module `\AO31'.
+Generating RTLIL representation for module `\AOI31'.
+Generating RTLIL representation for module `\AO32'.
+Generating RTLIL representation for module `\AOI32'.
+Generating RTLIL representation for module `\A41O'.
+Generating RTLIL representation for module `\A41OI'.
+Generating RTLIL representation for module `\AND2'.
+Generating RTLIL representation for module `\AND2B'.
+Generating RTLIL representation for module `\AND3'.
+Generating RTLIL representation for module `\AND3B'.
+Generating RTLIL representation for module `\AND4'.
+Generating RTLIL representation for module `\AND4B'.
+Generating RTLIL representation for module `\AND4BB'.
+Generating RTLIL representation for module `\BUF'.
+Generating RTLIL representation for module `\BUFBUF'.
+Generating RTLIL representation for module `\BUFINV'.
+Generating RTLIL representation for module `\CLKDLYBUF4S15'.
+Generating RTLIL representation for module `\CLKDLYBUF4S18'.
+Generating RTLIL representation for module `\CLKDLYBUF4S25'.
+Generating RTLIL representation for module `\CLKDLYBUF4S50'.
+Generating RTLIL representation for module `\INV'.
+Generating RTLIL representation for module `\CLKINVLP'.
+Generating RTLIL representation for module `\TIE'.
+Generating RTLIL representation for module `\DFFSR'.
+Generating RTLIL representation for module `\DFBBP'.
+Generating RTLIL representation for module `\DFRBP'.
+Generating RTLIL representation for module `\DFRTN'.
+Generating RTLIL representation for module `\DFFR'.
+Generating RTLIL representation for module `\DFSBP'.
+Generating RTLIL representation for module `\DFFS'.
+Generating RTLIL representation for module `\DFXBP'.
+Generating RTLIL representation for module `\DFF'.
+Generating RTLIL representation for module `\DLRBN'.
+Generating RTLIL representation for module `\DLRBP'.
+Generating RTLIL representation for module `\DLRTN'.
+Generating RTLIL representation for module `\DLRTP'.
+Generating RTLIL representation for module `\DLXBN'.
+Generating RTLIL representation for module `\DLXBP'.
+Generating RTLIL representation for module `\DLXTN'.
+Generating RTLIL representation for module `\DLATCH'.
+Generating RTLIL representation for module `\DLYGATE4SD1'.
+Generating RTLIL representation for module `\DLYGATE4SD2'.
+Generating RTLIL representation for module `\DLYGATE4SD3'.
+Generating RTLIL representation for module `\DLYMETAL6S2S'.
+Generating RTLIL representation for module `\DLYMETAL6S4S'.
+Generating RTLIL representation for module `\DLYMETAL6S6S'.
+Generating RTLIL representation for module `\EDFXBP'.
+Generating RTLIL representation for module `\EDFXTP'.
+Generating RTLIL representation for module `\FULLADDER'.
+Generating RTLIL representation for module `\FAH'.
+Generating RTLIL representation for module `\FAHCIN'.
+Generating RTLIL representation for module `\FAHCON'.
+Generating RTLIL representation for module `\HALFADDER'.
+Generating RTLIL representation for module `\LPFLOW_CLKBUFKAPWR'.
+Generating RTLIL representation for module `\LPFLOW_CLKINVKAPWR'.
+Generating RTLIL representation for module `\LPFLOW_INPUTISO0N'.
+Generating RTLIL representation for module `\LPFLOW_INPUTISO0P'.
+Generating RTLIL representation for module `\LPFLOW_INPUTISO1N'.
+Generating RTLIL representation for module `\LPFLOW_INPUTISO1P'.
+Generating RTLIL representation for module `\LPFLOW_INPUTISOLATCH'.
+Generating RTLIL representation for module `\LPFLOW_ISOBUFSRC'.
+Generating RTLIL representation for module `\LPFLOW_ISOBUFSRCKAPWR'.
+Generating RTLIL representation for module `\LPFLOW_LSBUF_LH_HL_ISOWELL_TAP'.
+Generating RTLIL representation for module `\LPFLOW_LSBUF_LH_ISOWELL'.
+Generating RTLIL representation for module `\LPFLOW_LSBUF_LH_ISOWELL_TAP'.
+Generating RTLIL representation for module `\MACRO_SPARECELL'.
+Generating RTLIL representation for module `\MAJ3'.
+Generating RTLIL representation for module `\MUX2'.
+Generating RTLIL representation for module `\MUX2I'.
+Generating RTLIL representation for module `\MUX4'.
+Generating RTLIL representation for module `\NAND2'.
+Generating RTLIL representation for module `\NAND2B'.
+Generating RTLIL representation for module `\NAND3'.
+Generating RTLIL representation for module `\NAND3B'.
+Generating RTLIL representation for module `\NAND4'.
+Generating RTLIL representation for module `\NAND4B'.
+Generating RTLIL representation for module `\NAND4BB'.
+Generating RTLIL representation for module `\NOR2'.
+Generating RTLIL representation for module `\NOR2B'.
+Generating RTLIL representation for module `\NOR3'.
+Generating RTLIL representation for module `\NOR3B'.
+Generating RTLIL representation for module `\NOR4'.
+Generating RTLIL representation for module `\NOR4B'.
+Generating RTLIL representation for module `\NOR4BB'.
+Generating RTLIL representation for module `\O2111A'.
+Generating RTLIL representation for module `\O2111AI'.
+Generating RTLIL representation for module `\O211A'.
+Generating RTLIL representation for module `\O211AI'.
 Generating RTLIL representation for module `\OA21'.
 Generating RTLIL representation for module `\OAI21'.
+Generating RTLIL representation for module `\OA21B'.
 Generating RTLIL representation for module `\OAI21B'.
-Generating RTLIL representation for module `\OAI31'.
+Generating RTLIL representation for module `\O221A'.
+Generating RTLIL representation for module `\O221AI'.
+Generating RTLIL representation for module `\OA22'.
 Generating RTLIL representation for module `\OAI22'.
-Generating RTLIL representation for module `\DFF'.
-Generating RTLIL representation for module `\DFFR'.
-Generating RTLIL representation for module `\DFFS'.
-Generating RTLIL representation for module `\DFFSR'.
-Generating RTLIL representation for module `\DLATCH'.
+Generating RTLIL representation for module `\O2BB2A'.
+Generating RTLIL representation for module `\O2BB2AI'.
+Generating RTLIL representation for module `\O311A'.
+Generating RTLIL representation for module `\O311AI'.
+Generating RTLIL representation for module `\OA31'.
+Generating RTLIL representation for module `\OAI31'.
+Generating RTLIL representation for module `\O32A'.
+Generating RTLIL representation for module `\O32AI'.
+Generating RTLIL representation for module `\O41A'.
+Generating RTLIL representation for module `\O41AI'.
+Generating RTLIL representation for module `\OR2'.
+Generating RTLIL representation for module `\OR2B'.
+Generating RTLIL representation for module `\OR3'.
+Generating RTLIL representation for module `\OR3B'.
+Generating RTLIL representation for module `\OR4'.
+Generating RTLIL representation for module `\OR4B'.
+Generating RTLIL representation for module `\OR4BB'.
+Generating RTLIL representation for module `\PROBE_P'.
+Generating RTLIL representation for module `\PROBEC_P'.
+Generating RTLIL representation for module `\SDFBBN'.
+Generating RTLIL representation for module `\SDFBBP'.
+Generating RTLIL representation for module `\SDFRBP'.
+Generating RTLIL representation for module `\SDFRTN'.
+Generating RTLIL representation for module `\SDFRTP'.
+Generating RTLIL representation for module `\SDFSBP'.
+Generating RTLIL representation for module `\SDFSTP'.
+Generating RTLIL representation for module `\SDFXBP'.
+Generating RTLIL representation for module `\SDFXTP'.
+Generating RTLIL representation for module `\SEDFXBP'.
+Generating RTLIL representation for module `\SEDFXTP'.
+Generating RTLIL representation for module `\XNOR2'.
+Generating RTLIL representation for module `\XNOR3'.
+Generating RTLIL representation for module `\XOR2'.
+Generating RTLIL representation for module `\XOR3'.
 Successfully finished Verilog frontend.
 
 5. Executing Verilog-2005 frontend: out/adder_demo.generic.v
@@ -272,25 +385,138 @@ Used module:     \AO31
 Used module:     \AO21
 Used module:     \AOI21B
 Used module:     \AO21B
-Removing unused module `\DLATCH'.
-Removing unused module `\DFFSR'.
-Removing unused module `\DFFS'.
-Removing unused module `\DFF'.
-Removing unused module `\OAI22'.
+Removing unused module `\XOR3'.
+Removing unused module `\XNOR3'.
+Removing unused module `\SEDFXTP'.
+Removing unused module `\SEDFXBP'.
+Removing unused module `\SDFXTP'.
+Removing unused module `\SDFXBP'.
+Removing unused module `\SDFSTP'.
+Removing unused module `\SDFSBP'.
+Removing unused module `\SDFRTP'.
+Removing unused module `\SDFRTN'.
+Removing unused module `\SDFRBP'.
+Removing unused module `\SDFBBP'.
+Removing unused module `\SDFBBN'.
+Removing unused module `\PROBEC_P'.
+Removing unused module `\PROBE_P'.
+Removing unused module `\OR4BB'.
+Removing unused module `\OR4B'.
+Removing unused module `\OR4'.
+Removing unused module `\OR3B'.
+Removing unused module `\OR3'.
+Removing unused module `\OR2B'.
+Removing unused module `\O41AI'.
+Removing unused module `\O41A'.
+Removing unused module `\O32AI'.
+Removing unused module `\O32A'.
 Removing unused module `\OAI31'.
+Removing unused module `\OA31'.
+Removing unused module `\O311AI'.
+Removing unused module `\O311A'.
+Removing unused module `\O2BB2AI'.
+Removing unused module `\O2BB2A'.
+Removing unused module `\OAI22'.
+Removing unused module `\OA22'.
+Removing unused module `\O221AI'.
+Removing unused module `\O221A'.
+Removing unused module `\OA21B'.
 Removing unused module `\OAI21'.
 Removing unused module `\OA21'.
+Removing unused module `\O211AI'.
+Removing unused module `\O211A'.
+Removing unused module `\O2111AI'.
+Removing unused module `\O2111A'.
+Removing unused module `\NOR4BB'.
+Removing unused module `\NOR4B'.
+Removing unused module `\NOR4'.
+Removing unused module `\NOR3B'.
+Removing unused module `\NOR3'.
+Removing unused module `\NOR2B'.
+Removing unused module `\NAND4BB'.
+Removing unused module `\NAND4B'.
+Removing unused module `\NAND4'.
+Removing unused module `\NAND3B'.
+Removing unused module `\NAND3'.
+Removing unused module `\NAND2B'.
+Removing unused module `\MUX4'.
+Removing unused module `\MUX2I'.
+Removing unused module `\MAJ3'.
+Removing unused module `\MACRO_SPARECELL'.
+Removing unused module `\LPFLOW_LSBUF_LH_ISOWELL_TAP'.
+Removing unused module `\LPFLOW_LSBUF_LH_ISOWELL'.
+Removing unused module `\LPFLOW_LSBUF_LH_HL_ISOWELL_TAP'.
+Removing unused module `\LPFLOW_ISOBUFSRCKAPWR'.
+Removing unused module `\LPFLOW_ISOBUFSRC'.
+Removing unused module `\LPFLOW_INPUTISOLATCH'.
+Removing unused module `\LPFLOW_INPUTISO1P'.
+Removing unused module `\LPFLOW_INPUTISO1N'.
+Removing unused module `\LPFLOW_INPUTISO0P'.
+Removing unused module `\LPFLOW_INPUTISO0N'.
+Removing unused module `\LPFLOW_CLKINVKAPWR'.
+Removing unused module `\LPFLOW_CLKBUFKAPWR'.
+Removing unused module `\HALFADDER'.
+Removing unused module `\FAHCON'.
+Removing unused module `\FAHCIN'.
+Removing unused module `\FAH'.
+Removing unused module `\FULLADDER'.
+Removing unused module `\EDFXTP'.
+Removing unused module `\EDFXBP'.
+Removing unused module `\DLYMETAL6S6S'.
+Removing unused module `\DLYMETAL6S4S'.
+Removing unused module `\DLYMETAL6S2S'.
+Removing unused module `\DLYGATE4SD3'.
+Removing unused module `\DLYGATE4SD2'.
+Removing unused module `\DLYGATE4SD1'.
+Removing unused module `\DLATCH'.
+Removing unused module `\DLXTN'.
+Removing unused module `\DLXBP'.
+Removing unused module `\DLXBN'.
+Removing unused module `\DLRTP'.
+Removing unused module `\DLRTN'.
+Removing unused module `\DLRBP'.
+Removing unused module `\DLRBN'.
+Removing unused module `\DFF'.
+Removing unused module `\DFXBP'.
+Removing unused module `\DFFS'.
+Removing unused module `\DFSBP'.
+Removing unused module `\DFRTN'.
+Removing unused module `\DFRBP'.
+Removing unused module `\DFBBP'.
+Removing unused module `\DFFSR'.
+Removing unused module `\TIE'.
+Removing unused module `\CLKINVLP'.
+Removing unused module `\INV'.
+Removing unused module `\CLKDLYBUF4S50'.
+Removing unused module `\CLKDLYBUF4S25'.
+Removing unused module `\CLKDLYBUF4S18'.
+Removing unused module `\CLKDLYBUF4S15'.
+Removing unused module `\BUFINV'.
+Removing unused module `\BUFBUF'.
+Removing unused module `\AND4B'.
+Removing unused module `\AND4'.
+Removing unused module `\AND3B'.
+Removing unused module `\AND2B'.
+Removing unused module `\A41OI'.
+Removing unused module `\A41O'.
+Removing unused module `\AOI32'.
+Removing unused module `\AO32'.
+Removing unused module `\AOI31'.
+Removing unused module `\A311OI'.
+Removing unused module `\A311O'.
+Removing unused module `\A2BB2OI'.
+Removing unused module `\A2BB2O'.
 Removing unused module `\AOI22'.
 Removing unused module `\AO22'.
-Removing unused module `\AOI31'.
+Removing unused module `\A222OI'.
+Removing unused module `\A221OI'.
+Removing unused module `\A221O'.
 Removing unused module `\AOI21'.
-Removing unused module `\MUX2I'.
-Removing unused module `\INV'.
-Removing unused module `\NOR3'.
-Removing unused module `\NAND3'.
-Removing unused module `\OR3'.
-Removing unused module `\AND4'.
-Removed 18 unused modules.
+Removing unused module `\A211OI'.
+Removing unused module `\A211O'.
+Removing unused module `\A2111OI'.
+Removing unused module `\A2111O'.
+Removed 131 unused modules.
 
 6.2. Executing PROC pass (convert processes to netlists).
 
@@ -298,7 +524,7 @@ Removed 18 unused modules.
 Cleaned up 0 empty switches.
 
 6.2.2. Executing PROC_RMDEAD pass (remove dead branches from decision trees).
-Marked 1 switch rules as full_case in process $proc$out/primitives.v:186$578 in module DFFR.
+Marked 1 switch rules as full_case in process $proc$out/primitives.v:297$297 in module DFFR.
 Removed a total of 0 dead cases.
 
 6.2.3. Executing PROC_PRUNE pass (remove redundant assignments in processes).
@@ -308,64 +534,64 @@ Promoted 0 assignments to connections.
 6.2.4. Executing PROC_INIT pass (extract init attributes).
 
 6.2.5. Executing PROC_ARST pass (detect async resets in processes).
-Found async reset \RESET_B in `\DFFR.$proc$out/primitives.v:186$578'.
+Found async reset \RESET_B in `\DFFR.$proc$out/primitives.v:297$297'.
 
 6.2.6. Executing PROC_ROM pass (convert switches to ROMs).
 Converted 0 switches.
 
 6.2.7. Executing PROC_MUX pass (convert decision trees to multiplexers).
-Creating decoders for process `\DFFR.$proc$out/primitives.v:186$578'.
-     1/1: $0\Q[0:0]
+Creating decoders for process `\DFFR.$proc$out/primitives.v:297$297'.
+     1/1: $0\IQ[0:0]
 
 6.2.8. Executing PROC_DLATCH pass (convert process syncs to latches).
 
 6.2.9. Executing PROC_DFF pass (convert process syncs to FFs).
-Creating register for signal `\DFFR.\Q' using process `\DFFR.$proc$out/primitives.v:186$578'.
-  created $adff cell `$procdff$588' with positive edge clock and positive level reset.
+Creating register for signal `\DFFR.\IQ' using process `\DFFR.$proc$out/primitives.v:297$297'.
+  created $adff cell `$procdff$869' with positive edge clock and positive level reset.
 
 6.2.10. Executing PROC_MEMWR pass (convert process memory writes to cells).
 
 6.2.11. Executing PROC_CLEAN pass (remove empty switches from decision trees).
-Removing empty process `DFFR.$proc$out/primitives.v:186$578'.
+Removing empty process `DFFR.$proc$out/primitives.v:297$297'.
 Cleaned up 0 empty switches.
 
 6.2.12. Executing OPT_EXPR pass (perform const folding).
-Optimizing module AO21.
+Optimizing module BUF.
+Optimizing module AND4BB.
+Optimizing module NOR2.
+Optimizing module NAND2.
+Optimizing module XNOR2.
+Optimizing module AND3.
+Optimizing module OAI21B.
+Optimizing module AND2.
 Optimizing module DFFR.
 <suppressed ~2 debug messages>
 Optimizing module MUX2.
-Optimizing module BUF.
-Optimizing module adder_demo.
-Optimizing module XNOR2.
-Optimizing module XOR2.
-Optimizing module AO31.
-Optimizing module NOR2.
+Optimizing module AO21.
 Optimizing module AOI21B.
-Optimizing module NAND2.
 Optimizing module AO21B.
+Optimizing module XOR2.
 Optimizing module OR2.
-Optimizing module AND4BB.
-Optimizing module OAI21B.
-Optimizing module AND3.
-Optimizing module AND2.
+Optimizing module adder_demo.
+Optimizing module AO31.
 
 6.3. Executing FLATTEN pass (flatten design).
-Deleting now unused module AO21.
+Deleting now unused module BUF.
+Deleting now unused module AND4BB.
+Deleting now unused module NOR2.
+Deleting now unused module NAND2.
+Deleting now unused module XNOR2.
+Deleting now unused module AND3.
+Deleting now unused module OAI21B.
+Deleting now unused module AND2.
 Deleting now unused module DFFR.
 Deleting now unused module MUX2.
-Deleting now unused module BUF.
-Deleting now unused module XNOR2.
-Deleting now unused module XOR2.
-Deleting now unused module AO31.
-Deleting now unused module NOR2.
+Deleting now unused module AO21.
 Deleting now unused module AOI21B.
-Deleting now unused module NAND2.
 Deleting now unused module AO21B.
+Deleting now unused module XOR2.
 Deleting now unused module OR2.
-Deleting now unused module AND4BB.
-Deleting now unused module OAI21B.
-Deleting now unused module AND3.
-Deleting now unused module AND2.
+Deleting now unused module AO31.
 <suppressed ~79 debug messages>
 
 6.4. Executing FUTURE pass.
@@ -375,8 +601,8 @@ Optimizing module adder_demo.
 
 6.6. Executing OPT_CLEAN pass (remove unused cells and wires).
 Finding unused cells or wires in module \adder_demo..
-Removed 32 unused cells and 124 unused wires.
-<suppressed ~33 debug messages>
+Removed 48 unused cells and 156 unused wires.
+<suppressed ~65 debug messages>
 
 6.7. Executing CHECK pass (checking for obvious problems).
 Checking module adder_demo...
@@ -389,14 +615,12 @@ Optimizing module adder_demo.
 
 6.8.2. Executing OPT_MERGE pass (detect identical cells).
 Finding identical cells in module `\adder_demo'.
-Computing hashes of 803 cells of `\adder_demo'.
+Computing hashes of 288 cells of `\adder_demo'.
 Finding duplicate cells in `\adder_demo'.
-Computing hashes of 606 cells of `\adder_demo'.
+Computing hashes of 266 cells of `\adder_demo'.
 Finding duplicate cells in `\adder_demo'.
-Computing hashes of 562 cells of `\adder_demo'.
-Finding duplicate cells in `\adder_demo'.
-<suppressed ~723 debug messages>
-Removed a total of 241 cells.
+<suppressed ~66 debug messages>
+Removed a total of 22 cells.
 
 6.8.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).
 Running muxtree optimizer on module \adder_demo..
@@ -410,13 +634,13 @@ Performed a total of 0 changes.
 
 6.8.5. Executing OPT_MERGE pass (detect identical cells).
 Finding identical cells in module `\adder_demo'.
-Computing hashes of 562 cells of `\adder_demo'.
+Computing hashes of 266 cells of `\adder_demo'.
 Finding duplicate cells in `\adder_demo'.
 Removed a total of 0 cells.
 
 6.8.6. Executing OPT_CLEAN pass (remove unused cells and wires).
 Finding unused cells or wires in module \adder_demo..
-Removed 0 unused cells and 241 unused wires.
+Removed 0 unused cells and 22 unused wires.
 <suppressed ~1 debug messages>
 
 6.8.7. Executing OPT_EXPR pass (perform const folding).
@@ -436,7 +660,7 @@ Performed a total of 0 changes.
 
 6.8.11. Executing OPT_MERGE pass (detect identical cells).
 Finding identical cells in module `\adder_demo'.
-Computing hashes of 562 cells of `\adder_demo'.
+Computing hashes of 266 cells of `\adder_demo'.
 Finding duplicate cells in `\adder_demo'.
 Removed a total of 0 cells.
 
@@ -462,7 +686,7 @@ Optimizing module adder_demo.
 
 6.12.2. Executing OPT_MERGE pass (detect identical cells).
 Finding identical cells in module `\adder_demo'.
-Computing hashes of 562 cells of `\adder_demo'.
+Computing hashes of 266 cells of `\adder_demo'.
 Finding duplicate cells in `\adder_demo'.
 Removed a total of 0 cells.
 
@@ -479,17 +703,17 @@ Finding unused cells or wires in module \adder_demo..
 
         +----------Local Count, excluding submodules.
         | 
-      776 wires
-      776 wire bits
-      369 public wires
-      369 public wire bits
+      496 wires
+      496 wire bits
+      385 public wires
+      385 public wire bits
         6 ports
         6 port bits
-      562 cells
+      266 cells
        16   $adff
-      286   $and
-       53   $not
-      128   $or
+       83   $and
+       46   $not
+       42   $or
        79   $scopeinfo
 
 6.15. Executing CHECK pass (checking for obvious problems).
@@ -497,22 +721,22 @@ Checking module adder_demo...
 Found and reported 0 problems.
 
 7. Executing ASYNC2SYNC pass.
-Replacing adder_demo.$flatten\dfrtp_2_1.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_1.D, Q=\dfrtp_2_1.Q
-Replacing adder_demo.$flatten\dfrtp_2_10.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_10.D, Q=\dfrtp_2_10.Q
-Replacing adder_demo.$flatten\dfrtp_2_11.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_11.D, Q=\dfrtp_2_11.Q
-Replacing adder_demo.$flatten\dfrtp_2_12.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_12.D, Q=\dfrtp_2_12.Q
-Replacing adder_demo.$flatten\dfrtp_2_13.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_13.D, Q=\dfrtp_2_13.Q
-Replacing adder_demo.$flatten\dfrtp_2_14.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_14.D, Q=\dfrtp_2_14.Q
-Replacing adder_demo.$flatten\dfrtp_2_15.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_15.D, Q=\dfrtp_2_15.Q
-Replacing adder_demo.$flatten\dfrtp_2_16.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_16.D, Q=\dfrtp_2_16.Q
-Replacing adder_demo.$flatten\dfrtp_2_2.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_2.D, Q=\dfrtp_2_2.Q
-Replacing adder_demo.$flatten\dfrtp_2_3.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_3.D, Q=\dfrtp_2_3.Q
-Replacing adder_demo.$flatten\dfrtp_2_4.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_4.D, Q=\dfrtp_2_4.Q
-Replacing adder_demo.$flatten\dfrtp_2_5.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_5.D, Q=\dfrtp_2_5.Q
-Replacing adder_demo.$flatten\dfrtp_2_6.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_6.D, Q=\dfrtp_2_6.Q
-Replacing adder_demo.$flatten\dfrtp_2_7.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_7.D, Q=\dfrtp_2_7.Q
-Replacing adder_demo.$flatten\dfrtp_2_8.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_8.D, Q=\dfrtp_2_8.Q
-Replacing adder_demo.$flatten\dfrtp_2_9.$procdff$588 ($adff): ARST=\rst_n, D=\dfrtp_2_9.D, Q=\dfrtp_2_9.Q
+Replacing adder_demo.$flatten\dfrtp_2_1.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_1.D, Q=\dfrtp_2_1.IQ
+Replacing adder_demo.$flatten\dfrtp_2_10.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_10.D, Q=\dfrtp_2_10.IQ
+Replacing adder_demo.$flatten\dfrtp_2_11.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_11.D, Q=\dfrtp_2_11.IQ
+Replacing adder_demo.$flatten\dfrtp_2_12.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_12.D, Q=\dfrtp_2_12.IQ
+Replacing adder_demo.$flatten\dfrtp_2_13.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_13.D, Q=\dfrtp_2_13.IQ
+Replacing adder_demo.$flatten\dfrtp_2_14.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_14.D, Q=\dfrtp_2_14.IQ
+Replacing adder_demo.$flatten\dfrtp_2_15.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_15.D, Q=\dfrtp_2_15.IQ
+Replacing adder_demo.$flatten\dfrtp_2_16.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_16.D, Q=\dfrtp_2_16.IQ
+Replacing adder_demo.$flatten\dfrtp_2_2.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_2.D, Q=\dfrtp_2_2.IQ
+Replacing adder_demo.$flatten\dfrtp_2_3.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_3.D, Q=\dfrtp_2_3.IQ
+Replacing adder_demo.$flatten\dfrtp_2_4.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_4.D, Q=\dfrtp_2_4.IQ
+Replacing adder_demo.$flatten\dfrtp_2_5.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_5.D, Q=\dfrtp_2_5.IQ
+Replacing adder_demo.$flatten\dfrtp_2_6.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_6.D, Q=\dfrtp_2_6.IQ
+Replacing adder_demo.$flatten\dfrtp_2_7.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_7.D, Q=\dfrtp_2_7.IQ
+Replacing adder_demo.$flatten\dfrtp_2_8.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_8.D, Q=\dfrtp_2_8.IQ
+Replacing adder_demo.$flatten\dfrtp_2_9.$procdff$869 ($adff): ARST=\rst_n, D=\dfrtp_2_9.D, Q=\dfrtp_2_9.IQ
 
 8. Executing MITER pass (creating miter circuit).
 Creating miter cell "miter" with gold cell "gold" and gate cell "gate".
@@ -540,218 +764,218 @@ Using SAT solver `minisat`.
 
 Setting up time step 1:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Final init constraint equation: { $flatten\gold.$auto$async2sync.cc:253:execute$18 $flatten\gold.$auto$async2sync.cc:253:execute$16 $flatten\gate.$auto$async2sync.cc:253:execute$698 $flatten\gate.$auto$async2sync.cc:253:execute$696 $flatten\gate.$auto$async2sync.cc:253:execute$694 $flatten\gate.$auto$async2sync.cc:253:execute$692 $flatten\gate.$auto$async2sync.cc:253:execute$690 $flatten\gate.$auto$async2sync.cc:253:execute$688 $flatten\gate.$auto$async2sync.cc:253:execute$686 $flatten\gate.$auto$async2sync.cc:253:execute$684 $flatten\gate.$auto$async2sync.cc:253:execute$682 $flatten\gate.$auto$async2sync.cc:253:execute$680 $flatten\gate.$auto$async2sync.cc:253:execute$678 $flatten\gate.$auto$async2sync.cc:253:execute$676 $flatten\gate.$auto$async2sync.cc:253:execute$674 $flatten\gate.$auto$async2sync.cc:253:execute$672 $flatten\gate.$auto$async2sync.cc:253:execute$670 $flatten\gate.$auto$async2sync.cc:253:execute$668 } = 0
+Imported 299 cells to SAT database.
+Final init constraint equation: { $flatten\gold.$auto$async2sync.cc:253:execute$18 $flatten\gold.$auto$async2sync.cc:253:execute$16 $flatten\gate.$auto$async2sync.cc:253:execute$979 $flatten\gate.$auto$async2sync.cc:253:execute$977 $flatten\gate.$auto$async2sync.cc:253:execute$975 $flatten\gate.$auto$async2sync.cc:253:execute$973 $flatten\gate.$auto$async2sync.cc:253:execute$971 $flatten\gate.$auto$async2sync.cc:253:execute$969 $flatten\gate.$auto$async2sync.cc:253:execute$967 $flatten\gate.$auto$async2sync.cc:253:execute$965 $flatten\gate.$auto$async2sync.cc:253:execute$963 $flatten\gate.$auto$async2sync.cc:253:execute$961 $flatten\gate.$auto$async2sync.cc:253:execute$959 $flatten\gate.$auto$async2sync.cc:253:execute$957 $flatten\gate.$auto$async2sync.cc:253:execute$955 $flatten\gate.$auto$async2sync.cc:253:execute$953 $flatten\gate.$auto$async2sync.cc:253:execute$951 $flatten\gate.$auto$async2sync.cc:253:execute$949 } = 0
 
 Setting up time step 2:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
+Imported 299 cells to SAT database.
 
 Setting up time step 3:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
+Imported 299 cells to SAT database.
 
 Setting up time step 4:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
+Imported 299 cells to SAT database.
 
 Setting up time step 1:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
 ** Trying induction with length 1 **
 
 Setting up time step 5:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 1] Solving problem with 14516 variables and 37934 clauses..
+[base case 1] Solving problem with 7141 variables and 18769 clauses..
 Base case for induction length 1 proven.
 
 Setting up time step 2:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 1] Solving problem with 5686 variables and 14779 clauses..
+[induction step 1] Solving problem with 2736 variables and 7113 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                1         1             1
-  init $flatten\gold.$auto$async2sync.cc:253:execute$16               253        fd      11111101
-  init $flatten\gold.$auto$async2sync.cc:253:execute$18               251        fb      11111011
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                1         1             1
+  init $flatten\gold.$auto$async2sync.cc:253:execute$16                 0         0      00000000
+  init $flatten\gold.$auto$async2sync.cc:253:execute$18                 0         0      00000000
 
 ** Trying induction with length 2 **
 
 Setting up time step 6:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 2] Solving problem with 17535 variables and 45901 clauses..
+[base case 2] Solving problem with 8685 variables and 22903 clauses..
 Base case for induction length 2 proven.
 
 Setting up time step 3:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 2] Solving problem with 8802 variables and 23068 clauses..
+[induction step 2] Solving problem with 4377 variables and 11569 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                1         1             1
-  init $flatten\gold.$auto$async2sync.cc:253:execute$16               252        fc      11111100
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                0         0             0
+  init $flatten\gold.$auto$async2sync.cc:253:execute$16               251        fb      11111011
   init $flatten\gold.$auto$async2sync.cc:253:execute$18               252        fc      11111100
 
 ** Trying induction with length 3 **
 
 Setting up time step 7:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 3] Solving problem with 20651 variables and 54190 clauses..
+[base case 3] Solving problem with 10326 variables and 27359 clauses..
 Base case for induction length 3 proven.
 
 Setting up time step 4:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 3] Solving problem with 12015 variables and 31679 clauses..
+[induction step 3] Solving problem with 6115 variables and 16347 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                1         1             1
-  init $flatten\gold.$auto$async2sync.cc:253:execute$16               236        ec      11101100
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                0         0             0
+  init $flatten\gold.$auto$async2sync.cc:253:execute$16               255        ff      11111111
   init $flatten\gold.$auto$async2sync.cc:253:execute$18               252        fc      11111100
 
 ** Trying induction with length 4 **
 
 Setting up time step 8:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 4] Solving problem with 23864 variables and 62801 clauses..
+[base case 4] Solving problem with 12064 variables and 32137 clauses..
 Base case for induction length 4 proven.
 
 Setting up time step 5:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 4] Solving problem with 15325 variables and 40612 clauses..
+[induction step 4] Solving problem with 7950 variables and 21447 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                0         0             0
   init $flatten\gold.$auto$async2sync.cc:253:execute$16               255        ff      11111111
-  init $flatten\gold.$auto$async2sync.cc:253:execute$18               254        fe      11111110
+  init $flatten\gold.$auto$async2sync.cc:253:execute$18               244        f4      11110100
 
 ** Trying induction with length 5 **
 
 Setting up time step 9:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 5] Solving problem with 27174 variables and 71734 clauses..
+[base case 5] Solving problem with 13899 variables and 37237 clauses..
 Base case for induction length 5 proven.
 
 Setting up time step 6:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 5] Solving problem with 18732 variables and 49867 clauses..
+[induction step 5] Solving problem with 9882 variables and 26869 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                0         0             0
   init $flatten\gold.$auto$async2sync.cc:253:execute$16               255        ff      11111111
   init $flatten\gold.$auto$async2sync.cc:253:execute$18               255        ff      11111111
 
@@ -759,135 +983,135 @@ Induction step failed. Incrementing induction length.
 
 Setting up time step 10:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 6] Solving problem with 30581 variables and 80989 clauses..
+[base case 6] Solving problem with 15831 variables and 42659 clauses..
 Base case for induction length 6 proven.
 
 Setting up time step 7:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 6] Solving problem with 22236 variables and 59444 clauses..
+[induction step 6] Solving problem with 11911 variables and 32613 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                1         1             1
-  init $flatten\gold.$auto$async2sync.cc:253:execute$16               255        ff      11111111
-  init $flatten\gold.$auto$async2sync.cc:253:execute$18                 0         0      00000000
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                1         1             1
+  init $flatten\gold.$auto$async2sync.cc:253:execute$16                 7         7      00000111
+  init $flatten\gold.$auto$async2sync.cc:253:execute$18                15         f      00001111
 
 ** Trying induction with length 7 **
 
 Setting up time step 11:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 7] Solving problem with 34085 variables and 90566 clauses..
+[base case 7] Solving problem with 17860 variables and 48403 clauses..
 Base case for induction length 7 proven.
 
 Setting up time step 8:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 7] Solving problem with 25837 variables and 69343 clauses..
+[induction step 7] Solving problem with 14037 variables and 38679 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                0         0             0
-  init $flatten\gold.$auto$async2sync.cc:253:execute$16                 0         0      00000000
-  init $flatten\gold.$auto$async2sync.cc:253:execute$18               255        ff      11111111
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                0         0             0
+  init $flatten\gold.$auto$async2sync.cc:253:execute$16                 1         1      00000001
+  init $flatten\gold.$auto$async2sync.cc:253:execute$18                63        3f      00111111
 
 ** Trying induction with length 8 **
 
 Setting up time step 12:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 8] Solving problem with 37686 variables and 100465 clauses..
+[base case 8] Solving problem with 19986 variables and 54469 clauses..
 Base case for induction length 8 proven.
 
 Setting up time step 9:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 8] Solving problem with 29535 variables and 79564 clauses..
+[induction step 8] Solving problem with 16260 variables and 45067 clauses..
 Induction step failed. Incrementing induction length.
 
   Time Signal Name                                                    Dec       Hex           Bin
   ---- ------------------------------------------------------ ----------- --------- -------------
-  init $flatten\gate.$auto$async2sync.cc:253:execute$668                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$670                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$672                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$674                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$676                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$678                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$680                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$682                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$684                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$686                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$688                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$690                1         1             1
-  init $flatten\gate.$auto$async2sync.cc:253:execute$692                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$694                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$696                0         0             0
-  init $flatten\gate.$auto$async2sync.cc:253:execute$698                0         0             0
-  init $flatten\gold.$auto$async2sync.cc:253:execute$16               255        ff      11111111
-  init $flatten\gold.$auto$async2sync.cc:253:execute$18                 3         3      00000011
+  init $flatten\gate.$auto$async2sync.cc:253:execute$949                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$951                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$953                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$955                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$957                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$959                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$961                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$963                0         0             0
+  init $flatten\gate.$auto$async2sync.cc:253:execute$965                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$967                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$969                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$971                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$973                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$975                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$977                1         1             1
+  init $flatten\gate.$auto$async2sync.cc:253:execute$979                0         0             0
+  init $flatten\gold.$auto$async2sync.cc:253:execute$16                 3         3      00000011
+  init $flatten\gold.$auto$async2sync.cc:253:execute$18                 1         1      00000001
 
 ** Trying induction with length 9 **
 
 Setting up time step 13:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[base case 9] Solving problem with 41384 variables and 110686 clauses..
+[base case 9] Solving problem with 22209 variables and 60857 clauses..
 Base case for induction length 9 proven.
 
 Setting up time step 10:
 Final constraint equation: { } = { }
-Imported 595 cells to SAT database.
-Import proof for assert: $auto$miter.cc:241:create_miter_equiv$701 when 1'1.
+Imported 299 cells to SAT database.
+Import proof for assert: $auto$miter.cc:241:create_miter_equiv$982 when 1'1.
 
-[induction step 9] Solving problem with 33330 variables and 90107 clauses..
+[induction step 9] Solving problem with 18580 variables and 51777 clauses..
 Induction step proven: SUCCESS!
 
                   /$$$$$$      /$$$$$$$$     /$$$$$$$    
@@ -900,6 +1124,6 @@ Induction step proven: SUCCESS!
                  \____ $$$|__/|________/|__/|_______/|__/
                        \__/                              
 
-End of script. Logfile hash: b37108af4b, time: 0.40s, user: 0.37s, system: 0.03s, MEM: 71.44 MB peak
+End of script. Logfile hash: f5575d6e35, time: 0.22s, user: 0.21s, system: 0.02s, MEM: 41.69 MB peak
 Yosys 0.68+post (git sha1 c12172fbae8af5e20f6fb52e3d4e92d56ed587b6, Release, AppleClang clang++ 17.0.0.17000604)
-Time spent: 90% 1x sat (0 sec), 1% 5x read_verilog (0 sec), ...
+Time spent: 86% 1x sat (0 sec), 5% 5x read_verilog (0 sec), ...
