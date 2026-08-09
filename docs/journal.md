@@ -707,3 +707,67 @@ blocks (functional match, with the gates backing each call)
   reg_enable: 3-bit feedback register, bit order unknown  (27 cells)
   clock_tree: buffers driving the flop clocks  (17 cells)
 ```
+
+## Finding Buses
+
+Before `split_datapath` was looking for a sum, since that's what the warm up was. Now I want to look for more general stuff.
+
+The old implementation was roughly:
+
+1. exhaustively sweep every register-state combination
+2. check whether some net matches bit k of sum(a,b) for each k
+3. if yes, return that as the adder
+
+### Using random vectors as cheaper filter, exhaustively sweep to prove a hypothesis
+
+The new implementation runs the design on a few hundred random register-state combinations instead of every single one:
+
+```py
+def sampled_vectors(
+    simulator: Simulator,
+    registers: list[Register],
+    inputs: dict[str, int],
+    count: int = 256,
+    seed: int = 0,
+):
+    """Every net's behaviour over random register values.
+
+    This is the filter: a few hundred vectors reject essentially every
+    hypothesis that is wrong, and unlike the exhaustive sweep the cost 
+    doesn't depend on register width.
+    """
+    rng = random.Random(seed)
+    combos = [tuple(rng.randrange(1 << r.width) for r in registers) for _ in range(count)]
+    return combos, _probe(simulator, registers, inputs, combos)
+```
+
+256 random vectors "probably" rejects all wrong operator hypotheses. Ie., a net that happens to be equal to `a&b` at 256 separate random trials but isn't actually `a & b` would be quite unlikely.
+
+If the design is small, the surviving hypotheses can be checked exhaustively. Above 20 registers (arbitrary choice for this task), the survivors are labelled as "sampled" to mark them as possible but not confirmed.
+
+Instead of just sum, we can add more operators easily:
+
+```py
+OPERATORS = {
+    "sum": ("+", lambda values: sum(values)),
+    "difference": ("-", lambda values: values[0] - values[1]),
+    "and": ("&", lambda values: values[0] & values[1]),
+    "or": ("|", lambda values: values[0] | values[1]),
+    "xor": ("^", lambda values: values[0] ^ values[1]),
+}
+```
+
+`find_buses` tries each one and keeps whatever's found. Simplified:
+
+```py
+for name, (symbol, compute) in OPERATORS.items():
+    description = f"{registers[0].name} {symbol} {registers[1].name}"
+    for width in range(operand_width + 1, floor - 1, -1):
+        top = {(compute(values) >> (width - 1)) & 1 for values in combos}
+        if len(top) == 1:
+            continue  # constant top bit: the result is narrower
+        bus = find_bus(combos, vectors, compute, width, name, description)
+        ...
+```
+
+Again, this isn't super helpful on its own but I hope it might get me one step closer to having a useful tool that can help deconstruct the real puzzle.

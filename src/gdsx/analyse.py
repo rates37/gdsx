@@ -1,14 +1,22 @@
-"""Analysis of netlist, attempt to simplify/abstract
+"""
+Three steps:
 
-Two steps:
+  * Registers (structural, exact): Flops sharing a control signature (cell
+    type, clock, async reset) are candidates for one register; splitting each
+    control group by data flow separates registers that just share a clock
 
-  * Registers: Flops that feed each other in a line are a shift register,
-        bit order known from the chain order
-  * Operators: Once we know which flops hold which bits, drive the register
-        state directly and sweep the whole input space
+  * Buses (functional): Drive the register state directly and look for nets
+    carrying bit k of some word-level operation on it. Random vectors implement
+    filtering, since a few hundred reject essentially every wrong hypothesis at
+    a lower cost. Survivors are confirmed over the whole state space when that
+    is affordable, and flagged `sampled` when it is not.
+
+  * Operators: Whatever produces the widest bus is one unit and whatever
+    consumes it is another
 """
 
 from __future__ import annotations
+import random
 from dataclasses import dataclass, field
 from itertools import product
 
@@ -266,7 +274,9 @@ def find_registers(nl: Netlist) -> list[Register]:
                     ordered=ordered,
                 )
             )
-    registers.sort(key=lambda r: r.name)  # sort to give stable output so testing is deterministic
+    registers.sort(
+        key=lambda r: r.name
+    )  # sort to give stable output so testing is deterministic
     return registers
 
 
@@ -429,21 +439,23 @@ class Bus:
     nets: list[str]  # uses LSB first
     inverted: list[bool]  # per bit
     description: str
+    #: "proven" over the whole state space, or "sampled" from random vectors
+    tier: str = "sampled"
 
     @property
     def width(self) -> int:
         return len(self.nets)
 
 
-def truth_vectors(
-    simulator: Simulator, registers: list[Register], inputs: dict[str, int]
+def _probe(
+    simulator: Simulator, registers: list[Register], inputs: dict[str, int], combos
 ):
-    """Every net's behaviour over the whole register state space
+    """Run the design for each register-value combination, recording every net
 
-    Returns (combos, {net: bytes}) where each byte string is the net's value at
-    the matching entry of `combos`.
+    Returns mapping {net: bytes} where byte i is that net's value for combos[i]. Byte
+    strings make the later matching a C-speed comparison rather than a Python
+    loop
     """
-    combos = list(product(*(range(1 << r.width) for r in registers)))
     nets = sorted(simulator.netlist.nets)
     columns = {net: bytearray(len(combos)) for net in nets}
     for i, values in enumerate(combos):
@@ -452,28 +464,158 @@ def truth_vectors(
         settled = simulator.settle(inputs)
         for net in nets:
             columns[net][i] = settled.get(net, 0)
-    return combos, {net: bytes(col) for net, col in columns.items()}
+    return {net: bytes(col) for net, col in columns.items()}
+
+
+def truth_vectors(
+    simulator: Simulator, registers: list[Register], inputs: dict[str, int]
+):
+    """Every net's behaviour over the whole register state space"""
+    combos = list(product(*(range(1 << r.width) for r in registers)))
+    return combos, _probe(simulator, registers, inputs, combos)
+
+
+def sampled_vectors(
+    simulator: Simulator,
+    registers: list[Register],
+    inputs: dict[str, int],
+    count: int = 256,
+    seed: int = 0,
+):
+    """Every net's behaviour over random register values
+
+    This is the filter stage: a few hundred vectors reject essentially every
+    wrong hypothesis, and unlike the exhaustive sweep the cost is not cooked.
+    NOTE: Whatever survives still has to be confirmed.
+    """
+    rng = random.Random(seed)
+    combos = [
+        tuple(rng.randrange(1 << r.width) for r in registers) for _ in range(count)
+    ]
+    return combos, _probe(simulator, registers, inputs, combos)
+
+
+# Word-level operations to look for. Each maps the register values
+# to an integer
+OPERATORS = {
+    "sum": ("+", lambda values: sum(values)),
+    "difference": ("-", lambda values: values[0] - values[1]),
+    "and": ("&", lambda values: values[0] & values[1]),
+    "or": ("|", lambda values: values[0] | values[1]),
+    "xor": ("^", lambda values: values[0] ^ values[1]),
+}
 
 
 def find_bus(
-    combos, vectors, bit_value, width: int, name: str, description: str
+    combos, vectors, compute, width: int, name: str, description: str
 ) -> Bus | None:
-    """Look for nets behaving like bits [0..width-1] of `bit_value(values, k)`"""
+    """Look for nets carrying bits 0..width-1 of `compute(values)`"""
+    by_vector: dict[bytes, str] = {}
+    for net, vector in sorted(vectors.items()):
+        by_vector.setdefault(vector, net)
+
     nets, inverted = [], []
     for k in range(width):
-        want = bytes(bit_value(values, k) for values in combos)
-        anti = bytes(1 - b for b in want)
-        match = next((n for n, v in sorted(vectors.items()) if v == want), None)
-        if match is not None:
-            nets.append(match)
+        want = bytes((compute(values) >> k) & 1 for values in combos)
+        if want in by_vector:
+            nets.append(by_vector[want])
             inverted.append(False)
             continue
-        match = next((n for n, v in sorted(vectors.items()) if v == anti), None)
-        if match is None:
+        anti = bytes(1 - b for b in want)
+        if anti not in by_vector:
             return None
-        nets.append(match)
+        nets.append(by_vector[anti])
         inverted.append(True)
     return Bus(name, nets, inverted, description)
+
+
+def cone_nets(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
+    """Every net feeding `nets`, walking back but never through `stop`"""
+    drivers = _drivers(nl)
+    by_name = {i.name: i for i in nl.instances}
+    seen: set[str] = set()
+    stack = list(nets)
+    while stack:
+        net = stack.pop()
+        if net in seen or net in stop or net not in drivers:
+            continue
+        seen.add(net)
+        inst = by_name[drivers[net][0]]
+        if is_sequential(inst.cell):
+            continue
+        cell = lookup(inst.cell)
+        stack.extend(inst.connections[p] for p in cell.inputs if p in inst.connections)
+    return seen
+
+
+def _is_intermediate(nl: Netlist, inner: Bus, outer: Bus) -> bool:
+    """True if `inner` is a step on the way to `outer` rather than a result"""
+    if inner.width >= outer.width:
+        return False
+    upstream = cone_nets(nl, set(outer.nets), set())
+    # Nets the two buses share are part of `outer` already (a ripple adder's
+    # sum bit 0 is its propagate bit 0), so they are not evidence either way.
+    return (set(inner.nets) - set(outer.nets)) <= upstream
+
+
+def find_buses(
+    nl: Netlist,
+    simulator: Simulator,
+    registers: list[Register],
+    inputs: dict[str, int],
+    min_width: int | None = None,
+) -> list[Bus]:
+    """Discover word-level buses
+
+    Filter with random vectors, then confirm survivors exhaustively when the
+    state space is small enough. A bus that only ever matched the sample is
+    reported at the `sampled` tier.
+
+    `min_width` defaults to the operand width: an adder's internals do
+    compute `a0 & b0` and `a0 ^ b0`, so without a floor every adder looks like
+    it also contains a 2-bit AND
+    """
+    if len(registers) != 2:
+        return []
+    operand_width = max(r.width for r in registers)
+    floor = operand_width if min_width is None else min_width
+
+    combos, vectors = sampled_vectors(simulator, registers, inputs)
+    exhaustive = sum(r.width for r in registers) <= 20
+    full_combos, full_vectors = (
+        truth_vectors(simulator, registers, inputs) if exhaustive else (None, None)
+    )
+
+    found = []
+    for name, (symbol, compute) in OPERATORS.items():
+        description = f"{registers[0].name} {symbol} {registers[1].name}"
+        for width in range(operand_width + 1, floor - 1, -1):
+            top = {(compute(values) >> (width - 1)) & 1 for values in combos}
+            if len(top) == 1:
+                continue  # constant top bit: the result is narrower
+            bus = find_bus(combos, vectors, compute, width, name, description)
+            if bus is None:
+                continue
+            if not exhaustive:
+                bus.tier = "sampled"
+                found.append(bus)
+                break
+            confirmed = find_bus(
+                full_combos, full_vectors, compute, width, name, description
+            )
+            if confirmed is not None:  # the random sample did not lie
+                confirmed.tier = "proven"
+                found.append(confirmed)
+                break
+
+    found.sort(key=lambda b: -b.width)
+    return [
+        bus
+        for bus in found
+        if not any(
+            _is_intermediate(nl, bus, other) for other in found if other is not bus
+        )
+    ]
 
 
 def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
@@ -497,36 +639,38 @@ def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
     return found
 
 
+# What to call the logic that produces each kind of bus.
+OPERATOR_UNITS = {
+    "sum": "adder",
+    "difference": "subtractor",
+    "and": "bitwise AND",
+    "or": "bitwise OR",
+    "xor": "bitwise XOR",
+}
+
+
 def split_datapath(
     nl: Netlist, registers: list[Register], output: str, inputs: dict[str, int]
 ):
-    # heavily hard coded to the warmup puzzle
-    if len(registers) != 2 or sum(r.width for r in registers) > 20:
+    """Find the widest internal bus, then split the gates around it
+    """
+    if len(registers) != 2:
         return None
 
     simulator = Simulator(nl)
-    combos, vectors = truth_vectors(simulator, registers, inputs)
-
-    width = max(r.width for r in registers) + 1
-    bus = find_bus(
-        combos,
-        vectors,
-        lambda values, k: (sum(values) >> k) & 1,
-        width,
-        "sum",
-        f"{registers[0].name} + {registers[1].name}",
-    )
-    if bus is None:
+    buses = find_buses(nl, simulator, registers, inputs)
+    if not buses:
         return None
+    bus = buses[0]
 
     flop_outputs = {
         output_net(lookup(inst.cell), inst.connections)
         for inst in nl.instances
         if is_sequential(inst.cell)
     } - {None}
-    adder = cone_instances(nl, set(bus.nets), flop_outputs)
-    comparator = cone_instances(nl, {output}, set(bus.nets) | flop_outputs) - adder
-    return bus, adder, comparator
+    producer = cone_instances(nl, set(bus.nets), flop_outputs)
+    consumer = cone_instances(nl, {output}, set(bus.nets) | flop_outputs) - producer
+    return bus, producer, consumer
 
 
 def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
@@ -583,13 +727,12 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
         split = split_datapath(nl, datapath, out, inputs)
         if split is None:
             continue
-        bus, adder, comparator = split
+        bus, producer, consumer = split
+        unit = OPERATOR_UNITS.get(bus.name, bus.name)
         result.blocks.append(
-            Block(bus.name, f"{bus.width}-bit adder -> {bus.description}", adder)
+            Block(bus.name, f"{bus.width}-bit {unit} -> {bus.description}", producer)
         )
         result.blocks.append(
-            Block(
-                f"cmp_{out}", f"equality comparator on {bus.name} -> {out}", comparator
-            )
+            Block(f"cmp_{out}", f"comparator on {bus.name} -> {out}", consumer)
         )
     return result

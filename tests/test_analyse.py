@@ -2,6 +2,7 @@ import pytest
 import rtl_fixtures
 from gdsx import analyse
 from gdsx.functions import is_sequential
+from gdsx.sim import Simulator
 
 needs_yosys = pytest.mark.skipif(
     not rtl_fixtures.yosys_available(), reason="yosys not installed"
@@ -96,6 +97,68 @@ def test_solutions_are_verified_by_simulation(sample_netlist):
     for values, verified in solutions:
         assert sum(values) == 496
         assert verified
+
+
+# bus discovery with no hypothesis about what the design does
+
+WIDE = """
+module wide(input clk, input rst_n, input a_in, input b_in, output [12:0] s);
+  reg [11:0] a, b;
+  always @(posedge clk or negedge rst_n)
+    if (!rst_n) begin a <= 0; b <= 0; end
+    else begin a <= {a[10:0], a_in}; b <= {b[10:0], b_in}; end
+  assign s = a + b;
+endmodule
+"""
+
+XOR_DESIGN = """
+module xorreg(input clk, input rst_n, input a_in, input b_in, output [3:0] z);
+  reg [3:0] a, b;
+  always @(posedge clk or negedge rst_n)
+    if (!rst_n) begin a <= 0; b <= 0; end
+    else begin a <= {a[2:0], a_in}; b <= {b[2:0], b_in}; end
+  assign z = a ^ b;
+endmodule
+"""
+
+
+def buses_of(nl, inputs):
+    registers = [r for r in analyse.find_registers(nl) if r.width > 1]
+    return analyse.find_buses(nl, Simulator(nl), registers, inputs)
+
+
+def test_sum_bus_found_without_being_told_to_look_for_a_sum(sample_netlist):
+    (bus,) = buses_of(sample_netlist, {"en": 1, "rst_n": 1})
+    assert (bus.name, bus.width, bus.tier) == ("sum", 9, "proven")
+
+
+def test_adder_internals_are_not_reported_as_separate_operators(sample_netlist):
+    """A ripple adder does compute a&b and a^b, but as intermediates"""
+    registers = [r for r in analyse.find_registers(sample_netlist) if r.width > 1]
+    every = analyse.find_buses(
+        sample_netlist,
+        Simulator(sample_netlist),
+        registers,
+        {"en": 1, "rst_n": 1},
+        min_width=2,
+    )
+    assert [b.name for b in every] == ["sum"]
+
+
+@needs_yosys
+def test_a_non_adder_is_identified_as_itself(tmp_path):
+    nl = rtl_fixtures.from_verilog(XOR_DESIGN, "xorreg", tmp_path)
+    (bus,) = buses_of(nl, {})
+    assert bus.name == "xor" and bus.width == 4
+
+
+@needs_yosys
+def test_bus_discovery_works_past_the_enumeration_ceiling(tmp_path):
+    """24 bits of state -- far too many to sweep, but random vectors are cheap."""
+    nl = rtl_fixtures.from_verilog(WIDE, "wide", tmp_path)
+    (bus,) = buses_of(nl, {})
+    assert (bus.name, bus.width) == ("sum", 13)
+    assert bus.tier == "sampled"  # filtered, not proven, so should be "sampled" to label as such
 
 
 def test_sum_bus_is_recovered(sample_netlist):
