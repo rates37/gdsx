@@ -507,9 +507,24 @@ equivalent -- Induction step proven: SUCCESS!
 
 As of right now, all prior mentioned limitations are still present.
 
-
 Committed at 996911b
 
 Added some even more heavily overfitted functions to identify adder and comparator. Useless for the real puzzle but good coding exercise.
 
+## More planning
 
+Currently the library is painfully over fit to the warmup. So before doing more stuff, I'm just going to lay out the plan to generalise / where to go from here.
+
+### (A subset of) Current Issues
+
+- Cell functions are hand-written in `src/gdsx/functions.py`, and only a small subset of the sky130 library is implemented
+
+- `CellFunction` assumes one output, so `fa`/`ha`/`dfbbn`/tri-state cant be represented. I don't know if the real puzzle uses any of these
+
+- Pin direction comes from naming convention
+
+- `find_registers` only recognises shift register chains
+
+- Analysis just enumerates over 2^20 register states, errors if more than 20 registers
+
+- Most of the datapath analysis is overfit, useless in general
