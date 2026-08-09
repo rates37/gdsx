@@ -1,5 +1,62 @@
+import pytest
+import rtl_fixtures
 from gdsx import analyse
 from gdsx.functions import is_sequential
+
+needs_yosys = pytest.mark.skipif(
+    not rtl_fixtures.yosys_available(), reason="yosys not installed"
+)
+
+
+def registers_of(source, top, tmp_path):
+    return analyse.find_registers(rtl_fixtures.from_verilog(source, top, tmp_path))
+
+
+@needs_yosys
+def test_counter_is_one_register_not_eight_flops(tmp_path):
+    (reg,) = registers_of(rtl_fixtures.COUNTER, "counter", tmp_path)
+    assert reg.width == 8
+    assert reg.kind == "feedback register"
+    assert reg.ordered
+
+
+@needs_yosys
+def test_accumulator_groups(tmp_path):
+    (reg,) = registers_of(rtl_fixtures.ACCUMULATOR, "accumulator", tmp_path)
+    assert reg.width == 4
+    assert reg.kind == "feedback register"
+
+
+@needs_yosys
+def test_parallel_load_groups_but_admits_it_cannot_order(tmp_path):
+    (reg,) = registers_of(rtl_fixtures.PARALLEL_LOAD, "parallel_load", tmp_path)
+    assert reg.width == 8
+    assert reg.kind == "parallel register"
+    assert not reg.ordered
+    assert "bit order unknown" in reg.description
+
+
+@needs_yosys
+def test_synthesised_shift_register_matches_the_extracted_one(tmp_path):
+    (reg,) = registers_of(rtl_fixtures.SHIFT_REGISTER, "shifter", tmp_path)
+    assert reg.width == 8
+    assert reg.kind == "shift register"
+    assert reg.ordered and reg.serial_input == "si"
+
+
+@needs_yosys
+def test_registers_sharing_control_are_still_split(tmp_path):
+    regs = registers_of(rtl_fixtures.TWO_REGISTERS, "two_regs", tmp_path)
+    assert [r.width for r in regs] == [4, 4]
+    assert {r.serial_input for r in regs} == {"a_in", "b_in"}
+
+
+@needs_yosys
+def test_operator_identified_on_a_synthesised_design(tmp_path):
+    """End to end on a design the tool has never seen: 4-bit sum == 20."""
+    nl = rtl_fixtures.from_verilog(rtl_fixtures.TWO_REGISTERS, "two_regs", tmp_path)
+    result = analyse.analyse(nl)
+    assert result.operators == ["eq = (reg_a_in + reg_b_in == 20)"]
 
 
 def test_two_eight_bit_shift_registers_are_recovered(sample_netlist):

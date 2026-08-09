@@ -590,3 +590,120 @@ class Sequential:
 ```
 
 This meant the simulator needs to also detect a clock edge, not just the clock net value.
+
+## Analysing More Types of Registers
+
+The old `find_registers` only looked for linearly chained shift registers. Mainly because it was the structure of the warm up puzzle. Now I'm looking past the warm up, so the real puzzle (almost) certainly won't have something like this. So identifying other common register constructs will probably be useful.
+
+### Grouping
+
+The new approach splits into a few steps:
+
+1. Survey all flip flops. For each one, identify what controls it (cell type, clock net, async reset/set), and what it depends on (other FFs and top-level ports reachable through its next state logic).
+
+2. Group by signature. Same clock and reset gives a candidate grouping. The warm up has two separate 8-bit shift registers but they would be in the same candidate group here. So this isn't enough to define a grouping. `_components()` does a walk of the graph over the `depends` relation to split a group into the sub-groups that actually exchange data:
+
+```py
+def _components(members: list[str], info: dict[str, _FlopInfo]) -> list[list[str]]:
+    inside = set(members)
+    # build undirected graph of dependencies
+    adjacency = {m: (info[m].depends & inside) - {m} for m in members}
+    for m, linked in list(adjacency.items()):
+        for other in linked:
+            adjacency[other] = adjacency[other] | {m}  # treat as undirected
+
+    seen: set[str] = set()
+    groups = []
+    # find connected components
+    for start in sorted(members):
+        if start in seen:
+            continue
+        stack, group = [start], []
+        while stack:
+            node = stack.pop()
+            if node in seen:
+                continue
+            seen.add(node)
+            group.append(node)
+            stack.extend(sorted(adjacency[node] - seen))
+        groups.append(sorted(group))
+    return groups
+```
+
+But for parallel loads, it would return 8 single registers, so this can be handled by treating all as a single parallel register.
+
+3. Order the bits by the dependency depth. In simple words "how many other FFs in this group does this FF transitively depend on?"
+
+4. Classify the shape, so we can report something more meaningful than "register"
+
+```py
+def _classify(group: list[str], info: dict[str, _FlopInfo]) -> str:
+    inside = set(group)
+    forward = {f: (info[f].depends & inside) - {f} for f in group}
+    if len(group) > 1 and not any(forward.values()):
+        return "parallel register"  # bits never cross depend, only shared control relates them
+    if all(len(v) <= 1 for v in forward.values()):
+        return "shift register"
+    if any(f in info[f].depends for f in group):
+        return "feedback register"  # counter, accumulator, LFSR, etc.
+    return "register"
+```
+
+
+To test all this I built new circuits since the warm up was too simple(only had shift regs), and the real puzzle is too messy and complex (and I don't know what it is yet). Used AI to generate tests quickly and re-format. It's risky, but it's good enough for now so I can move forward.
+
+
+Even now, attempting to read the sample, does not yield much more insight:
+
+```
+$ uv run gdsx analyse samples/puzzle.gds
+
+blocks (functional match, with the gates backing each call)
+  reg_dfrtp_2_11: 1-bit shift register  (153 cells)
+  reg_dfrtp_2_12: 1-bit shift register  (155 cells)
+  reg_dfrtp_2_13: 2-bit shift register, bit order unknown  (155 cells)
+  reg_dfrtp_2_14: 2-bit shift register, bit order unknown  (157 cells)
+  reg_dfrtp_2_19: 1-bit shift register  (153 cells)
+  reg_dfrtp_2_21: 3-bit feedback register, bit order unknown  (16 cells)
+  reg_dfrtp_2_22: 2-bit shift register, bit order unknown  (155 cells)
+  reg_dfrtp_2_24: 1-bit shift register  (155 cells)
+  reg_dfrtp_2_28: 2-bit shift register, bit order unknown  (155 cells)
+  reg_dfrtp_2_3: 5-bit feedback register  (21 cells)
+  reg_dfrtp_2_30: 2-bit shift register, bit order unknown  (155 cells)
+  reg_dfrtp_2_32: 2-bit shift register, bit order unknown  (157 cells)
+  reg_dfrtp_2_36: 2-bit shift register, bit order unknown  (155 cells)
+  reg_dfrtp_2_44: 3-bit feedback register  (13 cells)
+  reg_dfrtp_2_46: 1-bit shift register  (152 cells)
+  reg_dfrtp_2_61: 6-bit feedback register, bit order unknown  (169 cells)
+  reg_dfrtp_2_62: 2-bit shift register, bit order unknown  (10 cells)
+  reg_dfrtp_2_64: 1-bit shift register  (6 cells)
+  reg_dfrtp_2_65: 1-bit shift register  (8 cells)
+  reg_dfrtp_2_66: 2-bit shift register, bit order unknown  (8 cells)
+  reg_dfrtp_2_68: 2-bit shift register, bit order unknown  (10 cells)
+  reg_dfrtp_2_7: 2-bit shift register, bit order unknown  (155 cells)
+  reg_dfrtp_2_70: 1-bit shift register  (6 cells)
+  reg_dfrtp_2_71: 5-bit parallel register, bit order unknown  (24 cells)
+  reg_dfrtp_2_72: 1-bit shift register  (5 cells)
+  reg_dfrtp_2_75: 1-bit shift register  (5 cells)
+  reg_dfrtp_2_76: 2-bit shift register, bit order unknown  (8 cells)
+  reg_dfrtp_2_80: 1-bit shift register  (6 cells)
+  reg_dfrtp_2_81: 1-bit shift register  (8 cells)
+  reg_dfrtp_2_82: 3-bit shift register, bit order unknown  (53 cells)
+  reg_dfrtp_2_9: 3-bit feedback register  (14 cells)
+  reg_dfstp_2_4: 1-bit shift register  (14 cells)
+  reg_dfxtp_2_1: 2-bit shift register, bit order unknown  (7 cells)
+  reg_dfxtp_2_3: 2-bit shift register, bit order unknown  (6 cells)
+  reg_enable: 3-bit feedback register, bit order unknown  (27 cells)
+  reg_enable: 1-bit shift register  (12 cells)
+  reg_enable: 1-bit shift register  (3 cells)
+  reg_enable: 1-bit shift register  (3 cells)
+  reg_enable: 3-bit shift register  (7 cells)
+  reg_enable: 1-bit shift register  (3 cells)
+  reg_enable: 4-bit feedback register, bit order unknown  (15 cells)
+  reg_enable: 1-bit shift register  (3 cells)
+  reg_enable: 1-bit shift register  (3 cells)
+  reg_enable: 3-bit feedback register, bit order unknown  (15 cells)
+  reg_enable: 1-bit shift register  (7 cells)
+  reg_enable: 3-bit feedback register, bit order unknown  (27 cells)
+  clock_tree: buffers driving the flop clocks  (17 cells)
+```

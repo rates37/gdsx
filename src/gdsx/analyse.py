@@ -12,22 +12,44 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import product
 
-from .functions import clock_nets, data_nets, is_sequential, lookup, output_net
+from .functions import (
+    async_nets,
+    base_name,
+    clock_nets,
+    data_nets,
+    is_sequential,
+    lookup,
+    output_net,
+)
 from .netlist import Netlist
 from .sim import Simulator
 
 
 @dataclass
 class Register:
-    """A group of flip-flops that shift as a unit. `flops` is in bit order, LSB first"""
+    """A group of flip-flops that act as a unit.
+
+    `flops` is in bit order, LSB first
+
+    `ordered` says whether that bit order is real: a shift chain or a carry
+    chain gives each flop a distinct depth in the group's dependency graph, but
+    a parallel-load register's bits are order indistinguishable
+    """
 
     name: str
     flops: list[str]
     serial_input: str | None = None
+    kind: str = "register"
+    ordered: bool = True
 
     @property
     def width(self) -> int:
         return len(self.flops)
+
+    @property
+    def description(self) -> str:
+        order = "" if self.ordered else ", bit order unknown"
+        return f"{self.width}-bit {self.kind}{order}"
 
 
 @dataclass
@@ -91,54 +113,160 @@ def support(nl: Netlist, net: str) -> set[str]:
     return result
 
 
-def find_registers(nl: Netlist) -> list[Register]:
-    """Chain flops into registers by following each flop's data dependency"""
+@dataclass
+class _FlopInfo:
+    signature: tuple  # what controls this flop: cell type, clock, async nets
+    depends: set[str]  # FFs directly in its next-state cone
+    ports: set[str]  # top-level ports in its next-state cone
+
+
+def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
     flops = [i for i in nl.instances if is_sequential(i.cell)]
     names = {f.name for f in flops}
-
-    # Which FF feeds each FF's D input, and which ports it sees
-    feeder: dict[str, str | None] = {}
-    ports_seen: dict[str, set[str]] = {}
+    info = {}
     for f in flops:
         cell = lookup(f.cell)
-        # next_state may involve several pins (a scan flop sees D, SCD and SCE),
+        # next_state may involve several pins,
         # so the data cone is the union over all of them
         deps = set().union(
             *(support(nl, net) for net in data_nets(cell, f.connections))
         )
-        upstream = (deps & names) - {f.name}
-        feeder[f.name] = next(iter(upstream)) if len(upstream) == 1 else None
-        ports_seen[f.name] = {d for d in deps if d in nl.ports}
-
-    # A chain head is a flop nothing else feeds from
-    followers: dict[str, list[str]] = {}
-    for name, src in feeder.items():
-        if src:
-            followers.setdefault(src, []).append(name)
-
-    # Control ports (clock enables, resets) reach every flop
-    # a data port that only one flop sees is that chain's serial input
-    common = set.intersection(*ports_seen.values()) if ports_seen else set()
-
-    heads = [
-        f.name for f in flops if feeder[f.name] is None or feeder[f.name] not in names
-    ]
-    registers = []
-    for head in sorted(heads):
-        chain = [head]
-        while True:
-            nxt = followers.get(chain[-1], [])
-            if len(nxt) != 1:
-                break  # fan-out to two flops: not a linear shift chain
-            chain.append(nxt[0])
-        serial = sorted(ports_seen[head] - common)
-        registers.append(
-            Register(
-                name=f"reg_{serial[0]}" if len(serial) == 1 else f"reg_{head}",
-                flops=chain,
-                serial_input=serial[0] if len(serial) == 1 else None,
-            )
+        info[f.name] = _FlopInfo(
+            signature=(
+                base_name(f.cell),
+                frozenset(clock_nets(cell, f.connections)),
+                frozenset(async_nets(cell, f.connections)),
+            ),
+            depends=deps & names,
+            ports={d for d in deps if d in nl.ports},
         )
+    return info
+
+
+def _components(members: list[str], info: dict[str, _FlopInfo]) -> list[list[str]]:
+    """Split FFs that share control into groups that actually talk to each other"""
+    inside = set(members)
+    adjacency = {m: (info[m].depends & inside) - {m} for m in members}
+    for m, linked in list(adjacency.items()):
+        for other in linked:
+            adjacency[other] = adjacency[other] | {m}  # treat as undirected
+
+    seen: set[str] = set()
+    groups = []
+    for start in sorted(members):
+        if start in seen:
+            continue
+        stack, group = [start], []
+        while stack:
+            node = stack.pop()
+            if node in seen:
+                continue
+            seen.add(node)
+            group.append(node)
+            stack.extend(sorted(adjacency[node] - seen))
+        groups.append(sorted(group))
+    return groups
+
+
+def _transitive_depth(group: list[str], info: dict[str, _FlopInfo]) -> dict[str, int]:
+    """How many other flops of the group each flop transitively depends on"""
+    inside = set(group)
+    reach: dict[str, set[str]] = {}
+
+    def walk(node: str, path: frozenset) -> set[str]:
+        if node in reach:
+            return reach[node]
+        if node in path:
+            return set()  # a cycle: counters depend on themselves
+        out = set()
+        for dep in info[node].depends & inside:
+            out.add(dep)
+            out |= walk(dep, path | {node})
+        reach[node] = out
+        return out
+
+    return {f: len(walk(f, frozenset()) - {f}) for f in group}
+
+
+def _classify(group: list[str], info: dict[str, _FlopInfo]) -> str:
+    inside = set(group)
+    forward = {f: (info[f].depends & inside) - {f} for f in group}
+    if len(group) > 1 and not any(forward.values()):
+        return "parallel register"  # bits never talk, only shared control links them
+    if all(len(v) <= 1 for v in forward.values()):
+        return "shift register"
+    if any(f in info[f].depends for f in group):
+        return "feedback register"  # counter, accumulator, LFSR
+    return "register"
+
+
+def _group_name(
+    group: list[str], info: dict[str, _FlopInfo], common: set[str]
+) -> str | None:
+    """Name a parallel register after the data ports its bits load from"""
+    private = [sorted(info[f].ports - common) for f in group]
+    if not all(len(p) == 1 for p in private):
+        return None
+    names = [p[0] for p in private]
+    prefix = names[0]
+    for name in names[1:]:
+        while not name.startswith(prefix):
+            prefix = prefix[:-1]
+    prefix = prefix.rstrip("_[")
+    return f"reg_{prefix}" if prefix else None
+
+
+def find_registers(nl: Netlist) -> list[Register]:
+    """Group flops into registers.
+
+    Flops that share a control signature (same cell type, clock and async
+    reset) are candidates for one register. That over-groups (warm up
+    design's two shift registers share everything), so each group is
+    then split into the parts that actually exchange data
+    """
+    info = _survey(nl)
+    if not info:
+        return []
+
+    by_signature: dict[tuple, list[str]] = {}
+    for name, flop in info.items():
+        by_signature.setdefault(flop.signature, []).append(name)
+
+    # Control ports reach every flop, a data port only one flop sees is that
+    # group's serial input
+    common = set.intersection(*(f.ports for f in info.values()))
+
+    registers = []
+    for signature in sorted(by_signature, key=str):
+        members = by_signature[signature]
+        groups = _components(members, info)
+        if len(groups) > 1 and all(len(g) == 1 for g in groups):
+            # none of these bits feed each other, so shared control is the only evidence there is
+            # -> they are one parallel-load register
+            groups = [sorted(members)]
+
+        for group in groups:
+            depth = _transitive_depth(group, info)
+            ordered = len(set(depth.values())) == len(group)
+            flops = sorted(group, key=lambda f: (depth[f], f))
+
+            kind = _classify(group, info)
+            head = flops[0]
+            private = sorted(info[head].ports - common)
+            serial = (
+                private[0] if len(private) == 1 and kind == "shift register" else None
+            )
+            name = f"reg_{serial}" if serial else _group_name(group, info, common)
+            registers.append(
+                Register(
+                    name=name or f"reg_{head}",
+                    flops=flops,
+                    serial_input=serial,
+                    kind=kind,
+                    ordered=ordered,
+                )
+            )
+    registers.sort(key=lambda r: r.name)  # sort to give stable output so testing is deterministic
     return registers
 
 
@@ -425,7 +553,7 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
         result.blocks.append(
             Block(
                 reg.name,
-                f"{reg.width}-bit shift register",
+                reg.description,
                 set(reg.flops) | support_gates,
             )
         )

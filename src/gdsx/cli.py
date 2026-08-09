@@ -122,7 +122,7 @@ def analyse(
     console.print("[bold]registers[/]")
     for reg in result.registers:
         source = f" <- {reg.serial_input}" if reg.serial_input else ""
-        console.print(f"  {reg.name}: {reg.width}-bit shift register{source}")
+        console.print(f"  {reg.name}: {reg.description}{source}")
         console.print(f"    [dim]{' -> '.join(reg.flops)}[/]")
 
     console.print("\n[bold]blocks[/] (functional match, with the gates backing each call)")
