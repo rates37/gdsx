@@ -528,3 +528,65 @@ Currently the library is painfully over fit to the warmup. So before doing more 
 - Analysis just enumerates over 2^20 register states, errors if more than 20 registers
 
 - Most of the datapath analysis is overfit, useless in general
+
+## Getting Liberty Data
+
+google/skywater-pdk-libs-sky130_fd_sc_hd on GitHub publishes the data converted to json, one file per cell per drive strength.
+
+Added `tools/fetch_liberty.py` to list the repo tree, pick the lowest drive strength of each cell, pull the file for each, and records the pin directions, output pin functions, and the ff/latch group (for sequential cells). Everything else discarded, as it's not relevant here.
+
+Combined all into `config/sky130_fd_sc_hd.cells.json` for easy use.
+
+### Parsing Boolean Expressoins
+
+The liberty function string is something like "(A1&A2)|B1". Added a parser in `src/gdsx/liberty.py` to parse this. Liberty's syntax: ! or trailing ' is NOT, & or \* or juxtaposition is AND, ^ is XOR, | or + is OR, and 1/0 are constants.
+
+Using a very minimal AST:
+
+```py
+Expr = tuple  # ("var", name) | ("not", e) | ("and"|"or"|"xor", a, b) | ("const", 0|1)
+```
+
+`evaluate(expr: Expr, values: dict[str, int]) -> int` evaluates the expression directly, and `to_verilog(expr: Expr) -> str` converts it to a verilog expression. This is used to generate a more reliable verilog primitive library.
+
+Added tests for this in `tests/test_liberty.py`. Kept the old hand-written lookup table of functions in `tests/hand_functions.py`, and to keep the old tests working. Can be removed eventually.
+
+### Cells with multiple outputs
+
+Another problem from before was that the old cell data class only had a single output. That's fine for simple gates, but there are some more complex sky130 cells like a full adder has SUM and COUT, and dfbbn gives you both Q and Q_N off the same flip flop.
+
+So moved to the following `Cell` data class:
+
+```py
+@dataclass(frozen=True)
+class Cell:
+    name: str  # base name, e.g. "nand2"
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
+    power: tuple[str, ...]
+    functions: dict[str, Expr]  # output pin -> expression
+    sequential: Sequential | None = None
+    tristate: bool = False
+
+    def evaluate(self, values: dict[str, int]) -> dict[str, int]:
+        return {pin: evaluate(expr, values) for pin, expr in self.functions.items()}
+```
+
+This was annoying to refactor because it was already used in a lot of places. Also involved updating the simulator accordingly, as well as the `src/gdsx/analyse.py` too.
+
+### Sequential Elements
+
+The old `FlopFunction` hardcoded pin roles. Liberty already describes teh clocked_on and next_state as expressions, and this gives more general/flexible sequential elements for free.
+
+```py
+@dataclass(frozen=True)
+class Sequential:
+    state_vars: tuple[str, ...]
+    clocked_on: Expr
+    next_state: Expr
+    clear: Expr | None = None
+    preset: Expr | None = None
+    is_latch: bool = False
+```
+
+This meant the simulator needs to also detect a clock edge, not just the clock net value.

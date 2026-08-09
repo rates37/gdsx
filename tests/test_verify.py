@@ -6,8 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from gdsx import netlist, primitives, verify
-from gdsx.functions import COMBINATIONAL
+from gdsx import liberty, netlist, primitives, verify
 
 REFERENCE = Path(__file__).resolve().parents[1] / "samples" / "sample.v"
 
@@ -24,9 +23,12 @@ def test_primitives_cover_every_generic_used(sample_netlist):
             assert f"module {generic} (" in text
 
 
-def test_minterm_expansion_is_exhaustive():
-    for fn in COMBINATIONAL.values():
-        assert primitives._minterms(fn) not in ("", None)
+def test_every_describable_cell_emits_a_module():
+    text = primitives.verilog()
+    describable = [c for c in liberty.library().values() if c.has_behaviour]
+    assert len(describable) > 100
+    for cell in describable:
+        assert f"assign {sorted(cell.functions)[0]} =" in text or cell.is_sequential
 
 
 @needs_yosys

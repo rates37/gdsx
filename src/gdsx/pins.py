@@ -1,5 +1,5 @@
 """
-A pin is a name plus a point on a routing layer. 
+A pin is a name plus a point on a routing layer.
 We never need the pin polygon itself, because the point lands inside whatever
 merged cluster the pin belongs to.
 """
@@ -12,10 +12,24 @@ import klayout.db as db
 
 from .loader import Design
 
-# sky130_fd_sc_hd output pin names. 
-# The library is consistent enough, at least for this puzzle
-# todo: in order to extend to broader applications, find a better way
+# Fallback for cells the library doesn't describe. sky130_fd_sc_hd is
+# consistent enough that the naming convention is fine when there's nothing
+# better
 OUTPUT_PINS = {"X", "Y", "Q", "Q_N", "SUM", "COUT", "COUT_N", "HI", "LO"}
+POWER_PINS = {"VPWR", "VGND", "VPB", "VNB"}
+
+
+def direction_of(cell_name: str, pin: str) -> str:
+    """input / output / power for a pin, from Liberty where the cell is known"""
+    from .functions import base_name
+    from .liberty import library
+
+    if pin in POWER_PINS:
+        return "power"
+    cell = library().get(base_name(cell_name))
+    if cell is not None and (cell.inputs or cell.outputs):
+        return cell.direction(pin)
+    return "output" if pin in OUTPUT_PINS else "input"
 
 
 @dataclass(frozen=True)
@@ -26,13 +40,7 @@ class Pin:
 
     @property
     def is_power(self) -> bool:
-        return self.name in {"VPWR", "VGND", "VPB", "VNB"}
-
-    @property
-    def direction(self) -> str:
-        if self.is_power:
-            return "power"
-        return "output" if self.name in OUTPUT_PINS else "input"
+        return self.name in POWER_PINS
 
 
 class PinOracle:

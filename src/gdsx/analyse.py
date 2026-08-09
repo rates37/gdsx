@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import product
 
-from .functions import FlopFunction, is_sequential, lookup
+from .functions import clock_nets, data_nets, is_sequential, lookup, output_net
 from .netlist import Netlist
 from .sim import Simulator
 
@@ -48,14 +48,19 @@ class Analysis:
 
 
 def _drivers(nl: Netlist) -> dict[str, tuple[str, str]]:
-    """returns mapping of net -> (instance name, output pin) that drives it"""
+    """returns mapping of net -> (instance name, output pin) that drives it
+
+    A cell can drive several nets: `fa` produces SUM and COUT, a `dfbbp` both Q
+    and Q_N.
+    """
     out = {}
     for inst in nl.instances:
-        fn = lookup(inst.cell)
-        if fn and not is_sequential(inst.cell):
-            out[inst.connections[fn.output]] = (inst.name, fn.output)
-        elif isinstance(fn, FlopFunction):
-            out[inst.connections[fn.output]] = (inst.name, fn.output)
+        cell = lookup(inst.cell)
+        if cell is None:
+            continue
+        for pin in cell.functions:
+            if pin in inst.connections:
+                out[inst.connections[pin]] = (inst.name, pin)
     return out
 
 
@@ -81,8 +86,8 @@ def support(nl: Netlist, net: str) -> set[str]:
         if is_sequential(inst.cell):
             result.add(inst_name)
             continue
-        fn = lookup(inst.cell)
-        stack.extend(inst.connections[p] for p in fn.inputs)
+        cell = lookup(inst.cell)
+        stack.extend(inst.connections[p] for p in cell.inputs if p in inst.connections)
     return result
 
 
@@ -95,9 +100,12 @@ def find_registers(nl: Netlist) -> list[Register]:
     feeder: dict[str, str | None] = {}
     ports_seen: dict[str, set[str]] = {}
     for f in flops:
-        fn = lookup(f.cell)
-        deps = support(nl, f.connections[fn.data])
-        # A FF feeding its own D is an enable/hold path
+        cell = lookup(f.cell)
+        # next_state may involve several pins (a scan flop sees D, SCD and SCE),
+        # so the data cone is the union over all of them
+        deps = set().union(
+            *(support(nl, net) for net in data_nets(cell, f.connections))
+        )
         upstream = (deps & names) - {f.name}
         feeder[f.name] = next(iter(upstream)) if len(upstream) == 1 else None
         ports_seen[f.name] = {d for d in deps if d in nl.ports}
@@ -356,8 +364,8 @@ def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
         found.add(inst.name)
         if is_sequential(inst.cell):
             continue
-        fn = lookup(inst.cell)
-        stack.extend(inst.connections[p] for p in fn.inputs)
+        cell = lookup(inst.cell)
+        stack.extend(inst.connections[p] for p in cell.inputs if p in inst.connections)
     return found
 
 
@@ -384,10 +392,10 @@ def split_datapath(
         return None
 
     flop_outputs = {
-        inst.connections[lookup(inst.cell).output]
+        output_net(lookup(inst.cell), inst.connections)
         for inst in nl.instances
         if is_sequential(inst.cell)
-    }
+    } - {None}
     adder = cone_instances(nl, set(bus.nets), flop_outputs)
     comparator = cone_instances(nl, {output}, set(bus.nets) | flop_outputs) - adder
     return bus, adder, comparator
@@ -402,15 +410,18 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
 
     by_name = {i.name: i for i in nl.instances}
     flop_outputs = {
-        by_name[f].connections[lookup(by_name[f].cell).output]
+        output_net(lookup(by_name[f].cell), by_name[f].connections)
         for reg in result.registers
         for f in reg.flops
-    }
+    } - {None}
     for reg in result.registers:
-        data_nets = {
-            by_name[f].connections[lookup(by_name[f].cell).data] for f in reg.flops
-        }
-        support_gates = cone_instances(nl, data_nets, flop_outputs)
+        feeding = set().union(
+            *(
+                data_nets(lookup(by_name[f].cell), by_name[f].connections)
+                for f in reg.flops
+            )
+        )
+        support_gates = cone_instances(nl, feeding, flop_outputs)
         result.blocks.append(
             Block(
                 reg.name,
@@ -419,12 +430,14 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
             )
         )
 
-    clock_nets = {
-        by_name[f].connections[lookup(by_name[f].cell).clock]
-        for reg in result.registers
-        for f in reg.flops
-    }
-    clock_tree = cone_instances(nl, clock_nets, flop_outputs)
+    clocks = set().union(
+        *(
+            clock_nets(lookup(by_name[f].cell), by_name[f].connections)
+            for reg in result.registers
+            for f in reg.flops
+        )
+    )
+    clock_tree = cone_instances(nl, clocks, flop_outputs)
     if clock_tree:
         result.blocks.append(
             Block("clock_tree", "buffers driving the flop clocks", clock_tree)

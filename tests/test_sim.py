@@ -1,14 +1,9 @@
 import pytest
 
 from gdsx import analyse
-from gdsx.functions import COMBINATIONAL, base_name
+from gdsx.liberty import library
+from gdsx.netlist import Instance, Netlist
 from gdsx.sim import Simulator
-
-
-def test_base_name_strips_library_and_drive():
-    assert base_name("sky130_fd_sc_hd__nand2_2") == "nand2"
-    assert base_name("sky130_fd_sc_hd__a21boi_2") == "a21boi"
-    assert base_name("sky130_fd_sc_hd__clkbuf_16") == "clkbuf"
 
 
 @pytest.mark.parametrize(
@@ -29,7 +24,59 @@ def test_base_name_strips_library_and_drive():
     ],
 )
 def test_cell_functions(cell, inputs, expected):
-    assert COMBINATIONAL[cell].evaluate(inputs) == expected
+    assert library()[cell].evaluate(inputs) == {output(cell): expected}
+
+
+def output(cell):
+    (only,) = library()[cell].outputs
+    return only
+
+
+def ripple_carry_netlist(width=4):
+    """A hand-built netlist of full adders
+
+    `fa` has two outputs, which the old single-output cell model could not
+    represent at all
+    """
+    nl = Netlist(top="rca")
+    carry = "cin"
+    for bit in range(width):
+        out = f"cout{bit}"
+        nl.instances.append(
+            Instance(
+                name=f"fa{bit}",
+                cell="sky130_fd_sc_hd__fa_1",
+                connections={
+                    "A": f"a{bit}",
+                    "B": f"b{bit}",
+                    "CIN": carry,
+                    "SUM": f"s{bit}",
+                    "COUT": out,
+                },
+            )
+        )
+        carry = out
+    for inst in nl.instances:
+        for pin, net in inst.connections.items():
+            nl.nets.setdefault(net, []).append(f"{inst.name}/{pin}")
+    nl.ports = {
+        n: ("output" if n.startswith(("s", "cout")) else "input") for n in nl.nets
+    }
+    return nl, width
+
+
+def test_multi_output_cells_simulate():
+    nl, width = ripple_carry_netlist()
+    sim = Simulator(nl)
+    for a in range(1 << width):
+        for b in range(1 << width):
+            inputs = {"cin": 0}
+            inputs.update({f"a{i}": (a >> i) & 1 for i in range(width)})
+            inputs.update({f"b{i}": (b >> i) & 1 for i in range(width)})
+            values = sim.settle(inputs)
+            got = sum(values[f"s{i}"] << i for i in range(width))
+            got |= values[f"cout{width - 1}"] << width
+            assert got == a + b, f"{a} + {b} gave {got}"
 
 
 def test_chain_fixture_simulates(build, make):

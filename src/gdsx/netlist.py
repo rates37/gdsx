@@ -8,9 +8,9 @@ from pathlib import Path
 import klayout.db as db
 
 from .connectivity import Connectivity, trace
-from .functions import FlopFunction, lookup
+from .functions import generic_name, lookup
 from .loader import Design
-from .pins import OUTPUT_PINS, PinOracle
+from .pins import PinOracle, direction_of
 
 
 @dataclass
@@ -45,6 +45,16 @@ class Netlist:
             "floating": self.floating,
             "conflicts": self.conflicts,
         }
+
+
+def _is_driven(nl: Netlist, net: str) -> bool:
+    """True if any cell output pin sits on this net"""
+    cells = {inst.name: inst.cell for inst in nl.instances}
+    for ref in nl.nets[net]:
+        inst, pin = ref.split("/")
+        if direction_of(cells[inst], pin) == "output":
+            return True
+    return False
 
 
 def build(design: Design, conn: Connectivity | None = None) -> Netlist:
@@ -105,8 +115,7 @@ def build(design: Design, conn: Connectivity | None = None) -> Netlist:
         net = names[net_id]
         if net in nl.power_nets or net not in nl.nets:
             continue
-        driven = any(ref.split("/")[1] in OUTPUT_PINS for ref in nl.nets[net])
-        nl.ports[net] = "output" if driven else "input"
+        nl.ports[net] = "output" if _is_driven(nl, net) else "input"
 
     return nl
 
@@ -182,21 +191,21 @@ def to_generic_verilog(nl: Netlist) -> str:
         lines.append("  wire " + ", ".join(chunk) + ";")
     lines.append("")
     for inst in nl.instances:
-        fn = lookup(inst.cell)
-        if fn is None:
-            lines.append(f"  // unmapped cell {inst.cell} ({inst.name})")
+        cell = lookup(inst.cell)
+        if cell is None:
+            lines.append(f"  // no library description for {inst.cell} ({inst.name})")
             continue
-        if isinstance(fn, FlopFunction):
-            pins = [fn.clock, fn.data, fn.output] + ([fn.reset_n] if fn.reset_n else [])
-        else:
-            pins = list(fn.inputs) + [fn.output]
+        pins = [
+            p for p in list(cell.inputs) + list(cell.outputs) if p in inst.connections
+        ]
         conns = ", ".join(f".{p}({inst.connections[p]})" for p in pins)
-        lines.append(f"  {fn.generic} {inst.name} ({conns});")
+        lines.append(f"  {generic_name(inst.cell)} {inst.name} ({conns});")
     lines += ["", "endmodule", ""]
     return "\n".join(lines)
 
 
 def to_dot(nl: Netlist) -> str:
+    cells = {inst.name: inst.cell for inst in nl.instances}
     lines = ["digraph netlist {", "  rankdir=LR;", "  node [shape=box];"]
     for inst in nl.instances:
         lines.append(
@@ -208,7 +217,7 @@ def to_dot(nl: Netlist) -> str:
         lines.append(f'  "{net}" [shape=ellipse, style=dashed];')
         for ref in refs:
             inst, pin = ref.split("/")
-            if pin in {"X", "Y", "Q", "Q_N", "SUM", "COUT"}:
+            if direction_of(cells[inst], pin) == "output":
                 lines.append(f'  "{inst}" -> "{net}" [label="{pin}"];')
             else:
                 lines.append(f'  "{net}" -> "{inst}" [label="{pin}"];')

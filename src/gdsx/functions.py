@@ -1,149 +1,108 @@
-"""What each sky130 cell actually does
+"""What each library cell does
 
-The Boolean expressions follow the sky130_fd_sc_hd definitions. The
-naming convention is regular enough to read off the cell name, e.g.,
-`a21bo` = 2-input AND into an OR with the B input inverted, `o21bai` = the same
-shape with OR/NAND swapped, trailing `i` = inverting output (`Y` not `X`).
+liberty.py does the parsing. this module is the layer the rest of the library talks to.
+It maps a placed cell name (e.g., `sky130_fd_sc_hd__nand2_2`) to its behaviour, names
+the technology-independent equivalent
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Callable
 
+from .liberty import Cell, library, variables
 
-@dataclass(frozen=True)
-class CellFunction:
-    """A combinational cell"""
-
-    generic: str  # technology-independent name, for generic view
-    inputs: tuple[str, ...]
-    output: str
-    fn: Callable[..., int]
-
-    def evaluate(self, values: dict[str, int]) -> int:
-        return self.fn(*(values[p] for p in self.inputs))
-
-
-@dataclass(frozen=True)
-class FlopFunction:
-    """A rising-edge triggered D flip-flop, optional async active-low reset"""
-
-    generic: str
-    data: str = "D"
-    clock: str = "CLK"
-    output: str = "Q"
-    reset_n: str | None = None
-    inverted_output: bool = False
-
-
-def _comb(generic, inputs, output, fn):
-    return CellFunction(generic, tuple(inputs), output, fn)
-
-
-# note: not exhaustive of sky130_fd_sc_hd. list: https://sky130-unofficial.readthedocs.io/en/latest/contents/libraries/sky130_fd_sc_hd/README.html
-COMBINATIONAL: dict[str, CellFunction] = {
-    "and2": _comb("AND2", "AB", "X", lambda a, b: a & b),
-    "and3": _comb("AND3", "ABC", "X", lambda a, b, c: a & b & c),
-    "and4": _comb("AND4", "ABCD", "X", lambda a, b, c, d: a & b & c & d),
-    "and4bb": _comb(
-        "AND4BB",
-        ("A_N", "B_N", "C", "D"),
-        "X",
-        lambda a, b, c, d: (1 - a) & (1 - b) & c & d,
-    ),
-    "or2": _comb("OR2", "AB", "X", lambda a, b: a | b),
-    "or3": _comb("OR3", "ABC", "X", lambda a, b, c: a | b | c),
-    "nand2": _comb("NAND2", "AB", "Y", lambda a, b: 1 - (a & b)),
-    "nand3": _comb("NAND3", "ABC", "Y", lambda a, b, c: 1 - (a & b & c)),
-    "nor2": _comb("NOR2", "AB", "Y", lambda a, b: 1 - (a | b)),
-    "nor3": _comb("NOR3", "ABC", "Y", lambda a, b, c: 1 - (a | b | c)),
-    "xor2": _comb("XOR2", "AB", "X", lambda a, b: a ^ b),
-    "xnor2": _comb("XNOR2", "AB", "Y", lambda a, b: 1 - (a ^ b)),
-    "inv": _comb("INV", "A", "Y", lambda a: 1 - a),
-    "buf": _comb("BUF", "A", "X", lambda a: a),
-    "clkbuf": _comb("BUF", "A", "X", lambda a: a),
-    "clkinv": _comb("INV", "A", "Y", lambda a: 1 - a),
-    "mux2": _comb("MUX2", ("A0", "A1", "S"), "X", lambda a0, a1, s: a1 if s else a0),
-    "mux2i": _comb(
-        "MUX2I", ("A0", "A1", "S"), "Y", lambda a0, a1, s: 1 - (a1 if s else a0)
-    ),
-    # AND-OR / OR-AND families: aXY[b][i] (see module docstring)
-    "a21o": _comb("AO21", ("A1", "A2", "B1"), "X", lambda a1, a2, b1: (a1 & a2) | b1),
-    "a21oi": _comb(
-        "AOI21", ("A1", "A2", "B1"), "Y", lambda a1, a2, b1: 1 - ((a1 & a2) | b1)
-    ),
-    "a21bo": _comb(
-        "AO21B", ("A1", "A2", "B1_N"), "X", lambda a1, a2, b: (a1 & a2) | (1 - b)
-    ),
-    "a21boi": _comb(
-        "AOI21B", ("A1", "A2", "B1_N"), "Y", lambda a1, a2, b: 1 - ((a1 & a2) | (1 - b))
-    ),
-    "a31o": _comb(
-        "AO31",
-        ("A1", "A2", "A3", "B1"),
-        "X",
-        lambda a1, a2, a3, b1: (a1 & a2 & a3) | b1,
-    ),
-    "a31oi": _comb(
-        "AOI31",
-        ("A1", "A2", "A3", "B1"),
-        "Y",
-        lambda a1, a2, a3, b1: 1 - ((a1 & a2 & a3) | b1),
-    ),
-    "a22o": _comb(
-        "AO22",
-        ("A1", "A2", "B1", "B2"),
-        "X",
-        lambda a1, a2, b1, b2: (a1 & a2) | (b1 & b2),
-    ),
-    "a22oi": _comb(
-        "AOI22",
-        ("A1", "A2", "B1", "B2"),
-        "Y",
-        lambda a1, a2, b1, b2: 1 - ((a1 & a2) | (b1 & b2)),
-    ),
-    "o21a": _comb("OA21", ("A1", "A2", "B1"), "X", lambda a1, a2, b1: (a1 | a2) & b1),
-    "o21ai": _comb(
-        "OAI21", ("A1", "A2", "B1"), "Y", lambda a1, a2, b1: 1 - ((a1 | a2) & b1)
-    ),
-    "o21bai": _comb(
-        "OAI21B", ("A1", "A2", "B1_N"), "Y", lambda a1, a2, b: 1 - ((a1 | a2) & (1 - b))
-    ),
-    "o31ai": _comb(
-        "OAI31",
-        ("A1", "A2", "A3", "B1"),
-        "Y",
-        lambda a1, a2, a3, b1: 1 - ((a1 | a2 | a3) & b1),
-    ),
-    "o22ai": _comb(
-        "OAI22",
-        ("A1", "A2", "B1", "B2"),
-        "Y",
-        lambda a1, a2, b1, b2: 1 - ((a1 | a2) & (b1 | b2)),
-    ),
+# Readable names for the common families. Anything not listed keeps its
+# uppercased base name, which is still library-independent and drive-independent.
+GENERIC_ALIASES = {
+    "buf": "BUF",
+    "clkbuf": "BUF",
+    "inv": "INV",
+    "clkinv": "INV",
+    "a21o": "AO21",
+    "a21oi": "AOI21",
+    "a21bo": "AO21B",
+    "a21boi": "AOI21B",
+    "a22o": "AO22",
+    "a22oi": "AOI22",
+    "a31o": "AO31",
+    "a31oi": "AOI31",
+    "a32o": "AO32",
+    "a32oi": "AOI32",
+    "o21a": "OA21",
+    "o21ai": "OAI21",
+    "o21ba": "OA21B",
+    "o21bai": "OAI21B",
+    "o22a": "OA22",
+    "o22ai": "OAI22",
+    "o31a": "OA31",
+    "o31ai": "OAI31",
+    "fa": "FULLADDER",
+    "ha": "HALFADDER",
+    "dfxtp": "DFF",
+    "dfrtp": "DFFR",
+    "dfstp": "DFFS",
+    "dfbbn": "DFFSR",
+    "dlxtp": "DLATCH",
+    "conb": "TIE",
 }
 
-SEQUENTIAL: dict[str, FlopFunction] = {
-    "dfxtp": FlopFunction("DFF"),
-    "dfrtp": FlopFunction("DFFR", reset_n="RESET_B"),
-    "dfrtn": FlopFunction("DFFR", clock="CLK_N", reset_n="RESET_B"),
-    "dfstp": FlopFunction("DFFS", reset_n=None),
-    "dfbbn": FlopFunction("DFFSR", reset_n="RESET_B"),
-    "dlxtp": FlopFunction("DLATCH"),
-}
+
+class UnknownCell(KeyError):
+    pass
 
 
 def base_name(cell: str) -> str:
-    """`sky130_fd_sc_hd__nand2_2` -> `nand2` (strips library prefix and drive)."""
+    """`sky130_fd_sc_hd__nand2_2` -> `nand2` (prefix and drive stripped)"""
     name = cell.split("__", 1)[-1]
     head, _, tail = name.rpartition("_")
     return head if head and tail.isdigit() else name
 
 
-def lookup(cell: str) -> CellFunction | FlopFunction | None:
-    base = base_name(cell)
-    return COMBINATIONAL.get(base) or SEQUENTIAL.get(base)
+def lookup(cell: str) -> Cell | None:
+    """The cell's behaviour or None if the library doesn't describe it"""
+    found = library().get(base_name(cell))
+    return found if found and found.has_behaviour else None
 
 
 def is_sequential(cell: str) -> bool:
-    return base_name(cell) in SEQUENTIAL
+    found = library().get(base_name(cell))
+    return bool(found and found.is_sequential)
+
+
+def generic_name(cell: str) -> str:
+    base = base_name(cell)
+    return GENERIC_ALIASES.get(base, base.upper())
+
+
+# structural queries about a placed sequential cell
+
+
+def _nets_of(cell: Cell, expr, connections: dict[str, str]) -> set[str]:
+    if expr is None:
+        return set()
+    return {connections[pin] for pin in variables(expr) if pin in connections}
+
+
+def state_output_pin(cell: Cell) -> str | None:
+    if not cell.is_sequential:
+        return None
+    positive = ("var", cell.sequential.state_var)
+    return next((pin for pin, expr in cell.functions.items() if expr == positive), None)
+
+
+def output_net(cell: Cell, connections: dict[str, str]) -> str | None:
+    pin = state_output_pin(cell)
+    return connections.get(pin) if pin else None
+
+
+def data_nets(cell: Cell, connections: dict[str, str]) -> set[str]:
+    return _nets_of(cell, cell.sequential.next_state, connections)
+
+
+def clock_nets(cell: Cell, connections: dict[str, str]) -> set[str]:
+    return _nets_of(cell, cell.sequential.clocked_on, connections)
+
+
+def async_nets(cell: Cell, connections: dict[str, str]) -> set[str]:
+    seq = cell.sequential
+    return _nets_of(cell, seq.clear, connections) | _nets_of(
+        cell, seq.preset, connections
+    )
