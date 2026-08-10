@@ -1,5 +1,4 @@
-"""Turn small Verilog modules into netlists, so the analysis can be tested
-"""
+"""Turn small Verilog modules into netlists, so the analysis can be tested"""
 
 from __future__ import annotations
 
@@ -103,7 +102,8 @@ def to_netlist(design: dict, top: str) -> Netlist:
             name=f"{base}_{counters[base]}",
             cell=f"sky130_fd_sc_hd__{base}_1",
             connections={
-                pin_map[port]: net_of(bits[0]) for port, bits in cell["connections"].items()
+                pin_map[port]: net_of(bits[0])
+                for port, bits in cell["connections"].items()
             },
         )
         nl.instances.append(inst)
@@ -170,5 +170,22 @@ module two_regs(input clk, input rst_n, input a_in, input b_in, output eq);
     if (!rst_n) begin a <= 0; b <= 0; end
     else begin a <= {a[2:0], a_in}; b <= {b[2:0], b_in}; end
   assign eq = (a + b == 5'd20);
+endmodule
+"""
+
+TRAFFIC = """
+module traffic(input clk, input rst_n, input req, output go, output warn);
+  localparam RED = 2'd0, GREEN = 2'd1, AMBER = 2'd2;
+  reg [1:0] state;
+  always @(posedge clk or negedge rst_n)
+    if (!rst_n) state <= RED;
+    else case (state)
+      RED:     state <= req ? GREEN : RED;
+      GREEN:   state <= AMBER;
+      AMBER:   state <= RED;
+      default: state <= RED;
+    endcase
+  assign go = (state == GREEN);
+  assign warn = (state == AMBER);
 endmodule
 """

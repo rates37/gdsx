@@ -854,3 +854,91 @@ Since obviously I haven't recovered an actual high level internal representation
 Partial recovery isn't great but again, it can give some indication of the purpose.
 
 See output in `out/adder_demo.rtl.v`. It looks especially good here because the library is already overfit to the warmup puzzle.
+
+## FSMs
+
+It's possible that the real puzzle has an FSM. Yosys has some FSM tools, but those look for RTL level structure, but when converted to primitives, the structure is lost so it's not that helpful.
+
+The idea used here is essentially: load a register with a state, evaluate every next-state for every input combination, and BFS the reachable states from the initial(reset) state.
+
+If a register can reach all values, it's likely data. But an FSMwith a 3-bit encoding that only ever visited 4/8 possible states is likely an FSM.
+
+Thresholding on the ratio of reachable states to total states, we can guess it as an FSM.
+
+This correctly doesn't find any FSMs for the warm up puzzle, since there isn't really any. But it does find some stuff in the real puzzle:
+
+```
+$ uv run gdsx fsm samples/puzzle.gds
+4-state machine in reg_dfrtp_2_21 (3 bits, 50% of the encoding space used)
+  inputs: I, enable
+
+  state    encoding outputs                  transitions
+  S0 (reset) 000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S0 01->S0 10->S0 11->S1
+  S1       010    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S1 01->S1 10->S1 11->S2
+  S2       001    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S2 01->S2 10->S2 11->S3
+  S3       011    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S3 01->S3 10->S3 11->S3
+
+7-state machine in reg_dfrtp_2_61 (6 bits, 11% of the encoding space used)
+  inputs: I, enable
+
+  state    encoding  outputs                  transitions
+  S0 (reset) 000000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S0 01->S0 10->S0 11->S1
+  S1       100100    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S1 01->S2 10->S1 11->S3
+  S2       100000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S2 01->S2 10->S2 11->S3
+  S3       010100    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S3 01->S4 10->S3 11->S5
+  S4       010000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S4 01->S4 10->S4 11->S5
+  S5       110100    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S5 01->S6 10->S5 11->S5
+  S6       110000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S6 01->S6 10->S6 11->S5
+
+4-state machine in reg_dfrtp_2_9 (3 bits, 50% of the encoding space used)
+  inputs: I, enable
+
+  state    encoding outputs                  transitions
+  S0 (reset) 000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S0 01->S0 10->S0 11->S1
+  S1       001    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S1 01->S1 10->S1 11->S2
+  S2       010    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S2 01->S2 10->S2 11->S3
+  S3       011    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S3 01->S3 10->S3 11->S0
+
+11-state machine in reg_enable (4 bits, 69% of the encoding space used)
+  inputs: enable
+
+  state    encoding outputs                  transitions
+  S0 (reset) 0000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S0 1->S1
+  S1       0100    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S1 1->S2
+  S2       0001    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S2 1->S3
+  S3       0101    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S3 1->S4
+  S4       0010    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S4 1->S5
+  S5       0110    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S5 1->S6
+  S6       0011    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S6 1->S7
+  S7       0111    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S7 1->S8
+  S8       1000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S8 1->S9
+  S9       1100    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S9 1->S10
+  S10      1001    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S10 1->S0
+
+2-state machine in reg_enable (3 bits, 25% of the encoding space used)
+  inputs: enable
+
+  state    encoding outputs                  transitions
+  S0 (reset) 111    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S0 1->S1
+  S1       000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 0->S1 1->S1
+
+```
+
+Some interesting stuff here, although mostly likely noise, there is an ELEVEN state FSM that doesnt rely on the input `I`!! It counts through 0,1,2,3,4,5,6,7,8,9, and then goes to 12. But the bit ordering here is completely arbitrary. SO if we instead reorder the bits from [a,b,c,d] to [a,c,d,b] (see table, I might have errored in that ordering), we get a counter 0-10, i.e., a period of 11. That LINES UP with the IDEA I had above about looking for periodicity!
+
+| State | Given encoding `[8, 1, 4, 2]` | Reordered as `[8,4,2,1]` | Count |
+| ----- | ----------------------------- | ------------------------ | ----: |
+| S0    | `0000`                        | `0000`                   |     0 |
+| S1    | `0100`                        | `0001`                   |     1 |
+| S2    | `0001`                        | `0010`                   |     2 |
+| S3    | `0101`                        | `0011`                   |     3 |
+| S4    | `0010`                        | `0100`                   |     4 |
+| S5    | `0110`                        | `0101`                   |     5 |
+| S6    | `0011`                        | `0110`                   |     6 |
+| S7    | `0111`                        | `0111`                   |     7 |
+| S8    | `1000`                        | `1000`                   |     8 |
+| S9    | `1100`                        | `1001`                   |     9 |
+| S10   | `1001`                        | `1010`                   |    10 |
+| S0    | `0000`                        | `0000`                   |     0 |
+
+This might be the first meaningful piece of insight into what the hell the real puzzle is doing. Found at 2:34am on a Tuesday morning. Bed time.

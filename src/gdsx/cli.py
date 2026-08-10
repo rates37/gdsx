@@ -10,6 +10,7 @@ from rich.table import Table
 
 from . import config, connectivity, loader, netlist
 from . import analyse as analysis
+from . import fsm as control
 from . import lift as lifting
 from . import verify as equiv
 from .pins import PinOracle
@@ -176,6 +177,26 @@ def solve(
         loaded = ", ".join(f"{r.serial_input}={v}" for r, v in zip(registers, values))
         mark = "[green]verified[/]" if verified else "[red]FAILED[/]"
         console.print(f"  {loaded}   {mark}")
+
+
+@app.command()
+def fsm(
+    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+):
+    """Recover state machines by exploring each register's reachable states"""
+    nl = netlist.build(_load(gds, tech, top))
+    registers = analysis.find_registers(nl)
+    machines = control.find_state_machines(nl, registers)
+
+    if not machines:
+        console.print(
+            "[yellow]no state machines found[/] -- every register reaches most of its "
+            "encoding space, which is what data registers do"
+        )
+        return
+    for machine in machines:
+        console.print(escape(control.to_table(machine)))
+        console.print()
 
 
 @app.command()
