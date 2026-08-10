@@ -156,6 +156,36 @@ def to_json(nl: Netlist) -> str:
     return json.dumps(nl.to_dict(), indent=2)
 
 
+def to_generic_dict(nl: Netlist) -> dict:
+    """Like `Netlist.to_dict`, but with library cells replaced by generic primitives
+
+    Same instance names and net names, so this stays diffable against the
+    sky130 JSON. Cells the library doesn't describe are dropped, same as
+    `to_generic_verilog`.
+    """
+    d = nl.to_dict()
+    instances = []
+    for inst in nl.instances:
+        cell = lookup(inst.cell)
+        if cell is None:
+            continue
+        pins = list(cell.inputs) + list(cell.outputs)
+        connections = {p: n for p, n in inst.connections.items() if p in pins}
+        instances.append(
+            {
+                "name": inst.name,
+                "cell": generic_name(inst.cell),
+                "connections": connections,
+            }
+        )
+    d["instances"] = instances
+    return d
+
+
+def to_generic_json(nl: Netlist) -> str:
+    return json.dumps(to_generic_dict(nl), indent=2)
+
+
 def to_verilog(nl: Netlist) -> str:
     ports = sorted(nl.ports)
     lines = [
@@ -282,6 +312,7 @@ def write_all(nl: Netlist, outdir: Path) -> list[Path]:
         ("json", to_json(nl)),
         ("v", to_verilog(nl)),
         ("generic.v", to_generic_verilog(nl)),
+        ("generic.json", to_generic_json(nl)),
         ("dot", to_dot(nl)),
     )
     for suffix, text in outputs:
