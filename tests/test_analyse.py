@@ -129,7 +129,8 @@ def buses_of(nl, inputs):
 
 def test_sum_bus_found_without_being_told_to_look_for_a_sum(sample_netlist):
     (bus,) = buses_of(sample_netlist, {"en": 1, "rst_n": 1})
-    assert (bus.name, bus.width, bus.tier) == ("sum", 9, "proven")
+    assert (bus.name, bus.width) == ("sum", 9)
+    assert bus.proven
 
 
 def test_adder_internals_are_not_reported_as_separate_operators(sample_netlist):
@@ -154,11 +155,38 @@ def test_a_non_adder_is_identified_as_itself(tmp_path):
 
 @needs_yosys
 def test_bus_discovery_works_past_the_enumeration_ceiling(tmp_path):
-    """24 bits of state -- far too many to sweep, but random vectors are cheap."""
+    """24 bits of state: inefficient to sweep, but SAT will be fine"""
     nl = rtl_fixtures.from_verilog(WIDE, "wide", tmp_path)
     (bus,) = buses_of(nl, {})
     assert (bus.name, bus.width) == ("sum", 13)
-    assert bus.tier == "sampled"  # filtered, not proven, so should be "sampled" to label as such
+    assert bus.tier == "sat"
+
+
+@needs_yosys
+def test_bus_is_proven_by_sat_not_enumeration(sample_netlist, tmp_path):
+    """The cone really is handed to yosys and really does come back proven"""
+    registers = [r for r in analyse.find_registers(sample_netlist) if r.width > 1]
+    (bus,) = buses_of(sample_netlist, {"en": 1, "rst_n": 1})
+    assert bus.tier == "sat"
+    assert analyse.prove_bus(sample_netlist, bus, registers, tmp_path)
+
+
+@needs_yosys
+def test_sat_rejects_a_bus_that_is_not_what_it_claims(sample_netlist, tmp_path):
+    """Negative control: mislabel the operator and the proof must fail"""
+    registers = [r for r in analyse.find_registers(sample_netlist) if r.width > 1]
+    (bus,) = buses_of(sample_netlist, {"en": 1, "rst_n": 1})
+    bus.name = "xor"  # the sum bus is emphatically not a bitwise xor
+    assert not analyse.prove_bus(sample_netlist, bus, registers, tmp_path)
+
+
+@needs_yosys
+def test_falls_back_to_the_sweep_without_yosys(sample_netlist, monkeypatch):
+    """With no prover confirmation still happens by enumeration"""
+    monkeypatch.setattr("gdsx.verify.available", lambda: False)
+    (bus,) = buses_of(sample_netlist, {"en": 1, "rst_n": 1})
+    assert bus.tier == "exhaustive"
+    assert bus.proven
 
 
 def test_sum_bus_is_recovered(sample_netlist):

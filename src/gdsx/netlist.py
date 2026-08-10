@@ -204,6 +204,51 @@ def to_generic_verilog(nl: Netlist) -> str:
     return "\n".join(lines)
 
 
+def to_cone_verilog(
+    nl: Netlist,
+    name: str,
+    instances: set[str],
+    rename: dict[str, str],
+    outputs: list[str],
+) -> str:
+    """Emit part of the netlist as a standalone module, for proving in isolation
+
+    `rename` maps boundary nets (register outputs, control signals) to the port
+    names the reference model uses, so a miter can match the two by name. Any
+    net the cone reads but does not drive becomes an input
+    """
+    chosen = [inst for inst in nl.instances if inst.name in instances]
+    driven, read = set(), set()
+    for inst in chosen:
+        cell = lookup(inst.cell)
+        if cell is None:
+            continue
+        driven |= {inst.connections[p] for p in cell.functions if p in inst.connections}
+        read |= {inst.connections[p] for p in cell.inputs if p in inst.connections}
+
+    port = lambda net: rename.get(net, net)  # noqa: E731
+    inputs = sorted(port(n) for n in read - driven - nl.power_nets)
+    out_ports = [port(n) for n in outputs]
+    internal = sorted({port(n) for n in driven} - set(out_ports))
+
+    lines = [f"module {name} ({', '.join(inputs + out_ports)});"]
+    if inputs:
+        lines.append(f"  input {', '.join(inputs)};")
+    lines.append(f"  output {', '.join(out_ports)};")
+    for chunk in _chunks(internal, 8):
+        lines.append("  wire " + ", ".join(chunk) + ";")
+    lines.append("")
+    for inst in chosen:
+        cell = lookup(inst.cell)
+        pins = [
+            p for p in list(cell.inputs) + list(cell.outputs) if p in inst.connections
+        ]
+        conns = ", ".join(f".{p}({port(inst.connections[p])})" for p in pins)
+        lines.append(f"  {generic_name(inst.cell)} {inst.name} ({conns});")
+    lines += ["", "endmodule", ""]
+    return "\n".join(lines)
+
+
 def to_dot(nl: Netlist) -> str:
     cells = {inst.name: inst.cell for inst in nl.instances}
     lines = ["digraph netlist {", "  rankdir=LR;", "  node [shape=box];"]

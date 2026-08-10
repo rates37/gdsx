@@ -17,8 +17,11 @@ Three steps:
 
 from __future__ import annotations
 import random
+import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from itertools import product
+from pathlib import Path
 
 from .functions import (
     async_nets,
@@ -29,8 +32,9 @@ from .functions import (
     lookup,
     output_net,
 )
-from .netlist import Netlist
+from .netlist import Netlist, to_cone_verilog
 from .sim import Simulator
+from . import verify
 
 
 @dataclass
@@ -439,12 +443,18 @@ class Bus:
     nets: list[str]  # uses LSB first
     inverted: list[bool]  # per bit
     description: str
-    #: "proven" over the whole state space, or "sampled" from random vectors
+    # how the claim was established: "sat" (proven for all inputs at any
+    # width), "exhaustive" (swept the whole state space), or "sampled"
+    # (matched random vectors only)
     tier: str = "sampled"
 
     @property
     def width(self) -> int:
         return len(self.nets)
+
+    @property
+    def proven(self) -> bool:
+        return self.tier in ("sat", "exhaustive")
 
 
 def _probe(
@@ -558,22 +568,146 @@ def _is_intermediate(nl: Netlist, inner: Bus, outer: Bus) -> bool:
     return (set(inner.nets) - set(outer.nets)) <= upstream
 
 
+# Verilog for each operator, over operand words `a` and `b`.
+OPERATOR_VERILOG = {
+    "sum": "a + b",
+    "difference": "a - b",
+    "and": "a & b",
+    "or": "a | b",
+    "xor": "a ^ b",
+}
+
+
+def _reference_module(
+    bus: Bus, registers: list[Register], extra_inputs: list[str]
+) -> str:
+    """A behavioural model of the candidate bus, for the miter to compare against"""
+    operand_ports = [
+        f"{chr(ord('a') + i)}_{b}"
+        for i, r in enumerate(registers)
+        for b in range(r.width)
+    ]
+    out_ports = [f"y_{k}" for k in range(bus.width)]
+    ports = operand_ports + extra_inputs + out_ports
+
+    lines = [f"module bus_ref ({', '.join(ports)});"]
+    lines.append(f"  input {', '.join(operand_ports + extra_inputs)};")
+    lines.append(f"  output {', '.join(out_ports)};")
+    for i, reg in enumerate(registers):
+        letter = chr(ord("a") + i)
+        bits = ", ".join(f"{letter}_{b}" for b in reversed(range(reg.width)))
+        lines.append(f"  wire [{reg.width - 1}:0] {letter} = {{{bits}}};")
+    lines.append(f"  wire [{bus.width - 1}:0] r = {OPERATOR_VERILOG[bus.name]};")
+    for k, inverted in enumerate(bus.inverted):
+        lines.append(f"  assign y_{k} = {'~' if inverted else ''}r[{k}];")
+    lines += ["endmodule", ""]
+    return "\n".join(lines)
+
+
+def prove_bus(nl: Netlist, bus: Bus, registers: list[Register], workdir) -> bool:
+    """Prove the gates producing `bus` really implement its operator, at any width.
+
+    Cuts the cone between the register outputs and the bus nets out into its own
+    module, and miters it against a behavioral model. Because the cone is
+    combinational this is one SAT query
+    """
+
+    by_name = {i.name: i for i in nl.instances}
+    rename: dict[str, str] = {}
+    for i, reg in enumerate(registers):
+        letter = chr(ord("a") + i)
+        for bit, flop in enumerate(reg.flops):
+            net = output_net(lookup(by_name[flop].cell), by_name[flop].connections)
+            if net is None:
+                return False
+            rename[net] = f"{letter}_{bit}"
+    for k, net in enumerate(bus.nets):
+        rename[net] = f"y_{k}"
+
+    instances = cone_instances(nl, set(bus.nets), set(rename) - set(bus.nets))
+    if not instances:
+        return False
+
+    gate = to_cone_verilog(nl, "bus_gate", instances, rename, bus.nets)
+    extra = sorted(_free_inputs(nl, instances) - set(rename))
+    result = verify.combinational_equivalence(
+        gate,
+        "bus_gate",
+        _reference_module(bus, registers, extra),
+        "bus_ref",
+        workdir,
+        tag=bus.name,
+    )
+    return result.proven
+
+
+@contextmanager
+def _scratch(workdir: Path | None):
+    if workdir is not None:
+        workdir.mkdir(parents=True, exist_ok=True)
+        yield workdir
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            yield Path(tmp)
+
+
+def _confirm(nl, bus, registers, compute, sweep_data, workdir) -> str | None:
+    """Establish a filtered candidate, or reject it. Returns the tier earned.
+
+    SAT first: it is both stronger (all inputs, any width) and faster than
+    sweeping. If yosys is missing or the proof does not come back clean, fall
+    back to the sweep where it is affordable
+    """
+
+    if verify.available():
+        with _scratch(workdir) as directory:
+            try:
+                if prove_bus(nl, bus, registers, directory):
+                    return "sat"
+            except (OSError, verify.YosysMissing):
+                pass
+
+    full_combos, full_vectors = sweep_data()
+    if full_combos is None:
+        return "sampled"
+    confirmed = find_bus(
+        full_combos, full_vectors, compute, bus.width, bus.name, bus.description
+    )
+    if confirmed is None or confirmed.nets != bus.nets:
+        return None
+    return "exhaustive"
+
+
+def _free_inputs(nl: Netlist, instances: set[str]) -> set[str]:
+    """Nets the cone reads but does not drive (i.e. its input nets)"""
+    driven, read = set(), set()
+    for inst in nl.instances:
+        if inst.name not in instances:
+            continue
+        cell = lookup(inst.cell)
+        driven |= {inst.connections[p] for p in cell.functions if p in inst.connections}
+        read |= {inst.connections[p] for p in cell.inputs if p in inst.connections}
+    return read - driven - nl.power_nets
+
+
 def find_buses(
     nl: Netlist,
     simulator: Simulator,
     registers: list[Register],
     inputs: dict[str, int],
     min_width: int | None = None,
+    workdir: Path | None = None,
 ) -> list[Bus]:
-    """Discover word-level buses
+    """Discover word-level buses without being told what to look for.
 
-    Filter with random vectors, then confirm survivors exhaustively when the
-    state space is small enough. A bus that only ever matched the sample is
-    reported at the `sampled` tier.
+    Filter with random vectors, then confirm survivors by SAT where yosys is
+    available, by sweeping the state space where it is not and that is
+    affordable, and otherwise not at all (reported at the `sampled` tier).
 
     `min_width` defaults to the operand width: an adder's internals do
     compute `a0 & b0` and `a0 ^ b0`, so without a floor every adder looks like
-    it also contains a 2-bit AND
+    it also contains a 2-bit AND. A bus that only ever matched the sample is
+    reported at the `sampled` tier.
     """
     if len(registers) != 2:
         return []
@@ -581,10 +715,21 @@ def find_buses(
     floor = operand_width if min_width is None else min_width
 
     combos, vectors = sampled_vectors(simulator, registers, inputs)
-    exhaustive = sum(r.width for r in registers) <= 20
-    full_combos, full_vectors = (
-        truth_vectors(simulator, registers, inputs) if exhaustive else (None, None)
-    )
+
+    # Only pay for the exhaustive sweep if SAT cannot do the confirming, which
+    # for a design of any size it usually can
+    affordable = sum(r.width for r in registers) <= 20
+    swept: tuple | None = None
+
+    def sweep_data():
+        nonlocal swept
+        if swept is None:
+            swept = (
+                truth_vectors(simulator, registers, inputs)
+                if affordable
+                else (None, None)
+            )
+        return swept
 
     found = []
     for name, (symbol, compute) in OPERATORS.items():
@@ -596,17 +741,12 @@ def find_buses(
             bus = find_bus(combos, vectors, compute, width, name, description)
             if bus is None:
                 continue
-            if not exhaustive:
-                bus.tier = "sampled"
-                found.append(bus)
-                break
-            confirmed = find_bus(
-                full_combos, full_vectors, compute, width, name, description
-            )
-            if confirmed is not None:  # the random sample did not lie
-                confirmed.tier = "proven"
-                found.append(confirmed)
-                break
+            tier = _confirm(nl, bus, registers, compute, sweep_data, workdir)
+            if tier is None:
+                continue  # the random sample lied, drop it
+            bus.tier = tier
+            found.append(bus)
+            break
 
     found.sort(key=lambda b: -b.width)
     return [
@@ -639,7 +779,15 @@ def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
     return found
 
 
-# What to call the logic that produces each kind of bus.
+# How a bus claim was established
+EVIDENCE = {
+    "sat": "proven by SAT",
+    "exhaustive": "proven by sweep",
+    "sampled": "random vectors only",
+}
+
+
+# What to call the logic that produces each kind of bus
 OPERATOR_UNITS = {
     "sum": "adder",
     "difference": "subtractor",
@@ -652,8 +800,7 @@ OPERATOR_UNITS = {
 def split_datapath(
     nl: Netlist, registers: list[Register], output: str, inputs: dict[str, int]
 ):
-    """Find the widest internal bus, then split the gates around it
-    """
+    """Find the widest internal bus, then split the gates around it"""
     if len(registers) != 2:
         return None
 
@@ -730,7 +877,11 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
         bus, producer, consumer = split
         unit = OPERATOR_UNITS.get(bus.name, bus.name)
         result.blocks.append(
-            Block(bus.name, f"{bus.width}-bit {unit} -> {bus.description}", producer)
+            Block(
+                bus.name,
+                f"{bus.width}-bit {unit} -> {bus.description}, {EVIDENCE[bus.tier]}",
+                producer,
+            )
         )
         result.blocks.append(
             Block(f"cmp_{out}", f"comparator on {bus.name} -> {out}", consumer)
