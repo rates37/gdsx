@@ -840,3 +840,10 @@ Refactored/integrated in with the existing verify components.
 
 Added `gdsx analyse` to show how it knows something (SAT, exhaustive, sampled). Again cleaned up a lot with Claude.
 
+
+
+## IDEA
+
+Will test later after I finish this analytical path. Since module has 1-bit input, there's couod be some input hardwaer like a UART or something. This would involve periodic counting. (e.g., uart would count start bit, 8 data bits, stop bit, potional parity bit, but basically a counter would be needed to know when to sample/process input).
+
+Toggle clock for X clock cycles, monitor all register contents to see periodicity?
