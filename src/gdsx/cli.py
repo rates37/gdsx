@@ -10,6 +10,7 @@ from rich.table import Table
 
 from . import config, connectivity, loader, netlist
 from . import analyse as analysis
+from . import lift as lifting
 from . import verify as equiv
 from .pins import PinOracle
 
@@ -175,6 +176,48 @@ def solve(
         loaded = ", ".join(f"{r.serial_input}={v}" for r, v in zip(registers, values))
         mark = "[green]verified[/]" if verified else "[red]FAILED[/]"
         console.print(f"  {loaded}   {mark}")
+
+
+@app.command()
+def lift(
+    gds: Path = GdsArg,
+    out: Path = typer.Option(Path("out"), "-o", "--out", help="output directory"),
+    prove: bool = typer.Option(
+        True, "--prove/--no-prove", help="check the lift with yosys"
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+):
+    """Recover RTL from the gate netlist and prove the recovery is faithful"""
+    nl = netlist.build(_load(gds, tech, top))
+    result = lifting.build(nl, analysis.analyse(nl))
+
+    console.print("[bold]recovered[/]")
+    for statement in result.statements:
+        console.print(f"  [green]{escape(statement)}[/]")
+    console.print(
+        f"\n{len(result.lifted)} of {len(result.lifted) + len(result.kept)} cells lifted "
+        f"({result.coverage:.0%}); the rest stay as gates"
+    )
+
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / f"{nl.top}.rtl.v"
+    path.write_text(result.verilog)
+    console.print(f"  wrote {path}")
+
+    if not prove:
+        console.print("[yellow]not proven -- rerun without --no-prove[/]")
+        return
+    try:
+        proof = lifting.prove(nl, result, out)
+    except lifting.verify.YosysMissing as exc:
+        console.print(f"[yellow]{exc}; lift is unverified[/]")
+        raise typer.Exit(1)
+    if proof.proven:
+        console.print(f"[green]lift is faithful[/] -- {proof.summary}")
+    else:
+        console.print(f"[red]lift does NOT match the netlist[/] -- {proof.summary}")
+        raise typer.Exit(1)
 
 
 @app.command()

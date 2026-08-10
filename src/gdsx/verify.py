@@ -10,7 +10,7 @@ from pathlib import Path
 from . import primitives
 
 SCRIPT = """\
-read_verilog {reference}
+read_verilog {primitives} {reference}
 prep -top {top} -flatten
 async2sync
 design -stash gold
@@ -28,10 +28,11 @@ sat -verify -prove-asserts -tempinduct -set-init-zero -seq {seq} miter
 """
 
 
-# Same construction, minus the sequential machinery: a cone of gates has no
-# state so equivalence is a single SAT query
+#: The primitive library is read on both sides: a reference may be pure RTL, or
+#: it may be a hybrid that still instantiates gates.
+#: Same construction, minus the sequential machinery
 COMBINATIONAL_SCRIPT = """\
-read_verilog {reference}
+read_verilog {primitives} {reference}
 prep -top {ref_top} -flatten
 design -stash gold
 

@@ -78,6 +78,8 @@ class Analysis:
     registers: list[Register] = field(default_factory=list)
     blocks: list[Block] = field(default_factory=list)
     operators: list[str] = field(default_factory=list)
+    predicates: list[Predicate] = field(default_factory=list)
+    buses: list[Bus] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
 
@@ -304,10 +306,26 @@ def sweep(
         yield values, simulator.settle(inputs)[output]
 
 
+@dataclass
+class Predicate:
+    """A recognised relation between the registers and a one-bit output"""
+
+    output: str
+    operator: str  # which OPERATORS entry the comparison is over, if any
+    constant: int | None  # the value compared against, for "== k" relations
+    text: str
+
+    def verilog(self, bus_name: str, width: int) -> str | None:
+        """The RTL form given the bus that already carries the operator result"""
+        if self.constant is None:
+            return None
+        return f"({bus_name} == {width}'d{self.constant})"
+
+
 def identify(
     simulator: Simulator, registers: list[Register], output: str, inputs: dict[str, int]
 ):
-    """Name the function of `output` over the register contents, if possible"""
+    """Name the function of `output` over the register contents if possible"""
     if sum(r.width for r in registers) > 20:
         return None, "input space too large to sweep exhaustively"
 
@@ -316,29 +334,34 @@ def identify(
     if not hits:
         return None, f"{output} is never asserted"
 
+    left, right = (r.name for r in registers) if len(registers) == 2 else ("", "")
     if len(registers) == 2:
-        sums = {a + b for a, b in hits}
-        if len(sums) == 1:
-            k = sums.pop()
-            expected = {(a, b) for a, b in truth if a + b == k}
-            if hits == expected:
+        for operator, symbol, combine in (
+            ("sum", "+", lambda a, b: a + b),
+            ("difference", "-", lambda a, b: a - b),
+        ):
+            values = {combine(a, b) for a, b in hits}
+            if len(values) != 1:
+                continue
+            k = values.pop()
+            if hits == {(a, b) for a, b in truth if combine(a, b) == k}:
                 return (
-                    f"{output} = ({registers[0].name} + {registers[1].name} == {k})",
+                    Predicate(
+                        output,
+                        operator,
+                        k,
+                        f"{output} = ({left} {symbol} {right} == {k})",
+                    ),
                     None,
                 )
-        diffs = {a - b for a, b in hits}
-        if len(diffs) == 1:
-            k = diffs.pop()
-            expected = {(a, b) for a, b in truth if a - b == k}
-            if hits == expected:
-                return (
-                    f"{output} = ({registers[0].name} - {registers[1].name} == {k})",
-                    None,
-                )
-        if hits == {(a, b) for a, b in truth if a > b}:
-            return f"{output} = ({registers[0].name} > {registers[1].name})", None
-        if hits == {(a, b) for a, b in truth if a == b}:
-            return f"{output} = ({registers[0].name} == {registers[1].name})", None
+        for relation, symbol in (
+            (lambda a, b: a > b, ">"),
+            (lambda a, b: a == b, "=="),
+        ):
+            if hits == {(a, b) for a, b in truth if relation(a, b)}:
+                return Predicate(
+                    output, "", None, f"{output} = ({left} {symbol} {right})"
+                ), None
 
     return (
         None,
@@ -867,7 +890,8 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
     for out in outputs:
         described, note = identify(simulator, datapath, out, inputs)
         if described:
-            result.operators.append(described)
+            result.operators.append(described.text)
+            result.predicates.append(described)
         if note:
             result.notes.append(note)
 
@@ -875,6 +899,7 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
         if split is None:
             continue
         bus, producer, consumer = split
+        result.buses.append(bus)
         unit = OPERATOR_UNITS.get(bus.name, bus.name)
         result.blocks.append(
             Block(
