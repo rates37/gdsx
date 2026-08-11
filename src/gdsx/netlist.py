@@ -57,10 +57,17 @@ def _is_driven(nl: Netlist, net: str) -> bool:
     return False
 
 
-def build(design: Design, conn: Connectivity | None = None) -> Netlist:
+def build(
+    design: Design, conn: Connectivity | None = None, macros: dict | None = None
+) -> Netlist:
+    """Resolve every instance pin to a net and name the result"""
     tech = design.tech
-    conn = conn or trace(design)
-    oracle = PinOracle(design)
+    oracle = PinOracle(design, macros)
+    if conn is None:
+        from .pins import abstract_shapes, bond_pins
+
+        conn = trace(design, abstract_shapes(design, oracle))
+        bond_pins(design, conn, oracle)
 
     nl = Netlist(top=design.top.name)
 
@@ -69,7 +76,7 @@ def build(design: Design, conn: Connectivity | None = None) -> Netlist:
     # per instance pin
     members: dict[int, set[str]] = defaultdict(set)
     placements = sorted(
-        design.instances(), key=lambda t: (t[0], t[1].disp.y, t[1].disp.x)
+        design.instances(), key=lambda t: (t[0], t[1].disp.y, t[1].disp.x, str(t[1]))
     )
 
     counters: dict[str, int] = defaultdict(int)
