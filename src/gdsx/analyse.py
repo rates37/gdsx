@@ -134,6 +134,11 @@ class _FlopInfo:
     ports: set[str]  # top-level ports in its next-state cone
 
 
+def _roots(nl: Netlist, nets: set[str]) -> frozenset:
+    """What ultimately drives these nets: ports, or the flops behind them"""
+    return frozenset().union(*(support(nl, n) for n in nets)) if nets else frozenset()
+
+
 def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
     flops = [i for i in nl.instances if is_sequential(i.cell)]
     names = {f.name for f in flops}
@@ -145,11 +150,14 @@ def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
         deps = set().union(
             *(support(nl, net) for net in data_nets(cell, f.connections))
         )
+        # Signature on what drives the clock and reset, not on the net itself.
+        # A buffered clock tree gives every few flops their own clock net, which
+        # would otherwise split one register into a group per buffer
         info[f.name] = _FlopInfo(
             signature=(
                 base_name(f.cell),
-                frozenset(clock_nets(cell, f.connections)),
-                frozenset(async_nets(cell, f.connections)),
+                _roots(nl, clock_nets(cell, f.connections)),
+                _roots(nl, async_nets(cell, f.connections)),
             ),
             depends=deps & names,
             ports={d for d in deps if d in nl.ports},
@@ -251,6 +259,7 @@ def find_registers(nl: Netlist) -> list[Register]:
     common = set.intersection(*(f.ports for f in info.values()))
 
     registers = []
+    used_names: set[str] = set()
     for signature in sorted(by_signature, key=str):
         members = by_signature[signature]
         groups = _components(members, info)
@@ -271,9 +280,13 @@ def find_registers(nl: Netlist) -> list[Register]:
                 private[0] if len(private) == 1 and kind == "shift register" else None
             )
             name = f"reg_{serial}" if serial else _group_name(group, info, common)
+            name = name or f"reg_{head}"
+            while name in used_names:  # two groups can want the same data port
+                name += "_"
+            used_names.add(name)
             registers.append(
                 Register(
-                    name=name or f"reg_{head}",
+                    name=name,
                     flops=flops,
                     serial_input=serial,
                     kind=kind,
