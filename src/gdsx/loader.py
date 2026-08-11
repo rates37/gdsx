@@ -126,12 +126,13 @@ class Inspection:
     # Whether logic-cell definitions include the routing data needed for
     # extraction
     self_contained: bool
+    pin_source: str
 
     # Top-level text labels as (label, routing layer name)
     top_labels: list[tuple[str, str]]
 
 
-def inspect(design: Design) -> Inspection:
+def inspect(design: Design, macros: dict | None = None) -> Inspection:
     """Inspect a loaded design and summarize its contents"""
     tech = design.tech
 
@@ -156,11 +157,20 @@ def inspect(design: Design) -> Inspection:
     # Determine whether the layout contains complete standard-cell geometry
     # rather than empty abstract frames
     self_contained = False
+    pin_source = "none"
     if logic:
         probe = design.layout.cell(next(iter(logic)))
         li1_pin = design.index_of(tech.layer("li1").pin)
-
         self_contained = li1_pin is not None and probe.shapes(li1_pin).size() > 0
+        if self_contained:
+            pin_source = "in-GDS labels"
+        elif macros and set(logic) <= set(macros):
+            pin_source = "LEF abstracts"
+        elif macros:
+            missing = len(set(logic) - set(macros))
+            pin_source = f"LEF abstracts ({missing} cells missing)"
+        else:
+            pin_source = "unavailable"
 
     # Collect top-level text labels from each routing layer's pin layer
     top_labels = []
@@ -182,5 +192,6 @@ def inspect(design: Design) -> Inspection:
         nonlogic_cells=nonlogic,
         unknown_cells=unknown,
         self_contained=self_contained,
+        pin_source=pin_source,
         top_labels=sorted(top_labels),
     )

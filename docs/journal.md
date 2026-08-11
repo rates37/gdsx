@@ -942,3 +942,29 @@ Some interesting stuff here, although mostly likely noise, there is an ELEVEN st
 | S0    | `0000`                        | `0000`                   |     0 |
 
 This might be the first meaningful piece of insight into what the hell the real puzzle is doing. Found at 2:34am on a Tuesday morning. Bed time.
+
+## Aside: LEF reader
+
+Since I wanted to turn this into a general use library eventually, I started collecting some ideas for features that would make this more generally useful. One idea was incorporating ability to read pins from LEF files. This warmup puzzle and the real one has text labels in the GDS, but in general the gds file isn't required to have that, and in those cases, the LEF file is teh source of truth for the pin names/locations for each cell.
+
+This feature was mostly implemented by AI, since it isn't particularly important for the puzzle specifically, so may need "de-slopping" in the future.
+
+The parser in `src/gdsx/lef.py` just parses what the `PinOracle` object needs, ignoring everything else. No need to make a full parser, way too complex and mostly irrelevant.
+
+`_dbu(value: str, scale: float) -> int` does the conversion from microns to the GDS's internal integer grid units.
+
+`tools/fetch_lef.py` pulls the LEF files for the cells a given .gds file uses. Currently just the sky130_fd_sc_hd library.
+
+Then added the lef approach to the `PinOracle.pins` method to act as a fallback.
+
+Based on how I feel later, may or may not remove this feature. Still undecided atm.
+
+### Uncovered a Bug
+
+Implementing this uncovered a bug in `Netlist.build`. It was originally sorting instances by `(cell_name, y, x)` to get a stable placement order, but the warm up design had two cells sitting at the exact same point in different orientations. Since position alone doesn't tie break, added the transform string into the sorting key to make the results deterministic:
+
+```py
+placements = sorted(
+    design.instances(), key=lambda t: (t[0], t[1].disp.y, t[1].disp.x, str(t[1]))
+)
+```

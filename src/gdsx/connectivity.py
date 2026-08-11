@@ -1,9 +1,9 @@
 """Flatten the routing, merge it per layer, stitch via vias
 
-  1. On one layer, anything that touches is one thing  -> ``Region.merged()``
-     gives clusters on that layer.
-  2. A via connects the cluster under it to the cluster above it -> union-find
-  3. A cell pin is a point; whichever cluster contains that point is its net
+1. On one layer, anything that touches is one thing  -> ``Region.merged()``
+   gives clusters on that layer.
+2. A via connects the cluster under it to the cluster above it -> union-find
+3. A cell pin is a point; whichever cluster contains that point is its net
 """
 
 from __future__ import annotations
@@ -31,13 +31,13 @@ class UnionFind:
         while self.parent[root] != root:
             root = self.parent[root]
 
-        while self.parent[x] != root: # path compress
+        while self.parent[x] != root:  # path compress
             self.parent[x], x = root, self.parent[x]
 
         return root
 
     def union(self, a: int, b: int) -> None:
-        # union by size 
+        # union by size
         ra, rb = self.find(a), self.find(b)
 
         if ra == rb:
@@ -100,14 +100,20 @@ def _region(design: Design, ld: tuple[int, int]) -> db.Region:
     return db.Region(design.top.begin_shapes_rec(idx))
 
 
-def trace(design: Design) -> Connectivity:
+def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
+    """Trace connectivity. `extra` adds shapes per routing layer
+    """
     uf = UnionFind()
     conn = Connectivity(uf=uf)
+    extra = extra or {}
 
     # 1. Per-layer merge: Drawing and pin purposes go in together so that a pin
     # drawn only on the pin layer still fuses with the wire that touches it
     for rl in design.tech.routing:
-        region = (_region(design, rl.drawing) + _region(design, rl.pin)).merged()
+        region = _region(design, rl.drawing) + _region(design, rl.pin)
+        for box in extra.get(rl.name, ()):
+            region.insert(box)
+        region = region.merged()
         polys, ids = [], []
         for poly in region.each():
             polys.append(poly)

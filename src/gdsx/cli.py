@@ -25,27 +25,49 @@ TechOpt = typer.Option(
     None, "--tech", help="layer-map YAML (default: config/sky130.yaml)"
 )
 TopOpt = typer.Option(None, "--top", help="top cell name (default: auto-detect)")
+LefOpt = typer.Option(
+    None,
+    "--lef",
+    exists=True,
+    help="LEF abstracts, for a GDS that only references its cells",
+)
 
 
 def _load(gds: Path, tech: Optional[Path], top: Optional[str]) -> loader.Design:
     return loader.load(gds, config.load(tech), top)
 
 
+def _macros(design: loader.Design, path: Optional[Path]) -> dict:
+    if path is None:
+        return {}
+    from . import lef
+
+    return lef.read(path, design.dbu)
+
+
+def _build(gds: Path, tech, top, lef_path) -> "netlist.Netlist":
+    design = _load(gds, tech, top)
+    return netlist.build(design, macros=_macros(design, lef_path))
+
+
 @app.command()
 def inspect(
-    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+    gds: Path = GdsArg,
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Report hierarchy, layers, cell mix and whether the GDS is self-contained"""
     design = _load(gds, tech, top)
-    report = loader.inspect(design)
+    report = loader.inspect(design, _macros(design, lef))
 
     console.print(
         f"[bold]{report.top}[/]  dbu={report.dbu}  layers={len(report.layers)}"
     )
     console.print(
-        "pin source: [green]in-GDS labels[/]"
+        f"pin source: [green]{report.pin_source}[/]"
         if report.self_contained
-        else "pin source: [red]unavailable[/] (cells are abstract, need PDK LEF)"
+        else f"pin source: [red]{report.pin_source}[/] (cells are abstract; supply --lef)"
     )
 
     table = Table("kind", "cells", "instances")
@@ -68,11 +90,14 @@ def inspect(
 
 @app.command()
 def pins(
-    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+    gds: Path = GdsArg,
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Dump the pin oracle for every logic cell used in the design"""
     design = _load(gds, tech, top)
-    oracle = PinOracle(design)
+    oracle = PinOracle(design, _macros(design, lef))
     used = {name for name, _ in design.instances() if design.tech.is_logic_cell(name)}
     for cell in sorted(used):
         names = sorted({p.name for p in oracle.pins(cell)})
@@ -85,11 +110,12 @@ def extract(
     out: Path = typer.Option(Path("out"), "-o", "--out", help="output directory"),
     tech: Optional[Path] = TechOpt,
     top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Trace the routing and write the netlist (Verilog + JSON + dot)"""
     design = _load(gds, tech, top)
+    nl = netlist.build(design, macros=_macros(design, lef))
     conn = connectivity.trace(design)
-    nl = netlist.build(design, conn)
 
     console.print(
         f"{len(nl.instances)} instances, {len(nl.nets)} nets "
@@ -115,11 +141,14 @@ def extract(
 
 @app.command()
 def analyse(
-    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+    gds: Path = GdsArg,
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Recover registers and identify what the logic computes"""
 
-    nl = netlist.build(_load(gds, tech, top))
+    nl = _build(gds, tech, top, lef)
     result = analysis.analyse(nl)
 
     console.print("[bold]registers[/]")
@@ -159,10 +188,11 @@ def solve(
     limit: int = typer.Option(10, "--limit", help="how many solutions to report"),
     tech: Optional[Path] = TechOpt,
     top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Work out how to drive the design so an output goes high"""
 
-    nl = netlist.build(_load(gds, tech, top))
+    nl = _build(gds, tech, top, lef)
     mode, solutions = analysis.solve(nl, output, limit)
     if mode is None:
         console.print("[red]could not work out how to load the registers[/]")
@@ -181,10 +211,13 @@ def solve(
 
 @app.command()
 def fsm(
-    gds: Path = GdsArg, tech: Optional[Path] = TechOpt, top: Optional[str] = TopOpt
+    gds: Path = GdsArg,
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Recover state machines by exploring each register's reachable states"""
-    nl = netlist.build(_load(gds, tech, top))
+    nl = _build(gds, tech, top, lef)
     registers = analysis.find_registers(nl)
     machines = control.find_state_machines(nl, registers)
 
@@ -208,9 +241,10 @@ def lift(
     ),
     tech: Optional[Path] = TechOpt,
     top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Recover RTL from the gate netlist and prove the recovery is faithful"""
-    nl = netlist.build(_load(gds, tech, top))
+    nl = _build(gds, tech, top, lef)
     result = lifting.build(nl, analysis.analyse(nl))
 
     console.print("[bold]recovered[/]")
@@ -252,9 +286,10 @@ def verify(
     ),
     tech: Optional[Path] = TechOpt,
     top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
 ):
     """Prove the extracted netlist equivalent to a reference RTL (needs yosys installed)"""
-    nl = netlist.build(_load(gds, tech, top))
+    nl = _build(gds, tech, top, lef)
     paths = netlist.write_all(nl, out)
     generic = next(p for p in paths if p.name.endswith(".generic.v"))
 

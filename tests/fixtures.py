@@ -144,3 +144,14 @@ def chain(path: Path, stages: int = 5) -> Path:
     fx.label("head", "u0/A")
     fx.label("tail", f"u{stages - 1}/Y")
     return fx.save(path)
+
+
+def abstract(path: Path, source: Path = SAMPLE) -> Path:
+    """Strip the library cells' contents, leaving only references to them"""
+    layout = db.Layout()
+    layout.read(str(source))
+    for cell in layout.each_cell():
+        if cell.name.startswith("sky130_fd_sc_hd__"):
+            cell.clear()
+    layout.write(str(path))
+    return path
