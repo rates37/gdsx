@@ -968,3 +968,393 @@ placements = sorted(
     design.instances(), key=lambda t: (t[0], t[1].disp.y, t[1].disp.x, str(t[1]))
 )
 ```
+
+## Attempting to find stuff out about the puzzle
+
+I've spent a while implementing features, there are still more to implement but I want to start trying to use the tool since that will likely give me a better idea of what features to implement next to help the search.
+
+```
+$ uv run gdsx inspect samples/puzzle.gds
+puzzle  dbu=0.001  layers=41
+pin source: in-GDS labels
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━┓
+┃ kind                       ┃ cells ┃ instances ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━┩
+│ logic                      │ 66    │ 728       │
+│ non-logic (tap/decap/fill) │ 3     │ 890       │
+│ other (via/unknown)        │ 11    │ 8257      │
+└────────────────────────────┴───────┴───────────┘
+
+logic cells
+    84 x sky130_fd_sc_hd__dfrtp_2
+    49 x sky130_fd_sc_hd__nor2_2
+    39 x sky130_fd_sc_hd__nand2_2
+    31 x sky130_fd_sc_hd__o21a_2
+    30 x sky130_fd_sc_hd__and2b_2
+    29 x sky130_fd_sc_hd__xnor2_2
+    26 x sky130_fd_sc_hd__a31o_2
+    26 x sky130_fd_sc_hd__and3_2
+    25 x sky130_fd_sc_hd__inv_2
+    24 x sky130_fd_sc_hd__nand2b_2
+    23 x sky130_fd_sc_hd__a22o_2
+    21 x sky130_fd_sc_hd__xor2_2
+    21 x sky130_fd_sc_hd__mux2_1
+    20 x sky130_fd_sc_hd__a21oi_2
+    19 x sky130_fd_sc_hd__a21o_2
+    18 x sky130_fd_sc_hd__or3_2
+    17 x sky130_fd_sc_hd__and2_2
+    16 x sky130_fd_sc_hd__clkbuf_8
+    15 x sky130_fd_sc_hd__clkbuf_4
+    15 x sky130_fd_sc_hd__nand4_2
+    14 x sky130_fd_sc_hd__and4bb_2
+    13 x sky130_fd_sc_hd__or2_2
+    12 x sky130_fd_sc_hd__o211a_2
+    11 x sky130_fd_sc_hd__o31a_2
+    10 x sky130_fd_sc_hd__or4_2
+     9 x sky130_fd_sc_hd__or4b_2
+     8 x sky130_fd_sc_hd__and4_2
+     6 x sky130_fd_sc_hd__o21ai_2
+     6 x sky130_fd_sc_hd__a221o_2
+     6 x sky130_fd_sc_hd__conb_1
+     5 x sky130_fd_sc_hd__a211o_2
+     5 x sky130_fd_sc_hd__a32o_2
+     5 x sky130_fd_sc_hd__nor3b_2
+     4 x sky130_fd_sc_hd__a21boi_2
+     4 x sky130_fd_sc_hd__dfxtp_2
+     4 x sky130_fd_sc_hd__and4b_2
+     4 x sky130_fd_sc_hd__nor3_2
+     4 x sky130_fd_sc_hd__dfstp_2
+     4 x sky130_fd_sc_hd__o22a_2
+     4 x sky130_fd_sc_hd__and3b_2
+     4 x sky130_fd_sc_hd__o32a_2
+     3 x sky130_fd_sc_hd__a211oi_2
+     3 x sky130_fd_sc_hd__o221a_2
+     2 x sky130_fd_sc_hd__o21ba_2
+     2 x sky130_fd_sc_hd__nand3_2
+     2 x sky130_fd_sc_hd__nor4_2
+     2 x sky130_fd_sc_hd__nor4b_2
+     2 x sky130_fd_sc_hd__o311a_2
+     2 x sky130_fd_sc_hd__o22ai_2
+     2 x sky130_fd_sc_hd__a311o_2
+     2 x sky130_fd_sc_hd__a21bo_2
+     2 x sky130_fd_sc_hd__o31ai_2
+     1 x sky130_fd_sc_hd__clkbuf_16
+     1 x sky130_fd_sc_hd__a2111oi_2
+     1 x sky130_fd_sc_hd__a22oi_2
+     1 x sky130_fd_sc_hd__or3b_2
+     1 x sky130_fd_sc_hd__a221oi_2
+     1 x sky130_fd_sc_hd__a41oi_2
+     1 x sky130_fd_sc_hd__or4bb_2
+     1 x sky130_fd_sc_hd__buf_2
+     1 x sky130_fd_sc_hd__nand3b_2
+     1 x sky130_fd_sc_hd__o2bb2a_2
+     1 x sky130_fd_sc_hd__a31oi_2
+     1 x sky130_fd_sc_hd__o32ai_2
+     1 x sky130_fd_sc_hd__o21bai_2
+     1 x sky130_fd_sc_hd__o211ai_2
+
+top-level labels
+  I  (met3)
+  O[0]  (met3)
+  O[1]  (met3)
+  O[2]  (met3)
+  O[3]  (met3)
+  O[4]  (met3)
+  O[5]  (met3)
+  O[6]  (met3)
+  O[7]  (met3)
+  VGND  (met4)
+  VGND  (met5)
+  VPWR  (met4)
+  VPWR  (met5)
+  clk  (met3)
+  enable  (met3)
+  rst_n  (met3)
+  success  (met3)
+```
+
+So the ports are: serial `I`, 8-bit `O[7:0]`, `clk`, `enable`, `rst_n`, and `success`. This lines up with the sample vcd.
+
+Extracting:
+
+```
+uv run gdsx extract samples/puzzle.gds -o out
+```
+
+```py
+import json
+d=json.load(open('out/puzzle.json'))
+print('floating', len(d['floating']), 'conflicts', len(d['conflicts']), 'power', d['power_nets'])
+from gdsx.pins import direction_of
+cells={i['name']:i['cell'] for i in d['instances']}
+multi=[];und=[]
+for n,refs in d['nets'].items():
+    if n in d['power_nets']: continue
+    drv=[r for r in refs if direction_of(cells[r.split('/')[0]], r.split('/')[1])=='output']
+    if len(drv)>1: multi.append(n)
+    if not drv: und.append(n)
+print('multi-driven:', multi)
+print('undriven:', und)
+print('nets', len(d['nets']))
+```
+
+Output:
+
+```
+floating 0 conflicts 0 power ['VGND', 'VPWR']
+multi-driven: []
+undriven: ['I', 'n4692', 'enable', 'clk', 'rst_n']
+nets 741
+```
+
+```py
+import json
+d=json.load(open('out/puzzle.json'))
+print('n4692:', d['nets']['n4692'])
+```
+
+Output:
+
+```
+n4692: ['a311o_2_2/A1', 'a31oi_2_1/A1']
+```
+
+So `n4692` is the only net that is undriven and not a top level port. Possibly an easter egg?
+
+```py
+from gdsx import config, loader, netlist, analyze
+from gdsx.functions import is_sequential
+nl = netlist.build(loader.load('samples/puzzle.gds', config.load()))
+regs = analyze.find_registers(nl)
+print('%d flops in %d registers'%(sum(1 for i in nl.instances if is_sequential(i.cell)), len(regs)))
+for r in regs: print('  %-22s %s serial=%s' % (r.name, r.description, r.serial_input))
+print()
+dep = analyze.support(nl, 'success')
+print('success depends on %d flops + ports %s' % (len([d for d in dep if not d in nl.ports]), sorted(d for d in dep if d in nl.ports)))
+```
+
+Output:
+
+```
+92 flops in 46 registers
+  reg_dfrtp_2_11         1-bit shift register serial=None
+  reg_dfrtp_2_12         1-bit shift register serial=None
+  reg_dfrtp_2_13         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_14         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_19         1-bit shift register serial=None
+  reg_dfrtp_2_21         3-bit feedback register, bit order unknown serial=None
+  reg_dfrtp_2_22         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_24         1-bit shift register serial=None
+  reg_dfrtp_2_28         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_3          5-bit feedback register serial=None
+  reg_dfrtp_2_30         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_32         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_36         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_44         3-bit feedback register serial=None
+  reg_dfrtp_2_46         1-bit shift register serial=None
+  reg_dfrtp_2_61         6-bit feedback register, bit order unknown serial=None
+  reg_dfrtp_2_62         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_64         1-bit shift register serial=None
+  reg_dfrtp_2_65         1-bit shift register serial=None
+  reg_dfrtp_2_66         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_68         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_7          2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_70         1-bit shift register serial=None
+  reg_dfrtp_2_71         5-bit parallel register, bit order unknown serial=None
+  reg_dfrtp_2_72         1-bit shift register serial=None
+  reg_dfrtp_2_75         1-bit shift register serial=None
+  reg_dfrtp_2_76         2-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_80         1-bit shift register serial=None
+  reg_dfrtp_2_81         1-bit shift register serial=None
+  reg_dfrtp_2_82         3-bit shift register, bit order unknown serial=None
+  reg_dfrtp_2_9          3-bit feedback register serial=None
+  reg_dfstp_2_4          1-bit shift register serial=None
+  reg_dfxtp_2_1          2-bit shift register, bit order unknown serial=None
+  reg_dfxtp_2_3          2-bit shift register, bit order unknown serial=None
+  reg_enable             3-bit feedback register, bit order unknown serial=None
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             3-bit shift register serial=enable
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             4-bit feedback register, bit order unknown serial=None
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             3-bit feedback register, bit order unknown serial=None
+  reg_enable             1-bit shift register serial=enable
+  reg_enable             3-bit feedback register, bit order unknown serial=None
+
+success depends on 1 flops + ports []
+```
+
+So success is registered flag. Tracing the flop level dependency graph from it:
+
+```py
+from gdsx import config, loader, netlist, analyse
+from gdsx.functions import is_sequential, lookup, data_nets, output_net
+nl = netlist.build(loader.load('samples/puzzle.gds', config.load()))
+by = {i.name: i for i in nl.instances}
+flops = [i.name for i in nl.instances if is_sequential(i.cell)]
+
+# flop -> flops/ports its next state depends on
+deps = {}
+for f in flops:
+    inst = by[f]; cell = lookup(inst.cell)
+    d = set()
+    for net in data_nets(cell, inst.connections):
+        d |= analyse.support(nl, net)
+    deps[f] = d
+
+seed = [d for d in analyse.support(nl, 'success') if d in set(flops)]
+print('success driven by flop:', seed)
+
+# transitive fan-in over flops
+cone, stack = set(seed), list(seed)
+while stack:
+    f = stack.pop()
+    for d in deps[f]:
+        if d in deps and d not in cone:
+            cone.add(d); stack.append(d)
+ports = set()
+for f in cone: ports |= {d for d in deps[f] if d in nl.ports}
+print('success cone: %d of %d flops; ports seen: %s' % (len(cone), len(flops), sorted(ports)))
+
+# which flops are not in the cone
+print('outside the cone: %d flops' % (len(flops)-len(cone)))
+```
+
+Output:
+
+```
+success driven by flop: ['dfrtp_2_83']
+success cone: 79 of 92 flops; ports seen: ['I', 'enable']
+outside the cone: 13 flops
+```
+
+Trying to see drivers:
+
+```py
+from gdsx import config, loader, netlist, analyse
+from gdsx.functions import is_sequential, lookup, data_nets, clock_nets, async_nets
+nl = netlist.build(loader.load('samples/puzzle.gds', config.load()))
+by = {i.name: i for i in nl.instances}
+flops = [i.name for i in nl.instances if is_sequential(i.cell)]
+fs = set(flops)
+
+deps = {}
+for f in flops:
+    inst = by[f]; cell = lookup(inst.cell)
+    d = set()
+    for net in data_nets(cell, inst.connections):
+        d |= analyse.support(nl, net)
+    deps[f] = d
+
+# who does I feed directly
+head = [f for f in flops if 'I' in deps[f]]
+print('flops whose next state sees I:', head)
+print()
+# success flop chain
+cur = 'dfrtp_2_83'
+for depth in range(4):
+    d = deps[cur]
+    print(f'{cur}: flops={sorted(x for x in d if x in fs)} ports={sorted(x for x in d if x in nl.ports)}')
+    nxt = sorted(x for x in d if x in fs and x != cur)
+    if not nxt: break
+    cur = nxt[0]
+print()
+# control signature grouping only
+from collections import Counter
+sig = Counter()
+for f in flops:
+    inst = by[f]; cell = lookup(inst.cell)
+    sig[(inst.cell, tuple(sorted(clock_nets(cell, inst.connections))), tuple(sorted(async_nets(cell, inst.connections))))] += 1
+for k, v in sig.most_common():
+    print(f'{v:3d} flops: {k[0].split("__")[1]:12s} clk={k[1]} rst={k[2]}')
+```
+
+Output:
+
+```
+flops whose next state sees I: ['dfrtp_2_1', 'dfrtp_2_2', 'dfrtp_2_3', 'dfrtp_2_4', 'dfrtp_2_5', 'dfrtp_2_6', 'dfrtp_2_7', 'dfrtp_2_8', 'dfrtp_2_9', 'dfrtp_2_10', 'dfrtp_2_11', 'dfrtp_2_12', 'dfrtp_2_13', 'dfrtp_2_14', 'dfrtp_2_15', 'dfrtp_2_16', 'dfrtp_2_18', 'dfrtp_2_19', 'dfrtp_2_21', 'dfrtp_2_22', 'dfrtp_2_23', 'dfrtp_2_24', 'dfrtp_2_27', 'dfrtp_2_28', 'dfrtp_2_29', 'dfrtp_2_30', 'dfrtp_2_31', 'dfrtp_2_32', 'dfrtp_2_35', 'dfrtp_2_36', 'dfrtp_2_39', 'dfrtp_2_45', 'dfrtp_2_46', 'dfrtp_2_50', 'dfrtp_2_53', 'dfrtp_2_56', 'dfrtp_2_57', 'dfrtp_2_62', 'dfrtp_2_63', 'dfrtp_2_64', 'dfrtp_2_65', 'dfrtp_2_66', 'dfrtp_2_67', 'dfrtp_2_68', 'dfrtp_2_69', 'dfrtp_2_70', 'dfrtp_2_71', 'dfrtp_2_72', 'dfrtp_2_73', 'dfrtp_2_74', 'dfrtp_2_75', 'dfrtp_2_76', 'dfrtp_2_78', 'dfrtp_2_79', 'dfrtp_2_80', 'dfrtp_2_81', 'dfrtp_2_84', 'dfstp_2_4']
+
+dfrtp_2_83: flops=['dfrtp_2_1', 'dfrtp_2_10', 'dfrtp_2_11', 'dfrtp_2_12', 'dfrtp_2_13', 'dfrtp_2_14', 'dfrtp_2_15', 'dfrtp_2_16', 'dfrtp_2_18', 'dfrtp_2_19', 'dfrtp_2_2', 'dfrtp_2_22', 'dfrtp_2_23', 'dfrtp_2_24', 'dfrtp_2_28', 'dfrtp_2_29', 'dfrtp_2_3', 'dfrtp_2_30', 'dfrtp_2_31', 'dfrtp_2_32', 'dfrtp_2_35', 'dfrtp_2_36', 'dfrtp_2_39', 'dfrtp_2_4', 'dfrtp_2_45', 'dfrtp_2_46', 'dfrtp_2_5', 'dfrtp_2_50', 'dfrtp_2_56', 'dfrtp_2_57', 'dfrtp_2_6', 'dfrtp_2_61', 'dfrtp_2_62', 'dfrtp_2_63', 'dfrtp_2_64', 'dfrtp_2_65', 'dfrtp_2_66', 'dfrtp_2_67', 'dfrtp_2_68', 'dfrtp_2_69', 'dfrtp_2_7', 'dfrtp_2_70', 'dfrtp_2_71', 'dfrtp_2_72', 'dfrtp_2_73', 'dfrtp_2_74', 'dfrtp_2_75', 'dfrtp_2_76', 'dfrtp_2_78', 'dfrtp_2_79', 'dfrtp_2_8', 'dfrtp_2_80', 'dfrtp_2_81', 'dfrtp_2_82', 'dfrtp_2_83', 'dfrtp_2_84', 'dfrtp_2_9'] ports=[]
+dfrtp_2_1: flops=['dfrtp_2_1', 'dfrtp_2_2', 'dfrtp_2_3', 'dfrtp_2_6', 'dfrtp_2_61', 'dfrtp_2_9'] ports=['I', 'enable']
+dfrtp_2_2: flops=['dfrtp_2_2', 'dfrtp_2_61', 'dfrtp_2_9'] ports=['I', 'enable']
+dfrtp_2_61: flops=['dfrtp_2_17', 'dfrtp_2_20', 'dfrtp_2_25', 'dfrtp_2_26', 'dfrtp_2_40', 'dfrtp_2_41', 'dfrtp_2_47', 'dfrtp_2_51', 'dfrtp_2_61'] ports=['enable']
+
+  6 flops: dfrtp_2      clk=('n3801',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n3978',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n4836',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n3503',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n3286',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n2227',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n3319',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n1524',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n1015',) rst=('rst_n',)
+  6 flops: dfrtp_2      clk=('n771',) rst=('rst_n',)
+  5 flops: dfrtp_2      clk=('n5358',) rst=('rst_n',)
+  5 flops: dfrtp_2      clk=('n2993',) rst=('rst_n',)
+  5 flops: dfrtp_2      clk=('n622',) rst=('rst_n',)
+  3 flops: dfrtp_2      clk=('n1829',) rst=('rst_n',)
+  3 flops: dfrtp_2      clk=('n463',) rst=('rst_n',)
+  3 flops: dfrtp_2      clk=('n230',) rst=('rst_n',)
+  3 flops: dfstp_2      clk=('n1829',) rst=('rst_n',)
+  2 flops: dfxtp_2      clk=('n463',) rst=()
+  2 flops: dfxtp_2      clk=('n230',) rst=()
+  1 flops: dfstp_2      clk=('n463',) rst=('rst_n',)
+```
+
+So the clock tree is buffered into a bunch of different clock nets. TThis means my control-signature grouping split registers by _clock buffer_ rather than by register. That's a real bug, and fixing it now.
+
+Attempting to BFS the flop state looking for success:
+
+```py
+from collections import deque
+from gdsx import config, loader, netlist
+from gdsx.sim import Simulator
+
+nl = netlist.build(loader.load('samples/puzzle.gds', config.load()))
+sim = Simulator(nl)
+order = [i.name for i, _ in sim.flops]
+
+def snapshot(): return tuple(sim.state[f] for f in order)
+def restore(s): sim.state = dict(zip(order, s))
+
+sim.reset()
+sim.step({'clk':0,'rst_n':0,'enable':0,'I':0})
+start = snapshot()
+
+seen = {start: None}          # state -> (parent, bit)
+queue = deque([start])
+found = None
+steps = 0
+while queue and steps < 400000:
+    state = queue.popleft()
+    for bit in (0, 1):
+        restore(state)
+        v = sim.step({'clk':0,'rst_n':1,'enable':1,'I':bit})
+        steps += 1
+        nxt = snapshot()
+        if v['success']:
+            found = (state, bit, nxt); queue.clear(); break
+        if nxt not in seen:
+            seen[nxt] = (state, bit)
+            queue.append(nxt)
+    if found: break
+
+print('states explored:', len(seen), 'transitions:', steps)
+if found:
+    state, bit, _ = found
+    path = [bit]
+    while seen[state] is not None:
+        state, b = seen[state]
+        path.append(b)
+    path.reverse()
+    print('SUCCESS after %d bits: %s' % (len(path), ''.join(map(str, path))))
+else:
+    print('no success found')
+```
+
+It takes way too long, can't do it with this approach.
+
+Also found another issue, when the verilog is generated, it uses `O[0]` as the name of the first output rather than `O[7:0]` as the name of the output bus. THis means the generated verilog code wasn't legal verilog, won't run in a simulator. For now, lazily escaped the identifier. Should probably fix this later too. Done in commit: b524f7a.
