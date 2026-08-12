@@ -284,6 +284,12 @@ def verify(
     out: Path = typer.Option(
         Path("out"), "-o", "--out", help="where to put the yosys artifacts"
     ),
+    structural: bool = typer.Option(
+        False,
+        "--structural",
+        help="match corresponding points instead of inducting over the whole state space. "
+        "Much faster when the reference is a lift of this netlist",
+    ),
     tech: Optional[Path] = TechOpt,
     top: Optional[str] = TopOpt,
     lef: Optional[Path] = LefOpt,
@@ -294,8 +300,9 @@ def verify(
     generic = next(p for p in paths if p.name.endswith(".generic.v"))
 
     console.print(f"proving {generic} == {ref} ...")
+    prove = equiv.structural_equivalence if structural else equiv.equivalence
     try:
-        result = equiv.equivalence(generic, ref, nl.top, out)
+        result = prove(generic, ref, nl.top, out)
     except equiv.YosysMissing as exc:
         console.print(f"[red]{exc}[/]")
         raise typer.Exit(1)
@@ -304,7 +311,8 @@ def verify(
         console.print(f"[green]equivalent[/] -- {result.summary}")
     else:
         console.print(f"[red]not proven[/] -- {result.summary}")
-        console.print(f"[dim]full log: {out / 'equiv.log'}[/]")
+        tag = "equiv_structural.log" if structural else "equiv.log"
+        console.print(f"[dim]full log: {out / tag}[/]")
         raise typer.Exit(1)
 
 

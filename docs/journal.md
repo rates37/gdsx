@@ -1478,3 +1478,34 @@ At this point it still seems a little too complex of a task to manually piece to
 
 I found out about yosys `sat -seq N` which can do SAT solving on sequential circuits, but I don't like the idea of using that, as it would just be a black box and not give much insight into the puzzle. Good to know as a last resort if I give up, but I really like the idea of doing this in a more understandable way.
 
+## Cheaper Equivalent Checking
+
+I already made the `gdsx verify` command, which used temporal induction, flattens two designs, build a miter, and asks the Yosys SAT solver to induct over the entire state space. But this is expensive, especially for the puzzle (when verifying the primitive vs lifted), which just timed out in my testing.
+
+Instead, since most internal signals are the same, we can check for structural equivalence using `equiv_name`/`equiv_induct` instead of `miter`/`sat -tempinduct`:
+
+```py
+STRUCTURAL_SCRIPT = """\
+read_verilog {primitives} {reference}
+prep -top {top} -flatten
+async2sync
+opt_clean
+design -stash gold
+
+read_verilog {primitives} {extracted}
+prep -top {top} -flatten
+async2sync
+opt_clean
+design -stash gate
+
+design -copy-from gold -as gold {top}
+design -copy-from gate -as gate {top}
+equiv_make gold gate equiv
+hierarchy -top equiv
+equiv_simple -seq {seq}
+equiv_induct -seq {seq}
+equiv_status -assert
+"""
+```
+
+Now added a `--structural` flag to `gdsx verify` to use this structural equivalence check instead of the miter based SAT check.
