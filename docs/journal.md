@@ -1358,3 +1358,123 @@ else:
 It takes way too long, can't do it with this approach.
 
 Also found another issue, when the verilog is generated, it uses `O[0]` as the name of the first output rather than `O[7:0]` as the name of the output bus. THis means the generated verilog code wasn't legal verilog, won't run in a simulator. For now, lazily escaped the identifier. Should probably fix this later too. Done in commit: b524f7a.
+
+## Attempt 2:
+
+Slept and having another attempt at some stuff:
+
+### Check what undriven nets are connected to:
+
+```py
+from gdsx import config, loader, netlist, analyse
+
+nl = netlist.build(loader.load('samples/puzzle.gds', config.load()))
+print('floating pins:', nl.floating)
+print('conflicts:', nl.conflicts)
+
+drivers = analyse._drivers(nl)
+undriven = [n for n in nl.nets if n not in drivers and n not in nl.power_nets and n not in nl.ports]
+print('undriven nets (excluding ports/power):', undriven)
+for net in undriven:
+    print(f'  {net}: referenced by {nl.nets[net]}')
+    cone = analyse.cone_instances(nl, {'success'}, set())
+    print(f'    in success cone: {net in cone}')
+    for port in ['success'] + [f'O[{i}]' for i in range(8)]:
+        c = analyse.cone_instances(nl, {port}, set())
+        readers = [ref.split('/')[0] for ref in nl.nets[net]]
+        hit = [r for r in readers if r in c]
+        if hit:
+            print(f'    reaches {port} via {hit}')
+```
+
+Output:
+
+```
+floating pins: []
+conflicts: []
+undriven nets (excluding ports/power): ['n4692']
+  n4692: referenced by ['a311o_2_2/A1', 'a31oi_2_1/A1']
+    in success cone: False
+    reaches O[1] via ['a311o_2_2', 'a31oi_2_1']
+    reaches O[4] via ['a31oi_2_1']
+```
+
+There is one undriven net, but it's not connected to the success cone. So it might affect the output bits, but not whether success is reached. Possible easter egg? Or maybe just a red herring.
+
+### Checking FF depedency from `I`:
+
+```py
+from collections import deque
+from gdsx import config, loader, netlist, analyse
+from gdsx.functions import is_sequential, lookup, data_nets, output_net
+
+nl = netlist.build(loader.load('samples/puzzle.gds', config.load()))
+by = {i.name: i for i in nl.instances}
+flops = [i.name for i in nl.instances if is_sequential(i.cell)]
+fs = set(flops)
+deps = {}
+for f in flops:
+    inst = by[f]
+    cell = lookup(inst.cell)
+    d = set()
+    for net in data_nets(cell, inst.connections):
+        d |= analyse.support(nl, net)
+    deps[f] = d
+
+fwd = {f: set() for f in flops}
+for f in flops:
+    for d in deps[f]:
+        if d in fs:
+            fwd[d].add(f)
+
+seeds = [f for f in flops if 'I' in deps[f]]
+depth = {f: 0 for f in seeds}
+q = deque(seeds)
+while q:
+    f = q.popleft()
+    for n in fwd[f]:
+        if n not in depth:
+            depth[n] = depth[f] + 1
+            q.append(n)
+
+print('flops directly fed by I:', len(seeds))
+print('max flop-graph depth from I:', max(depth.values()) if depth else None)
+print('total flops:', len(flops))
+
+success_flop = None
+for f in flops:
+    net = output_net(lookup(by[f].cell), by[f].connections)
+    if net == 'success':
+        success_flop = f
+        break
+print('flop driving success directly:', success_flop)
+if success_flop:
+    print('depth of the success flop:', depth.get(success_flop))
+    print('flops in cone of success data-input:', len(deps[success_flop] & fs))
+
+selfloop = [f for f in flops if f in deps[f]]
+print('flops that feed themselves (counters/holds):', len(selfloop))
+
+pure = [f for f in flops if not (deps[f] & fs)]
+print('flops fed only by ports:', pure)
+```
+
+Output:
+
+```
+flops directly fed by I: 58
+max flop-graph depth from I: 11
+total flops: 92
+flop driving success directly: dfrtp_2_83
+depth of the success flop: 1
+flops in cone of success data-input: 57
+flops that feed themselves (counters/holds): 92
+flops fed only by ports: []
+```
+
+58 registers directly (or through combinational logic) read `I`. Max depth of 11, which is the second time the number 11 has come up in this puzzle. Probably a coincidence but maybe easter egg.
+
+At this point it still seems a little too complex of a task to manually piece together, so I'll keep adding more features to the tool to help with that.
+
+I found out about yosys `sat -seq N` which can do SAT solving on sequential circuits, but I don't like the idea of using that, as it would just be a black box and not give much insight into the puzzle. Good to know as a last resort if I give up, but I really like the idea of doing this in a more understandable way.
+
