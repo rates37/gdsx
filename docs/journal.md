@@ -1509,3 +1509,264 @@ equiv_status -assert
 ```
 
 Now added a `--structural` flag to `gdsx verify` to use this structural equivalence check instead of the miter based SAT check.
+
+## Normalisation
+
+Since plan is to eventually lift the Verilog to more readable form, need to reverse transformations that was applied during synthesis / P&R. E.g., a clock signal doesn't directly connect to all FFs in the design, but rather goes through a clock tree of `clkbuf` cells first. This makes the primitive verilog very hard to read, as the clock tree is just noise. Added `src/gdsx/normalise.py`.
+
+There are three main transforms:
+
+1. constant propagation: any constants are propagated through the design. Any gate whose output is fixed regardless of its inputs can be replaced with a constant.
+
+2. Identity collapse: any buffers essentially do nothing for the behaviour of the circuit (in simulation), so they can be combined. E.g., all the clock buffers, and any other buffers that pass a signal through to meet timing requirements.
+
+3. Inverter pairs in series can collapse into a short.
+
+### Union Find again
+
+To merge/combine nets, it uses a Union find, just like before. Implemented in the `_Aliases` class. However, here the tie breaking over which name is kept is important. Port names always win, as a port name that gets merged into an internal net would change the module interface. Otherwise, the driver side of the merge wins, so a chain of buffers collapses towards the source, rather than towards the leaf.
+
+### Exhaustive Evaluation
+
+The `_simplify` function asks "given the knowns about the inputs of a cell, is the output still dependent on the inputs?":
+
+```py
+def _simplify(cell, inst: Instance, value_of) -> tuple[dict[str, int], dict[str, str]]:
+    if cell.is_sequential or not cell.has_behaviour:
+        return {}, {}
+    known: dict[str, int] = {}
+    unknown: list[str] = []
+    # ommitted collection of known/unknown inputs from this snippet for brevity
+    rows = []
+    for bits in product((0, 1), repeat=len(unknown)):
+        values = dict(known, **dict(zip(unknown, bits)))
+        rows.append((values, cell.evaluate(values)))
+
+    constants: dict[str, int] = {}
+    copies: dict[str, str] = {}
+    for pin in rows[0][1]:
+        seen = {out[pin] for _, out in rows}
+        if len(seen) == 1:
+            constants[pin] = seen.pop()
+            continue
+        for candidate in unknown:
+            if all(out[pin] == inputs[candidate] for inputs, out in rows):
+                copies[pin] = candidate
+                break
+    return constants, copies
+```
+
+This is just brute-force enumeration over the still unknown inputs. I wrote about a similar implementation I did for a side project here: https://github.com/rates37/openxc2064/blob/main/docs/optimiser.md
+
+This process is then repeated in a loop until no more simplifications can be made.
+
+Exmaple:
+
+```
+uv run gdsx normalise samples/puzzle.gds -o out/mystery_normalised
+728 -> 688 instances, 741 -> 696 nets
+45 cells removed, 45 nets merged
+    33 buffers collapsed
+     1 inverter pairs collapsed
+    11 cells folded to a constant
+     0 cells degenerated into a wire
+     0 cells driving nothing
+    13 nets known constant
+
+buffers
+  buf_2_1              sky130_fd_sc_hd__buf_2 n3049 := n3048
+  clkbuf_16_1          sky130_fd_sc_hd__clkbuf_16 n1034 := clk
+  clkbuf_4_1           sky130_fd_sc_hd__clkbuf_4 n1 := n3978
+  clkbuf_4_2           sky130_fd_sc_hd__clkbuf_4 n3981 := n3801
+  clkbuf_4_3           sky130_fd_sc_hd__clkbuf_4 n5399 := n4836
+  clkbuf_4_4           sky130_fd_sc_hd__clkbuf_4 n5352 := n5358
+  clkbuf_4_5           sky130_fd_sc_hd__clkbuf_4 n3378 := n3503
+  clkbuf_4_6           sky130_fd_sc_hd__clkbuf_4 n3443 := n3286
+  clkbuf_4_7           sky130_fd_sc_hd__clkbuf_4 n3351 := n2993
+  clkbuf_4_8           sky130_fd_sc_hd__clkbuf_4 n3335 := n3319
+  clkbuf_4_9           sky130_fd_sc_hd__clkbuf_4 n2219 := n2227
+  clkbuf_4_10          sky130_fd_sc_hd__clkbuf_4 n2139 := n1829
+  clkbuf_4_11          sky130_fd_sc_hd__clkbuf_4 n1435 := n1524
+  clkbuf_4_12          sky130_fd_sc_hd__clkbuf_4 n1420 := n1015
+  clkbuf_4_13          sky130_fd_sc_hd__clkbuf_4 n287 := n230
+  clkbuf_4_14          sky130_fd_sc_hd__clkbuf_4 n1033 := n771
+  clkbuf_4_15          sky130_fd_sc_hd__clkbuf_4 n1164 := n622
+  clkbuf_8_1           sky130_fd_sc_hd__clkbuf_8 n3801 := clk
+  clkbuf_8_2           sky130_fd_sc_hd__clkbuf_8 n3978 := clk
+  clkbuf_8_3           sky130_fd_sc_hd__clkbuf_8 n4836 := clk
+  clkbuf_8_4           sky130_fd_sc_hd__clkbuf_8 n5358 := clk
+  clkbuf_8_5           sky130_fd_sc_hd__clkbuf_8 n3503 := clk
+  clkbuf_8_6           sky130_fd_sc_hd__clkbuf_8 n3286 := clk
+  clkbuf_8_7           sky130_fd_sc_hd__clkbuf_8 n3319 := clk
+  clkbuf_8_8           sky130_fd_sc_hd__clkbuf_8 n2993 := clk
+  clkbuf_8_9           sky130_fd_sc_hd__clkbuf_8 n2227 := clk
+  clkbuf_8_10          sky130_fd_sc_hd__clkbuf_8 n1829 := clk
+  clkbuf_8_11          sky130_fd_sc_hd__clkbuf_8 n1524 := clk
+  clkbuf_8_12          sky130_fd_sc_hd__clkbuf_8 n1015 := clk
+  clkbuf_8_13          sky130_fd_sc_hd__clkbuf_8 n463 := clk
+  clkbuf_8_14          sky130_fd_sc_hd__clkbuf_8 n230 := clk
+  clkbuf_8_15          sky130_fd_sc_hd__clkbuf_8 n622 := clk
+  clkbuf_8_16          sky130_fd_sc_hd__clkbuf_8 n771 := clk
+
+inverter pairs
+  inv_2_24             sky130_fd_sc_hd__inv_2 n127 := n2951
+
+constant folds
+  conb_1_2             sky130_fd_sc_hd__conb_1 n2949 = 1
+  conb_1_2             sky130_fd_sc_hd__conb_1 n3435 = 0
+  conb_1_3             sky130_fd_sc_hd__conb_1 n4677 = 1
+  conb_1_3             sky130_fd_sc_hd__conb_1 n6854 = 0
+  conb_1_4             sky130_fd_sc_hd__conb_1 n4512 = 1
+  conb_1_4             sky130_fd_sc_hd__conb_1 n533 = 0
+  conb_1_5             sky130_fd_sc_hd__conb_1 n4433 = 1
+  conb_1_5             sky130_fd_sc_hd__conb_1 n6992 = 0
+  conb_1_6             sky130_fd_sc_hd__conb_1 n2439 = 1
+  conb_1_6             sky130_fd_sc_hd__conb_1 n469 = 0
+  a22o_2_17            sky130_fd_sc_hd__a22o_2 n549 = 0
+  wrote out/mystery_normalised/puzzle.json
+  wrote out/mystery_normalised/puzzle.v
+  wrote out/mystery_normalised/puzzle.generic.v
+  wrote out/mystery_normalised/puzzle.generic.json
+  wrote out/mystery_normalised/puzzle.dot
+```
+
+## xref
+
+Trying to dedup/generalise some logic. Prior analysis often needs to ask something like what drives a given net, what's between/cutting these two nodes, etc. `src/gdsx/xref.py` generalises this
+
+```py
+@dataclass(frozen=True)
+class Ref:
+    """One pin on one instance, and which way it faces"""
+    instance: str
+    pin: str
+    cell: str
+    direction: str  # input | output | power
+
+@dataclass
+class Xref:
+    net: str
+    drivers: list[Ref] = field(default_factory=list)
+    readers: list[Ref] = field(default_factory=list)
+    port: str | None = None  # "input"/"output" if the net reaches the boundary
+```
+
+`refs(nl, net)` returns an `Xref` object on what drives and reads a net.
+
+E.g.,:
+
+```py
+from gdsx import config, loader, netlist, xref
+nl = netlist.build(loader.load('samples/sample.gds', config.load()))
+print(xref.report(xref.refs(nl, 'n629')))
+```
+
+Output:
+
+```
+net n629
+  <- and2_2_3.X (sky130_fd_sc_hd__and2_2)
+  -> a21bo_2_1.A2 (sky130_fd_sc_hd__a21bo_2)
+  -> a31o_2_1.A2 (sky130_fd_sc_hd__a31o_2)
+  -> xor2_2_5.B (sky130_fd_sc_hd__xor2_2)
+```
+
+### Fan-in/out:
+
+`fanin`/`fanout` walk the graph outward from a net and stop at flops (by default).
+
+```py
+def fanin(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
+    """Nets upstream of `net`, level by level
+
+    Stops at flops by default: past a flop you are in the previous clock cycle,
+    which is a different question from "what makes this value".
+    """
+    # ..
+
+def fanout(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
+    """Nets downstream of `net`, level by level"""
+    # ...
+```
+
+### `between` slice
+
+Another function here is `between(sources, sinks)`:
+
+```py
+def between(nl: Netlist, sources: set[str], sinks: set[str], through_flops: bool = True) -> set[str]:
+    """Instances on a path from any source net to any sink net
+
+    Forwards from the sources and backwards from the sinks, intersected
+    """
+```
+
+## Regions
+
+The xref `between` slices the computational graph. But given the hint that the puzzle layout hints at its function, slicing by spatial region is also important.
+
+```py
+@dataclass
+class Region:
+    box: Box
+    inside: list[str]
+    netlist: Netlist
+    total_cells: int
+    inputs: list[str] = field(default_factory=list)
+    outputs: list[str] = field(default_factory=list)
+    internal: list[str] = field(default_factory=list)
+```
+
+We can use the "cut ratio" (fraction of the region's nets that cross its boundary) as a heuristic for finding a good region to cut. Cutting a lot of nets suggests you cut an important submodule in half, whereas only having a few nets that enter/leave the region gives you a good suggestion that what you cut is a self-contained piece of functionality.
+
+## Guards
+
+When synthesised, something like `if (enable) q <= d` becomes a self-feeding 2:1 mux in front of the flip flop, and after cells mapping, mux gets implemented based on what the mapper chose. This means every FFs fan-in cone contains its own output, because the hold path (when enable=0) reads the FFs output. Then `find_registers` builds a bunch of self-loops and it's harder to see the underlying structure, all because of the presence of an `enable` signal.
+
+Running `normalise` with `seed={net:value}` then ends up checking if the FFs data input ends up aliased to the same net as its own output:
+
+```py
+def find(nl, *, min_fanout=MIN_FANOUT, nets=None):
+    """For every FF, the conditions under which its data input becomes its own output"""
+    state = _state(nl)
+    tested = nets if nets is not None else candidates(nl, min_fanout)
+    # ...
+    for net in tested:
+        for value in (0, 1):
+            alias = normalise(nl, seed={net: value}, clean=False).merges
+            for flop, (d_nets, q) in state.items():
+                target = settle(alias, q)
+                if all(settle(alias, d) == target for d in d_nets):
+                    result.guards.append(Guard(flop, net, value))
+    return result
+```
+
+A FF with `D = Q` (a no-op) woudl trivially match the assumptions, since it's data input already equals its output regardless of any cofactor, resulting a reporting a meaningless "guard" for every candidate tested. SO add an extra check to catch this:
+
+```py
+baseline = normalise(nl, clean=False).merges
+...
+state = {
+    flop: (d, q)
+    for flop, (d, q) in state.items()
+    if not all(settle(baseline, n) == settle(baseline, q) for n in d)
+}
+```
+
+Running this on the sample, it correctly identifies all the FFs in the sample puzzle have a shared enable signal:
+
+```
+$ uv run gdsx guards samples/sample.gds
+21 candidate control nets tested against 16 flops
+16 flops have a recovered freeze condition, 0 do not
+
+GROUPS  (flops that are enabled together)
+   16 flops frozen when en=0
+        dfrtp_2_1, dfrtp_2_10, dfrtp_2_11, dfrtp_2_12, dfrtp_2_13, dfrtp_2_14
+        dfrtp_2_15, dfrtp_2_16, dfrtp_2_2, dfrtp_2_3, dfrtp_2_4, dfrtp_2_5
+        dfrtp_2_6, dfrtp_2_7, dfrtp_2_8, dfrtp_2_9
+```
+
+## Floorplan
+
+Added (AI sloppified) functionality to turn a grouping into an SVG plotted at the real coordinates of the cells. Probably will remove this, it's not super important, and not well implemented.

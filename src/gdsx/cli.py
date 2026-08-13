@@ -1,17 +1,23 @@
 """Command line surface for library: `gdsx inspect|pins|extract`."""
 
 from __future__ import annotations
+import json as _json
 from pathlib import Path
 from typing import Optional
-import typer
 from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
+import typer
 
 from . import config, connectivity, loader, netlist
 from . import analyse as analysis
+from . import floorplan as _fp
 from . import fsm as control
+from . import geometry as _geo
+from . import guards as _guards
 from . import lift as lifting
+from . import normalise as _normalise
+from . import region as _region
 from . import verify as equiv
 from .pins import PinOracle
 
@@ -137,6 +143,234 @@ def extract(
 
     for path in netlist.write_all(nl, out):
         console.print(f"  wrote {path}")
+
+
+@app.command()
+def normalise(
+    gds: Path = GdsArg,
+    out: Path = typer.Option(Path("out"), "-o", "--out", help="output directory"),
+    fold: bool = typer.Option(
+        True, "--fold/--no-fold", help="propagate tie cells and constants"
+    ),
+    clean: bool = typer.Option(
+        True, "--clean/--no-clean", help="drop cells driving nothing"
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """Collapse buffers and inverter pairs, propagate constants
+
+    Structure-preserving, nothing is resynthesised, so what comes out is the
+    same design with the place-and-route scaffolding removed.
+    """
+    nl = _build(gds, tech, top, lef)
+    result = _normalise.normalise(nl, fold=fold, clean=clean)
+
+    console.print(
+        f"{len(nl.instances)} -> {len(result.netlist.instances)} instances, "
+        f"{len(nl.nets)} -> {len(result.netlist.nets)} nets"
+    )
+    console.print(escape(result.report()))
+    for path in netlist.write_all(result.netlist, out):
+        console.print(f"  wrote {path}")
+
+
+@app.command()
+def region(
+    gds: Path = GdsArg,
+    box: Optional[str] = typer.Option(None, "--box", help="x0,y0,x1,y1 in microns"),
+    band: Optional[int] = typer.Option(
+        None, "--band", help="index of a band from `gdsx placement`"
+    ),
+    group: Optional[str] = typer.Option(
+        None, "--group", help="a label in --groups, by its bounding box"
+    ),
+    groups_file: Optional[Path] = typer.Option(
+        None,
+        "--groups",
+        exists=True,
+        help="JSON of {label: [instance, ...]}, for --group",
+    ),
+    pad: float = typer.Option(2.0, "--pad", help="microns to grow the selection by"),
+    axis: str = typer.Option("x", "--axis", help="axis to band along, for --band"),
+    out: Optional[Path] = typer.Option(
+        None, "-o", "--out", help="write the region here"
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """Carve a physical area of the die out as a netlist of its own
+
+    `slice` cuts along logical lines; this cuts along physical ones. Nets that
+    cross the boundary become ports, and the reported cut ratio says whether
+    the area was a block or just a rectangle drawn through the middle of one.
+
+    With none of --box/--band/--group, lists the bands so you can pick one.
+    """
+    design = _load(gds, tech, top)
+    nl = netlist.build(design, macros=_macros(design, lef))
+    placed = _fp.placements(design, nl)
+    if not placed:
+        console.print("[yellow]no placement in this file[/]")
+        raise typer.Exit(1)
+    points = {p.name: (p.x, p.y) for p in placed}
+
+    extents: dict[str, tuple[float, float]] = {}
+    sizes: dict[str, tuple[float, float]] = {}
+    for p in placed:
+        if p.cell not in sizes:
+            bb = design.layout.cell(p.cell).bbox()
+            sizes[p.cell] = (
+                (bb.width() * design.dbu, bb.height() * design.dbu)
+                if bb
+                else (0.0, 0.0)
+            )
+        extents[p.name] = sizes[p.cell]
+
+    label = None
+    if box:
+        try:
+            x0, y0, x1, y1 = (float(v) for v in box.split(","))
+        except ValueError:
+            console.print("[red]--box wants four numbers: x0,y0,x1,y1[/]")
+            raise typer.Exit(1)
+        area = _region.Box(x0, y0, x1, y1)
+    elif band is not None:
+        found = [b for b in _geo.bands(points, axis) if len(b.members) >= 5]
+        if not 0 <= band < len(found):
+            console.print(f"[red]no band {band}; there are {len(found)}[/]")
+            raise typer.Exit(1)
+        area = _region.bounding_box(points, found[band].members, pad, extents)
+        label = f"band{band}"
+    elif group and groups_file:
+        by_label = _json.loads(groups_file.read_text())
+        if group not in by_label:
+            console.print(f"[red]no group {group!r}; have {sorted(by_label)}[/]")
+            raise typer.Exit(1)
+        area = _region.bounding_box(points, by_label[group], pad, extents)
+        label = group.replace(" ", "_")
+    else:
+        console.print("bands available (use --band N):")
+        for i, b in enumerate(
+            b for b in _geo.bands(points, axis) if len(b.members) >= 5
+        ):
+            console.print(
+                f"  {i}: {b.lo:9.2f} .. {b.hi:9.2f}  {len(b.members):4d} cells"
+            )
+        return
+
+    carved = _region.extract(nl, points, area, f"{nl.top}_{label or 'region'}", extents)
+    console.print(escape(carved.report()))
+    if carved.inputs:
+        console.print(
+            "[dim]  inputs:  " + escape(", ".join(carved.inputs[:12])) + "[/]"
+        )
+    if carved.outputs:
+        console.print(
+            "[dim]  outputs: " + escape(", ".join(carved.outputs[:12])) + "[/]"
+        )
+    if out:
+        for path in netlist.write_all(carved.netlist, out):
+            console.print(f"  wrote {path}")
+        console.print(
+            "[dim]the JSON can be passed to any other command in place of the GDS[/]"
+        )
+
+
+@app.command()
+def placement(
+    gds: Path = GdsArg,
+    axis: str = typer.Option("x", "--axis", help="axis to band along: x or y"),
+    groups: Optional[Path] = typer.Option(
+        None,
+        "--groups",
+        exists=True,
+        help="JSON of {name: [instance, ...]} to break the bands down by",
+    ),
+    ordered: Optional[Path] = typer.Option(
+        None,
+        "--ordered",
+        exists=True,
+        help="JSON of {name: {instance: index}} to test for being laid out in index order",
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """Read the floorplan as evidence, cell rows, functional bands, ordered arrays"""
+    design = _load(gds, tech, top)
+    nl = netlist.build(design, macros=_macros(design, lef))
+    points = {p.name: (p.x, p.y) for p in _fp.placements(design, nl)}
+
+    by_group = _json.loads(groups.read_text()) if groups else None
+    console.print(escape(_geo.report(points, by_group, axis)))
+
+    if ordered:
+        console.print("\n[bold]ORDERED ARRAYS[/]")
+        for name, indexed in _json.loads(ordered.read_text()).items():
+            result = _geo.ordering(
+                name, {k: int(v) for k, v in indexed.items()}, points
+            )
+            if result is not None:
+                console.print("  " + escape(str(result)))
+
+
+@app.command()
+def guards(
+    gds: Path = GdsArg,
+    fanout: int = typer.Option(
+        4, "--fanout", help="minimum readers for a net to be a candidate"
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """What has to be true for each register to change, (i.e., enables)"""
+    nl = _build(gds, tech, top, lef)
+    result = _guards.find(nl, min_fanout=fanout)
+    console.print(escape(result.report()))
+
+
+@app.command()
+def map(
+    gds: Path = GdsArg,
+    groups_file: Path = typer.Option(
+        ...,
+        "--groups",
+        exists=True,
+        help="JSON of {label: [instance, ...]} to colour the cells by",
+    ),
+    out: Path = typer.Option(Path("out/floorplan.svg"), "-o", "--out"),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """Colour a grouping onto the layout's own coordinates
+
+    The grouping comes from wherever you worked it out: `gdsx guards`, a
+    hand-written list, another tool, etc.. Placement is produced by a different
+    process from connectivity, so a grouping that turns out to be physically
+    compact is corroborated by something the analysis never looked at.
+    """
+    design = _load(gds, tech, top)
+    nl = netlist.build(design, macros=_macros(design, lef))
+    groups = {
+        inst: label
+        for label, members in _json.loads(groups_file.read_text()).items()
+        for inst in members
+    }
+
+    placed = _fp.placements(design, nl)
+    if not placed:
+        console.print("[yellow]no placement in this file[/]")
+        raise typer.Exit(1)
+
+    console.print(escape(_fp.report(placed, groups, _fp.spread(placed, groups))))
+    console.print(
+        f"wrote {_fp.write(out, _fp.draw(placed, groups, f'{nl.top} by {groups_file.stem}'))}"
+    )
 
 
 @app.command()

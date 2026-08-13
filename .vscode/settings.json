@@ -3,6 +3,8 @@
         "behavioural",
         "gdsx",
         "klayout",
+        "Normalisation",
+        "normalise",
         "recognised",
         "tokenise"
     ]
