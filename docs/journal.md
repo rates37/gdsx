@@ -1866,14 +1866,13 @@ Found this from a 2017 CTF: https://blog.dragonsector.pl/2017/10/?m=1
 
 Methodology there sounds similar to what I was saying about using a sequential SAT solver to find the input sequence that leads to success. But like before I'd rather not do that (at least at first) and gradually recover the structure of the design.
 
-
 ## Circuit Idioms
 
-`analyse.OPERATORS` finds multi bit operators (like adders, subtractors, logical operators) by hypothesis, confirming candidates with random sampling + exhaustive search / SAT solve. `idiom.py` uses a different approach, instead looking for the pattern of gates that implement a given operator. 
+`analyse.OPERATORS` finds multi bit operators (like adders, subtractors, logical operators) by hypothesis, confirming candidates with random sampling + exhaustive search / SAT solve. `idiom.py` uses a different approach, instead looking for the pattern of gates that implement a given operator.
 
 Every net is the output of some small subgraph/subcircuit. Enumerating for each net, every small set of nets whose values determine it gives a small subsection of the design worth checking without needing to guess where a meaningful boundary might be.
 
-To get a cut, we take one cut from each of the driving cell's inputs and union them, keeping unions that stay within a given size limit. This recurses backwards through the graph, again with a depth limit to avoid compute requirements exploding. 
+To get a cut, we take one cut from each of the driving cell's inputs and union them, keeping unions that stay within a given size limit. This recurses backwards through the graph, again with a depth limit to avoid compute requirements exploding.
 
 ### Canonical Form
 
@@ -1944,3 +1943,45 @@ Output:
 ```
 
 The 16 shift register hold muxes are found straight away. Some of the other stuff is less obvious or just completely misleading. A bit of a shame. But still, maybe this is useful once the circuit is a little more broken up into submodules?
+
+## Recovering register bit order by probing
+
+`find_registers` (from a long way up) grouped registers and then attempted to order them. And parallel-load register's bits never talk to one another, which was a noted limitation, as it meant there is nothing in the dependency graph to sort them.
+
+The design's output ports carry indexing, like `O[7]`, `O[6]`, ... And in that case, it's trivial to get the bit ordering!
+
+### Probing:
+
+`probe_positions` answers which bit a FF corresponds to, by setting one FF's state to 1 with everything else at 0, simulating, and seeing which single bit of the word changed.
+
+```py
+def probe_positions(nl, register, inputs=None):
+    """word -> {flop: bit index}, for the words each flop lands on cleanly
+
+    Per word, because one FF may reaches several. E.g., bit 2 of a register
+    is bit 2 of the register's own output and three bits of the adder it
+    feeds. The register word is the one where it moves a single bit.
+    """
+```
+
+Again unlikely to be super useful here, but maybe in decoding the `O[7:0]` bits. But then again, the puzzle hinted that the `O` bits are driven by the decoding logic, which isn't necessary for deriving the input sequence. That being said, can't hurt.
+
+```py
+nl = rtl_fixtures.from_verilog(rtl_fixtures.PARALLEL_LOAD, "parallel_load", d)
+registers = analyse.find_registers(nl)
+```
+
+Output before this change:
+
+```
+8-bit parallel register, bit order unknown   (order_evidence = topology)
+```
+
+Output after this change:
+
+```
+after:  q  8-bit parallel register   (order_evidence = probe)
+        ['dfrtp_1', 'dfrtp_2', 'dfrtp_3', 'dfrtp_4', 'dfrtp_5', 'dfrtp_6', 'dfrtp_7', 'dfrtp_8']
+```
+
+Still unsure if keeping this feature. I'm not convinced it's definitely useful for the puzzle.
