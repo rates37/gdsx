@@ -1770,3 +1770,48 @@ GROUPS  (flops that are enabled together)
 ## Floorplan
 
 Added (AI sloppified) functionality to turn a grouping into an SVG plotted at the real coordinates of the cells. Probably will remove this, it's not super important, and not well implemented.
+
+## Read Netlist json back in
+
+Added a `Netlist.from_dict()` method to read back in a netlist that was written out to JSON. Useful for analysis and extraction. E.g., `gdsx region ... -o out` writes the carved netlist from a region to disk in json format, so now can be read back in.
+
+```
+$ uv run gdsx region samples/sample.gds --band 0 -o out
+region (20.08, 19.76) .. (48.38, 86.80)
+  35 of 79 cells (44%)
+  5 inputs, 16 outputs, 19 internal nets
+  cut ratio 0.53 -- a block with a lot of context
+  inputs:  A, B, clk, en, rst_n
+  outputs: n104, n168, n176, n191, n208, n209, n303, n345, n410, n426, n427, n445
+  wrote out/adder_demo_band0.json
+  wrote out/adder_demo_band0.v
+  wrote out/adder_demo_band0.generic.v
+  wrote out/adder_demo_band0.generic.json
+  wrote out/adder_demo_band0.dot
+```
+
+Now that JSON can be passed to other commands in place of the gds file path:
+
+```
+$ uv run gdsx analyse out/adder_demo_band0.json
+registers
+  reg_A: 8-bit shift register <- A
+    dfrtp_2_12 -> dfrtp_2_10 -> dfrtp_2_15 -> dfrtp_2_11 -> dfrtp_2_14 -> dfrtp_2_13 -> dfrtp_2_16 -> dfrtp_2_9
+  reg_B: 8-bit shift register <- B
+    dfrtp_2_2 -> dfrtp_2_5 -> dfrtp_2_4 -> dfrtp_2_6 -> dfrtp_2_1 -> dfrtp_2_8 -> dfrtp_2_3 -> dfrtp_2_7
+
+blocks (functional match, with the gates backing each call)
+  reg_A: 8-bit shift register  (16 cells)
+  reg_B: 8-bit shift register  (16 cells)
+  clock_tree: buffers driving the flop clocks  (3 cells)
+
+operators (proven over the full input space)
+  n104 asserted for 32768 of 65536 states. no known operator matches
+  ...
+```
+
+## Synth RTL -> Netlist moved out of test suite
+
+In `tests/rtl_fixtures` there was already a flow of write verilog -> run through yosys -> rename the gates to sky130 equivalents and get something relatively indistinguishable from the extracted netlist.
+
+Does renaming instead of actual synthesis directly to sky130 so that there isn't a dependence on needing the PDK. Only needs the small json it fetches once.

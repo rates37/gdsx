@@ -26,7 +26,12 @@ app = typer.Typer(
 )
 console = Console()
 
-GdsArg = typer.Argument(..., exists=True, dir_okay=False, help="input GDS file")
+GdsArg = typer.Argument(
+    ...,
+    exists=True,
+    dir_okay=False,
+    help="input GDS, or a netlist JSON written by `gdsx extract` or `gdsx region`",
+)
 TechOpt = typer.Option(
     None, "--tech", help="layer-map YAML (default: config/sky130.yaml)"
 )
@@ -52,6 +57,9 @@ def _macros(design: loader.Design, path: Optional[Path]) -> dict:
 
 
 def _build(gds: Path, tech, top, lef_path) -> "netlist.Netlist":
+    """The netlist for whatever was passed: a layout, or a netlist JSON"""
+    if gds.suffix == ".json":
+        return netlist.Netlist.from_dict(_json.loads(gds.read_text()))
     design = _load(gds, tech, top)
     return netlist.build(design, macros=_macros(design, lef_path))
 

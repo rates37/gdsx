@@ -33,6 +33,33 @@ class Netlist:
         default_factory=list
     )  # "inst/pin" connecting to multiple nets
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "Netlist":
+        """Rebuild a netlist written by `to_dict`
+
+        Slices, sub-blocks and cached extractions all come back this way, which
+        lets one command's output be another command's input.
+        """
+        nl = cls(
+            top=data["top"],
+            ports=dict(data.get("ports", {})),
+            power_nets=set(data.get("power_nets", ())),
+            floating=list(data.get("floating", ())),
+            conflicts=list(data.get("conflicts", ())),
+        )
+        nl.instances = [
+            Instance(i["name"], i["cell"], dict(i["connections"]))
+            for i in data["instances"]
+        ]
+        nl.nets = {net: list(refs) for net, refs in data.get("nets", {}).items()}
+        if not nl.nets:  # rebuild the index if it was not stored
+            for inst in nl.instances:
+                for pin, net in inst.connections.items():
+                    nl.nets.setdefault(net, []).append(f"{inst.name}/{pin}")
+            for net in nl.nets:
+                nl.nets[net].sort()
+        return nl
+
     def to_dict(self) -> dict:
         return {
             "top": self.top,
@@ -218,10 +245,14 @@ def to_verilog(nl: Netlist) -> str:
     for chunk in _chunks([ident(w) for w in wires], 8):
         lines.append("  wire " + ", ".join(chunk) + ";")
     for net in sorted(nl.power_nets):
-        lines.append(f"  {'supply0' if net.endswith('GND') else 'supply1'} {ident(net)};")
+        lines.append(
+            f"  {'supply0' if net.endswith('GND') else 'supply1'} {ident(net)};"
+        )
     lines.append("")
     for inst in nl.instances:
-        conns = ", ".join(f".{p}({ident(n)})" for p, n in sorted(inst.connections.items()))
+        conns = ", ".join(
+            f".{p}({ident(n)})" for p, n in sorted(inst.connections.items())
+        )
         lines.append(f"  {inst.cell} {inst.name} ({conns});")
     lines += ["", "endmodule", ""]
     return "\n".join(lines)
