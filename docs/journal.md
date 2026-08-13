@@ -1865,3 +1865,82 @@ outputs
 Found this from a 2017 CTF: https://blog.dragonsector.pl/2017/10/?m=1
 
 Methodology there sounds similar to what I was saying about using a sequential SAT solver to find the input sequence that leads to success. But like before I'd rather not do that (at least at first) and gradually recover the structure of the design.
+
+
+## Circuit Idioms
+
+`analyse.OPERATORS` finds multi bit operators (like adders, subtractors, logical operators) by hypothesis, confirming candidates with random sampling + exhaustive search / SAT solve. `idiom.py` uses a different approach, instead looking for the pattern of gates that implement a given operator. 
+
+Every net is the output of some small subgraph/subcircuit. Enumerating for each net, every small set of nets whose values determine it gives a small subsection of the design worth checking without needing to guess where a meaningful boundary might be.
+
+To get a cut, we take one cut from each of the driving cell's inputs and union them, keeping unions that stay within a given size limit. This recurses backwards through the graph, again with a depth limit to avoid compute requirements exploding. 
+
+### Canonical Form
+
+Two of the same circuit, eg an adder, built by different synthesisers, or run through different flows like produce different physical circuits. Some inputs may have different orders, some inverted, etc. Instead of matching, we can normalise to a canonical form to compare against. Here, using Negation/Permutation of Inputs, Negation of the output (NPN) form:
+
+```py
+@lru_cache(maxsize=1 << 16)
+def npn(table: int, width: int) -> int:
+    """The canonical form of a function under input/output negation and permutation"""
+```
+
+At width 4 that's $2^4 \times 4! \times 2 = 768$ transformations per function, and `lru_cache`ed avoids recomputing as well.
+
+### The Library:
+
+Created a small hand written table of named functions, canonicalised once at import time, keyed by `(width, canonical form)`:
+
+```py
+@lru_cache(maxsize=1)
+def library():
+    """(inputs, canonical form) -> name."""
+    found = {}
+    for name, width, function in DEFINITIONS:
+        key = (width, npn(table_of(width, function), width))
+        if key in found and name not in found[key].split(" / "):
+            found[key] = f"{found[key]} / {name}"
+        else:
+            found.setdefault(key, name)
+    return found
+```
+
+To match a candidate cut against the library, we evaluate its truth table, canonicalise it, and look it up in the library.
+
+### Matching
+
+`match()` walks every net's cuts from widest to narrowest and keeps the widest one that is in the library.
+
+### Composition
+
+`carry_chains(matches)` follows the structural relationship between matched carry bits, in order to identify multi-bit adders. Todo: expand this to other operators like sub. Investigate if other things like barrel shifters, etc.
+
+### Running on the warmup:
+
+```py
+from gdsx import config, loader, netlist, idiom
+nl = netlist.build(loader.load('samples/sample.gds', config.load()))
+matches = idiom.match(nl)
+chains = idiom.carry_chains(matches)
+print(idiom.report(nl, matches, chains))
+```
+
+Output:
+
+```
+35 nets match a known function (139 cuts examined, 12 idioms in the library)
+
+    16 x mux                    n108, n135, n179, n205, n207, n211 ...
+     7 x adder sum / parity     n14, n16, n3, n576, n656, n668 ...
+     5 x compare bit (a>b)      n581, n678, n705, n741, n800
+     4 x adder carry (majority) n18, n587, n687, n842
+     3 x and/or of 4            S, n19, n658
+
+1 carry chains:
+  2-bit adder: carries n687 -> n18
+
+  Matched by canonical function, so a resynthesised adder still matches.
+  Nothing here is a claim about what the operands mean.
+```
+
+The 16 shift register hold muxes are found straight away. Some of the other stuff is less obvious or just completely misleading. A bit of a shame. But still, maybe this is useful once the circuit is a little more broken up into submodules?
