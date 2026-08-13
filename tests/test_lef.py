@@ -7,7 +7,7 @@ from gdsx import analyse, lef, loader, netlist
 from gdsx.connectivity import trace
 from gdsx.pins import PinOracle, abstract_shapes, bond_pins
 
-LEF_FILE = Path(__file__).resolve().parents[1] / "samples" / "sample_cells.lef"
+LEF_FILE = Path(__file__).resolve().parent / "data" / "sample_cells.lef"
 
 
 @pytest.fixture(scope="session")

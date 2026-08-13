@@ -1,6 +1,6 @@
 """Fetch the LEF abstracts for the cells a design uses
 
-uv run python tools/fetch_lef.py samples/sample.gds -o samples/sample_cells.lef
+uv run python tools/fetch_lef.py samples/sample.gds -o tests/data/sample_cells.lef
 
 The result is a single multi-MACRO file, which is the shape a PDK ships.
 """
