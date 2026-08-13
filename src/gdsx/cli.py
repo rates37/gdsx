@@ -9,7 +9,7 @@ from rich.markup import escape
 from rich.table import Table
 import typer
 
-from . import config, connectivity, loader, netlist
+from . import config, connectivity, interface, loader, netlist
 from . import analyse as analysis
 from . import floorplan as _fp
 from . import fsm as control
@@ -379,6 +379,21 @@ def map(
     console.print(
         f"wrote {_fp.write(out, _fp.draw(placed, groups, f'{nl.top} by {groups_file.stem}'))}"
     )
+
+
+@app.command()
+def ports(
+    gds: Path = GdsArg,
+    cycles: int = typer.Option(
+        12, help="how long to drive the design for each measurement"
+    ),
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """What each pin is for: clock, reset, gate, data"""
+    nl = _build(gds, tech, top, lef)
+    console.print(escape(interface.report(interface.describe(nl, cycles))))
 
 
 @app.command()

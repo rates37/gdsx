@@ -1815,3 +1815,53 @@ operators (proven over the full input space)
 In `tests/rtl_fixtures` there was already a flow of write verilog -> run through yosys -> rename the gates to sky130 equivalents and get something relatively indistinguishable from the extracted netlist.
 
 Does renaming instead of actual synthesis directly to sky130 so that there isn't a dependence on needing the PDK. Only needs the small json it fetches once.
+
+## Interface inference based on behaviour
+
+Earlier phases assumed meaning of top level ports based on the name (clk, rst_n, en, etc.). Instead, I thought it would be cool to be able to infer the meaning of input ports based on their behaivour. THere's aleready all this functionality in the library for analysis, but it's all separate in different commands. They aren't useless but it's a bit overwhelming to have to go through so much documentation to figure out how to use them. Not that this will replace them but for a quick surface level look, this can provide some initial direction.
+
+Note: I think for the purpose of the puzzle this is useless bc the puzzle does have meaninful port names (clk, I, O, en, success, etc.).
+
+### Input classification
+
+The five key input behaviours to check for are:
+
+- clock/reset: easy to tell as it will reach the clock or async reset pin of FFs
+- gate: holding at once value freezes the design (e.g., enable pin)
+- data(generic): changing this changes the outputs/state, most pins fall here, and doesn't provide much meaningful info
+- combinational: reaches the outputs directly, never touches a FF
+- unused: find pins that are literally meaningless
+
+### Output classification
+
+Way harder to classify outputs, especially for the puzzles because something like success would only go high when the correct input sequence is applied. I.e., basically never if you don't know the correct sequence. So for now it's between `static`, `registered`, and `combinational`. Since the puzzle sequence isn't known, it currently labels the success output as `static` (and the `O` outputs).
+
+Now using it on the puzzle, it tells me basically what we already knew:
+
+```
+$ uv run gdsx ports samples/puzzle.gds
+inputs
+
+  I              input  data (reaches 58 flops)
+  clk            input  clock (drives the flop clock pins)
+  enable         input  gate (held at 0 nothing changes)
+  rst_n          input  reset (drives the flop set/clear pins, asserted 0)
+
+outputs
+
+  O[0]           static
+  O[1]           static
+  O[2]           static
+  O[3]           static
+  O[4]           static
+  O[5]           static
+  O[6]           static
+  O[7]           static
+  success        static
+```
+
+## More misc Notes:
+
+Found this from a 2017 CTF: https://blog.dragonsector.pl/2017/10/?m=1
+
+Methodology there sounds similar to what I was saying about using a sequential SAT solver to find the input sequence that leads to success. But like before I'd rather not do that (at least at first) and gradually recover the structure of the design.
