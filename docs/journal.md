@@ -1985,3 +1985,65 @@ after:  q  8-bit parallel register   (order_evidence = probe)
 ```
 
 Still unsure if keeping this feature. I'm not convinced it's definitely useful for the puzzle.
+
+## Register Purpose ID:
+
+Now trying to answer the question what each register is acutalyly doing (counter, accumulator, LFSD, etc.). This can be read from netlist topology
+
+Five categories:
+
+- counter: feedback through an adder who's only operand is the register itself
+- accumulator: feedback through an adder that also reads something else
+- LFSR: feedback through XOR gates acting on its own bits
+- input register: no feedback, just fed from input ports
+
+This is useful because a counter and a register would appear similar if only considering the register nets, but by considering the surrounding gates, we can get suggestions for what the register is actually used for in the physcial design. Like the difference between `Q <= Q + 1` and `Q <= Q + d` is whether the adder's second operand is a constant or comes from another net within the circuit.
+
+`sequential.graph(nl, registers)` builds a map of register -> the registers its next state depends on. Needs the whole cone, not just what's directly on the D pin, so that we can fully understand what drives that register.
+
+### Exmaple on Warmup:
+
+```py
+from gdsx import config, loader, netlist, analyse, sequential
+nl = netlist.build(loader.load('samples/sample.gds', config.load()))
+registers = analyse.resolve_bit_order(nl, analyse.find_registers(nl))
+roles = sequential.classify(nl, registers)
+print(sequential.report(nl, roles, sequential.pipelines(roles)))
+```
+
+Output:
+
+```
+2 registers over 16 flops
+
+    2 x shift register
+        reg_A   [bits feed the next]
+        reg_B   [bits feed the next]
+```
+
+Unfortunately something like a multi-bit wide pipeline like `a <= d; b <= a; c <= b;` gets shown as eight separate 3-bit shift registers: (needs looking at again in the future)
+
+```
+# PIPELINE, 8 bits wide, 3 stages
+8 registers over 24 flops
+
+    8 x shift register
+        reg_d_0   [bits feed the next]
+        reg_d_1   [bits feed the next]
+        ...
+```
+
+On the real puzzle:
+
+```
+3 registers over 92 flops
+
+    1 x accumulator
+        reg_dfrtp_2_41  <- reg_dfstp_2_1, reg_dfxtp_2_1   [feedback through a carry bit]
+    1 x LFSR
+        reg_dfstp_2_1  <- reg_dfrtp_2_41, reg_dfxtp_2_1   [shift with 10 parity taps]
+    1 x state register
+        reg_dfxtp_2_1  <- reg_dfrtp_2_41   [depends on itself]
+```
+
+Not much informative there sadly.
