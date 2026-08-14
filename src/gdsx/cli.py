@@ -18,6 +18,7 @@ from . import guards as _guards
 from . import lift as lifting
 from . import normalise as _normalise
 from . import region as _region
+from . import sequential
 from . import verify as equiv
 from .pins import PinOracle
 
@@ -394,6 +395,21 @@ def ports(
     """What each pin is for: clock, reset, gate, data"""
     nl = _build(gds, tech, top, lef)
     console.print(escape(interface.report(interface.describe(nl, cycles))))
+
+
+@app.command()
+def registers(
+    gds: Path = GdsArg,
+    tech: Optional[Path] = TechOpt,
+    top: Optional[str] = TopOpt,
+    lef: Optional[Path] = LefOpt,
+):
+    """What kind of thing each register is"""
+
+    nl = _build(gds, tech, top, lef)
+    found = analysis.resolve_bit_order(nl, analysis.find_registers(nl))
+    roles = sequential.classify(nl, found)
+    console.print(escape(sequential.report(nl, roles, sequential.pipelines(roles))))
 
 
 @app.command()
