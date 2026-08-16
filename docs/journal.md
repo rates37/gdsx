@@ -2769,6 +2769,29 @@ Another possible easter egg, we see the letters "J", "S", and "C" diagonally top
 
 ![Solved grid](./solved_grid.png)
 
+Rough reasoning for the solution:
+
+* 13/15 must be 4,8 and 4,10
+* 19/24 must be 9,2. other one undetermined atm
+* 30/31, since all in col 1, one must be 1,10 due to spacing. rest of col 1 beside 1,7 and 1,8 can be removed due to col constraint
+* 22/23, must be 7,0 and 7,2 due to spacing constraint
+* 19/24 must be 9,0 since 8,0 crossed out due to space constraint from 7,0
+* rest of col 9 crossed out, so 45/46 must be 10,6 and 10,8
+* 30/31 other one must be 1,7, as 1,8 crossed out from row contraint and 45/46 selection
+* 32/35 - one must be 5,1. other is either 4,6 or 5,6 but unsure currently
+* 28/29 must be 0,1 and 0,3 all other have been crossed out
+* 7/8 must be 2,3 and 2,5 as only 2,3-5 is remaining from that region
+* row 9 only has two consecutive purple and a solitary blue, so due to spacing constraint, blue must be a cat
+* 4,4 must contain cat since it is directly next to two cosecutive purple and rest of row is eliminated
+* follows that 4,6 is a cat too
+* 8,5 is only one left in that row, must be cat to satisfy row requirements
+* 6,6 or 6,7 must be cat since only two remaining green cells, so eliminate 6,9
+* follows that 5,9 is cat since only remaining cell in that row and only 1 cat in that row so far
+* 5,6 eliminated due to col constraint
+* 4,6 only remaining pink square, must be cat
+* 6,6 eliminated row constraint
+* 6,7 must be green
+
 Okay, if this ISNT the solution then I don't know what is, since it satisfies all the constraints and there isn't any remaining logic in the cone of `success` that we haven't looked at yet.
 
 Trying it: in `workspace/solve_cat.py`:
