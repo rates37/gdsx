@@ -2429,3 +2429,114 @@ We can see that each one depends on the previous ones, and the last one (9) depe
 Simulating it in `workspace/big_counter.py` confirms this, and it counts the number of clock cycles that `I` is high for (limited by the 121 cycle limit that we observed before). This makes me think part of success going high is this counter reaching a certain number? But given the netlist, there's also other logic involved.
 
 ### What a register pair does
+
+So from above, I know (think) that all registers are in 2-bit pairs. There are 22 registers under `n96`(11 pairs), and 22 registers under `n136` (another 11 pairs). Each pair needs to be a 10 or 01 in order to drive `success` high.
+
+Now since it's just 2 bits, I think we can probably observe the circuit structure and find out what each pair does? Given there's so many, it's likely they all do similar functionality but for different regions of the input? That's unconfirmed though.
+
+Ok, since the `n136` group is the one that has fewer dependencies (only the first 4-bit counter), I'll look at a pair from that one first. Looking at 70/71:
+
+```py
+uv run python -c "
+import sys
+sys.path.insert(0, 'workspace')
+import cone
+cone.walk(cone.dpin('dfrtp_2_70'), 6)
+print('---'*10)
+cone.walk(cone.dpin('dfrtp_2_71'), 6)"
+```
+
+Output;
+
+```
+n1007 <- o21a_2_26 (o21a_2)  ((A1 & B1) | (A2 & B1))  {'A1': 'n985', 'A2': 'n945', 'B1': 'n1012'}
+ n985 = <dfrtp_2_71.Q>
+ n945 <- nand4_2_10 (nand4_2)  (((~A | ~B) | ~C) | ~D)  {'A': 'I', 'B': 'n896', 'C': 'n1140', 'D': 'n1137'}
+  I = <I>
+  n896 <- and2b_2_24 (and2b_2)  (~A_N & B)  {'A_N': 'n151', 'B': 'enable'}
+   n151 = <dfrtp_2_61.Q>
+   enable = <enable>
+  n1140 = <dfrtp_2_70.Q>
+  n1137 <- and4bb_2_11 (and4bb_2)  (((~A_N & ~B_N) & C) & D)  {'A_N': 'n1082', 'B_N': 'n664', 'C': 'n2786', 'D': 'n658'}
+   n1082 = <dfrtp_2_40.Q>
+   n664 = <dfrtp_2_51.Q>
+   n2786 = <dfrtp_2_41.Q>
+   n658 = <dfrtp_2_47.Q>
+ n1012 <- a31o_2_22 (a31o_2)  (((A1 & A2) & A3) | B1)  {'A1': 'I', 'A2': 'n896', 'A3': 'n1137', 'B1': 'n1140'}
+  I = <I>
+  n896 <- and2b_2_24 (and2b_2)  (~A_N & B)  {'A_N': 'n151', 'B': 'enable'}
+  n1137 <- and4bb_2_11 (and4bb_2)  (((~A_N & ~B_N) & C) & D)  {'A_N': 'n1082', 'B_N': 'n664', 'C': 'n2786', 'D': 'n658'}
+  n1140 = <dfrtp_2_70.Q>
+------------------------------
+n947 <- nand2b_2_19 (nand2b_2)  (A_N | ~B)  {'A_N': 'n985', 'B': 'n945'}
+ n985 = <dfrtp_2_71.Q>
+ n945 <- nand4_2_10 (nand4_2)  (((~A | ~B) | ~C) | ~D)  {'A': 'I', 'B': 'n896', 'C': 'n1140', 'D': 'n1137'}
+  I = <I>
+  n896 <- and2b_2_24 (and2b_2)  (~A_N & B)  {'A_N': 'n151', 'B': 'enable'}
+   n151 = <dfrtp_2_61.Q>
+   enable = <enable>
+  n1140 = <dfrtp_2_70.Q>
+  n1137 <- and4bb_2_11 (and4bb_2)  (((~A_N & ~B_N) & C) & D)  {'A_N': 'n1082', 'B_N': 'n664', 'C': 'n2786', 'D': 'n658'}
+   n1082 = <dfrtp_2_40.Q>
+   n664 = <dfrtp_2_51.Q>
+   n2786 = <dfrtp_2_41.Q>
+   n658 = <dfrtp_2_47.Q>
+```
+
+Both obviously need enable high, and its corresponding Q61 / `n896` signal to be high.
+
+Both also depend on `n1137`, which is a 4-input AND gate depending on 40, 41, 47, and 51 - the bits from the 4-bit counter. So this pair is gated by the 4-bit counter being at a specific value, like an address decoder.
+
+Finally both have a "tick" behaviour based on `I`, `en`, and `n1137`. With `q0=Q70` and `q1=Q71`, the truth table for the pair is:
+
+| `{q1, q0}` | `{q1_next, q0_next}` |
+| ---------- | -------------------- |
+| `00`       | `01`                 |
+| `01`       | `10`                 |
+| `10`       | `11`                 |
+| `11`       | `11`                 |
+
+Appears to be a saturating counter, counting up to 3 and latching there. But since `success` needed `~dfrtp_2_70.Q` and `dfrtp_2_71.Q`, success can only go high when this counter is at `10`. This implies there's an upper limit on the number of times `I` can be high in order to trigger success.
+
+Looking at another pair, they looked similar. So I think all pairs are similar, but gated by different values of the 4-bit counter. 
+
+Looking at a pair from the `n96` group, it's a simliar story, except it relies on BOTH 4-bit counters, and slightly more decoding logic.
+
+#### Script to Find Which Pairs Correspond to which clock cycles:
+
+In `workspace/pair_sensitivity.py`, we check for each clock cycle, which pairs are sensitive to `I`. The output is:
+
+```
+N96 pairs
+dfrtp_2_22  /dfrtp_2_23   is sensitive on cycles: [7, 17, 18, 29, 30, 41, 42]
+dfrtp_2_19  /dfrtp_2_24   is sensitive on cycles: [8, 9, 19, 20, 31]
+dfrtp_2_30  /dfrtp_2_31   is sensitive on cycles: [78, 79, 80, 89, 90, 101, 111, 112]
+dfrtp_2_28  /dfrtp_2_29   is sensitive on cycles: [0, 1, 2, 3, 4, 11, 12, 14, 15, 22, 23, 33, 34, 45]
+dfrtp_2_11  /dfrtp_2_12   is sensitive on cycles: [37, 38, 39, 48, 59, 60, 61, 72, 81, 82, 83]
+dfrtp_2_7   /dfrtp_2_8    is sensitive on cycles: [13, 24, 35, 44, 46, 55, 56, 57]
+dfrtp_2_13  /dfrtp_2_15   is sensitive on cycles: [91, 102, 103, 113]
+dfrtp_2_14  /dfrtp_2_16   is sensitive on cycles: [63, 64, 65, 74, 85, 96, 107, 108, 109]
+dfrtp_2_36  /dfrtp_2_39   is sensitive on cycles: [10, 21, 32, 40, 43, 49, 50, 51, 52, 53, 54, 62, 73, 84, 92, 93, 94, 95, 104, 105, 106, 114, 115, 116, 117, 118, 119, 120]
+dfrtp_2_32  /dfrtp_2_35   is sensitive on cycles: [5, 6, 16, 25, 26, 27, 28, 36, 47, 58, 66, 67, 68, 69, 70, 71, 77, 88, 99, 100, 110]
+dfrtp_2_45  /dfrtp_2_46   is sensitive on cycles: [75, 76, 86, 87, 97, 98]
+
+N136 pairs
+dfrtp_2_70  /dfrtp_2_71   is sensitive on cycles: [5, 16, 27, 38, 49, 60, 71, 82, 93, 104, 115]
+dfrtp_2_68  /dfrtp_2_69   is sensitive on cycles: [4, 15, 26, 37, 48, 59, 70, 81, 92, 103, 114]
+dfrtp_2_74  /dfrtp_2_75   is sensitive on cycles: [7, 18, 29, 40, 51, 62, 73, 84, 95, 106, 117]
+dfrtp_2_72  /dfrtp_2_73   is sensitive on cycles: [6, 17, 28, 39, 50, 61, 72, 83, 94, 105, 116]
+dfrtp_2_62  /dfrtp_2_63   is sensitive on cycles: [1, 12, 23, 34, 45, 56, 67, 78, 89, 100, 111]
+dfrtp_2_56  /dfrtp_2_57   is sensitive on cycles: [0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110]
+dfrtp_2_66  /dfrtp_2_67   is sensitive on cycles: [3, 14, 25, 36, 47, 58, 69, 80, 91, 102, 113]
+dfrtp_2_64  /dfrtp_2_65   is sensitive on cycles: [2, 13, 24, 35, 46, 57, 68, 79, 90, 101, 112]
+dfrtp_2_76  /dfrtp_2_78   is sensitive on cycles: [9, 20, 31, 42, 53, 64, 75, 86, 97, 108, 119]
+dfrtp_2_79  /dfrtp_2_80   is sensitive on cycles: [8, 19, 30, 41, 52, 63, 74, 85, 96, 107, 118]
+dfrtp_2_81  /dfrtp_2_84   is sensitive on cycles: [10, 21, 32, 43, 54, 65, 76, 87, 98, 109, 120]
+```
+
+First, the `n136` pairs, it looks like they are all non-overlapping sets, and all clock cycle mod 11. This makes sense since they purely decode the first 4-bit counter, which cycles through 0-10.
+
+But what's interesting is for the `n96` pairs, they are also non-overlapping sets. So for any given clock cycle, exactly one of the `n96` pairs increments, and exactly one of the `n136` pairs increments.
+
+This tells me that we need an input sequence with exactly 22 clock cycles where `I` is high, and the rest of the clock cycles, `I` is low.
+
