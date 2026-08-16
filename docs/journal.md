@@ -2574,3 +2574,101 @@ Solution: [6, 8, 18, 19, 28, 29, 34, 44, 45, 55, 59, 65, 81, 86, 97, 101, 102, 1
 ```
 
 However, this did not solve the puzzle, `success` remained low. So the logic that has yet to be inspected must have something to do with this. Attempting to enumerate all solutions yielded over 3000 possibilities after running for a few minutes, and likely would yield an infeasble number in total, so scrapped that idea as well.
+
+### The missing things
+
+From one of the sections above, we know that both `dfrtp_2_18` and `dfrtp_2_50` must must remain at 0. So let's inspect their cones to see what they depend on and what they do.
+
+```py
+uv run python -c "
+import sys
+sys.path.insert(0, 'workspace')
+import cone
+cone.walk(cone.dpin('dfrtp_2_18'), 6)
+print('---'*10)
+cone.walk(cone.dpin('dfrtp_2_50'), 6)"
+```
+
+Output:
+
+```
+n3508 <- a31o_2_9 (a31o_2)  (((A1 & A2) & A3) | B1)  {'A1': 'n2823', 'A2': 'n896', 'A3': 'n3493', 'B1': 'n3499'}
+ n2823 <- and4bb_2_9 (and4bb_2)  (((~A_N & ~B_N) & C) & D)  {'A_N': 'n658', 'B_N': 'n2786', 'C': 'n664', 'D': 'n1082'}
+  n658 = <dfrtp_2_47.Q>
+  n2786 = <dfrtp_2_41.Q>
+  n664 = <dfrtp_2_51.Q>
+  n1082 = <dfrtp_2_40.Q>
+ n896 <- and2b_2_24 (and2b_2)  (~A_N & B)  {'A_N': 'n151', 'B': 'enable'}
+  n151 = <dfrtp_2_61.Q>
+  enable = <enable>
+ n3493 <- mux2_1_8 (mux2_1)  ((A0 & ~S) | (A1 & S))  {'A0': 'n3426', 'A1': 'n3427', 'S': 'n3399'}
+  n3426 <- nand2_2_27 (nand2_2)  (~A | ~B)  {'A': 'n3408', 'B': 'I'}
+   n3408 = <dfrtp_2_27.Q>
+   I = <I>
+  n3427 <- or2_2_8 (or2_2)  (A | B)  {'A': 'n3408', 'B': 'I'}
+   n3408 = <dfrtp_2_27.Q>
+   I = <I>
+  n3399 = <dfrtp_2_21.Q>
+ n3499 = <dfrtp_2_18.Q>
+------------------------------
+n2984 <- a31o_2_16 (a31o_2)  (((A1 & A2) & A3) | B1)  {'A1': 'I', 'A2': 'n896', 'A3': 'n2948', 'B1': 'n2951'}
+ I = <I>
+ n896 <- and2b_2_24 (and2b_2)  (~A_N & B)  {'A_N': 'n151', 'B': 'enable'}
+  n151 = <dfrtp_2_61.Q>
+  enable = <enable>
+ n2948 <- a221o_2_2 (a221o_2)  (((B1 & B2) | (A1 & A2)) | C1)  {'A1': 'n2981', 'A2': 'n3180', 'B1': 'n2949', 'B2': 'n3067', 'C1': 'n3066'}
+  n2981 <- or4bb_2_1 (or4bb_2)  (((A | B) | ~C_N) | ~D_N)  {'A': 'n658', 'B': 'n2786', 'C_N': 'n664', 'D_N': 'n1082'}
+   n658 = <dfrtp_2_47.Q>
+   n2786 = <dfrtp_2_41.Q>
+   n664 = <dfrtp_2_51.Q>
+   n1082 = <dfrtp_2_40.Q>
+  n3180 = <dfrtp_2_37.Q>
+  n2949 <- conb_1_2 (conb_1)  1'b1  {'HI': 'n2949', 'LO': 'n3435'}
+  n3067 = <dfrtp_2_44.Q>
+  n3066 <- a22o_2_3 (a22o_2)  ((B1 & B2) | (A1 & A2))  {'A1': 'n3048', 'A2': 'n3046', 'B1': 'n3049', 'B2': 'n3044'}
+   n3048 <- or4_2_5 (or4_2)  (((A | B) | C) | D)  {'A': 'n658', 'B': 'n1082', 'C': 'n2786', 'D': 'n664'}
+    n658 = <dfrtp_2_47.Q>
+    n1082 = <dfrtp_2_40.Q>
+    n2786 = <dfrtp_2_41.Q>
+    n664 = <dfrtp_2_51.Q>
+   n3046 = <dfrtp_2_53.Q>
+   n3049 <- buf_2_1 (buf_2)  A  {'A': 'n3048'}
+    n3048 <- or4_2_5 (or4_2)  (((A | B) | C) | D)  {'A': 'n658', 'B': 'n1082', 'C': 'n2786', 'D': 'n664'}
+   n3044 = <dfrtp_2_48.Q>
+ n2951 = <dfrtp_2_50.Q>
+```
+
+That's almost relieving, they are (relatively) small number of dependencies, and those ff names look familiar.
+
+#### `dfrtp_2_18`:
+
+From the output above, we can see that `dfrtp_2_18` depends on: `{I, 18, 21, 27, 40, 41, 47, 51, 61, enable}`. `21`/`27` depend on each other and on `I`. The other registers are the 4-bit counter and the enable signal.
+
+The node `n2823` is the expression: `n2823 = Q40 & Q51 & ~Q41 & ~Q47`. This represents the 4-bit counter being at value 10, i.e., right before it wraps around to 0.
+
+Noting things down:
+
+`D18 = (n2823 & en & n3493) | Q18`, so it latches on (and can never be turned off). This must encode some property of the input that must never be violated.
+
+`n3493 = (~Q21 & ~(Q27 & I)) | (Q21 & (Q27 | I))`
+
+`D21 = ~n2823 & (Q21 | (Q27 & I))`
+
+`D27 = ~n2823 & (Q27 | I) & (Q21 | ~(Q27 & I))`
+
+So `D21` and `D27` both have `~n2823` as a factor, so both are forced to 0 at every pulse of `n2823`, every time the lower 4-bit counter goes from 10 -> 0.
+
+Tabulating the truth table for `D21` and `D27`, you get the sequence 00 -> 01 -> 10 -> 11 (while n2823=0), so it's yet another saturating 2-bit counter.
+
+So substitute the four states into `n3493`, the condition that trips `D18` (and thus is the thing that prevents success from ever going high), sampled at the `n2823` cycle, is:
+
+| count so far | `n3493` | Safe?                                              |
+| ------------ | ------- | -------------------------------------------------- |
+| 0            | 1       | never                                              |
+| 1            | ~I      | only if `I=1` at the cycle 10 of the lower counter |
+| 2            | `I`     | only if `I=0` at the cycle 10 of the lower counter |
+| 3            | 1       | never                                              |
+
+So this basically says every span of 11 cycles must contain exactly 2 pulses of `I` being high, and the rest low.
+
+This is like a complement to the mod 11 constraint that applied to all the `n136` pairs, except this is applying to `cycle // 11` positions, if that makes sense. I guess another way to think of it would be that the `n136` pairs are ensuring exactly 2 pulses per column, whereas this is ensuring exactly 2 pulses per row, if you think of the 121 cycles as a 11x11 grid. Still unsure what the `n96` pairs are constraining, but they are also ensuring maximum of 2 pulses, just not as easily interpretable as a grid.
