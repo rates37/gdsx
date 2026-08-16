@@ -2498,7 +2498,7 @@ Finally both have a "tick" behaviour based on `I`, `en`, and `n1137`. With `q0=Q
 
 Appears to be a saturating counter, counting up to 3 and latching there. But since `success` needed `~dfrtp_2_70.Q` and `dfrtp_2_71.Q`, success can only go high when this counter is at `10`. This implies there's an upper limit on the number of times `I` can be high in order to trigger success.
 
-Looking at another pair, they looked similar. So I think all pairs are similar, but gated by different values of the 4-bit counter. 
+Looking at another pair, they looked similar. So I think all pairs are similar, but gated by different values of the 4-bit counter.
 
 Looking at a pair from the `n96` group, it's a simliar story, except it relies on BOTH 4-bit counters, and slightly more decoding logic.
 
@@ -2540,3 +2540,37 @@ But what's interesting is for the `n96` pairs, they are also non-overlapping set
 
 This tells me that we need an input sequence with exactly 22 clock cycles where `I` is high, and the rest of the clock cycles, `I` is low.
 
+### Reframing as an ILP Problem
+
+We can reframe this as an ILP problem now. We need to choose a set of clock cycles to trigger every 2-bit counter to increment exactly twice.
+
+Define a binary variable for each clock cycle:
+
+$$ x_i = \begin{cases} 1 & \text{if } I \text{ is high on clock cycle } i \\ 0 & \text{otherwise} \end{cases}$$
+
+Convert each counter's sensitivity list into a constraint. E.g., `dfrtp_2_56  /dfrtp_2_57` is sensitive on cycles `[0, 11, 22, 33, 44, 55, 66, 77, 88, 99, 110]`, so we can write the constraint:
+
+$$ x*0 + x*{11} + x*{22} + x*{33} + x*{44} + x*{55} + x*{66} + x*{77} + x*{88} + x*{99} + x\_{110} = 2 $$
+
+Every counter creates a similar constraint.
+
+Build the constraint matrix. The ILP represents these equations as a matrix:
+
+$$ Ax = b$$
+
+Where:
+
+- each column represents a possible clock cycle (0-120)
+- each row represents a counter's sensitivity list
+- $b$ is a vector of 2's
+- $A_{i,c}=1$ if counter $i$ is sensitive to clock cycle $c$, else 0
+
+Must constrain the variables to be binary, since `I` is binary.
+
+Implemented this in `workspace/solve.py`, and yielded the solution:
+
+```
+Solution: [6, 8, 18, 19, 28, 29, 34, 44, 45, 55, 59, 65, 81, 86, 97, 101, 102, 104, 109, 112, 113, 115]
+```
+
+However, this did not solve the puzzle, `success` remained low. So the logic that has yet to be inspected must have something to do with this. Attempting to enumerate all solutions yielded over 3000 possibilities after running for a few minutes, and likely would yield an infeasble number in total, so scrapped that idea as well.
