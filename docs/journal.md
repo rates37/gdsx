@@ -2231,3 +2231,201 @@ So this is 44 flops total (22 FFs for each of the two deep AND trees). For each 
 Given how many times 11 or a multiple of it has come up this is almost definitely something related to the circuit's function.
 
 But essentially this target state is now defined as a total of 50 FFs at a specific value. 22 2-bit pair values at `01` or `10`, and 6 other conditions: `dfrtp_2_50 = 0`, `dfrtp_2_18 = 0`, `dfrtp_2_1/2/3 = 1`, and `n4123` resolving to `dfrtp_2_4/5/10 = 0`.
+
+### Grouping into Functional Blocks
+
+Next idea to group registers based on their function. It's pretty hard to do this automatically, but based on manual inspection of the drivers in each register's fan in tree, you can make some progress:
+
+In `workspace/fgraph.py` (turn off word wrap in editor to see slightly more clearly)
+
+```sh
+$ uv run python work/fgraph.py
+dfrtp_2_1       D <- I,dfrtp_2_1,dfrtp_2_2,dfrtp_2_3,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_2       D <- I,dfrtp_2_2,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_3       D <- I,dfrtp_2_2,dfrtp_2_3,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_4       D <- I,dfrtp_2_1,dfrtp_2_2,dfrtp_2_3,dfrtp_2_4,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_5       D <- I,dfrtp_2_1,dfrtp_2_2,dfrtp_2_3,dfrtp_2_4,dfrtp_2_5,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_6       D <- I,dfrtp_2_2,dfrtp_2_3,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_7       D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_7,dfrtp_2_8,enable
+dfrtp_2_8       D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_7,dfrtp_2_8,enable
+dfrtp_2_9       D <- I,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_10      D <- I,dfrtp_2_1,dfrtp_2_10,dfrtp_2_2,dfrtp_2_3,dfrtp_2_4,dfrtp_2_5,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_11      D <- I,dfrtp_2_11,dfrtp_2_12,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_12      D <- I,dfrtp_2_11,dfrtp_2_12,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_13      D <- I,dfrtp_2_13,dfrtp_2_15,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_14      D <- I,dfrtp_2_14,dfrtp_2_16,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_15      D <- I,dfrtp_2_13,dfrtp_2_15,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_16      D <- I,dfrtp_2_14,dfrtp_2_16,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_17      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_18      D <- I,dfrtp_2_18,dfrtp_2_21,dfrtp_2_27,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_19      D <- I,dfrtp_2_17,dfrtp_2_19,dfrtp_2_20,dfrtp_2_24,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_20      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_21      D <- I,dfrtp_2_21,dfrtp_2_27,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_22      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_22,dfrtp_2_23,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_23      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_22,dfrtp_2_23,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_24      D <- I,dfrtp_2_17,dfrtp_2_19,dfrtp_2_20,dfrtp_2_24,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_25      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_26      D <- dfrtp_2_17,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_27      D <- I,dfrtp_2_21,dfrtp_2_27,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_28      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_28,dfrtp_2_29,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_29      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_28,dfrtp_2_29,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_30      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_30,dfrtp_2_31,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_31      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_30,dfrtp_2_31,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_32      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_32,dfrtp_2_35,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_33      D <- dfrtp_2_33,dfrtp_2_43,dfrtp_2_61,enable
+dfrtp_2_34      D <- dfrtp_2_33,dfrtp_2_34,dfrtp_2_61,enable
+dfrtp_2_35      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_32,dfrtp_2_35,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_36      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_36,dfrtp_2_39,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_37      D <- dfrtp_2_34,dfrtp_2_37,dfrtp_2_61,enable
+dfrtp_2_38      D <- dfrtp_2_38,dfrtp_2_42,dfrtp_2_61,enable
+dfrtp_2_39      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_36,dfrtp_2_39,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_40      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_41      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_61,enable
+dfrtp_2_42      D <- dfrtp_2_42,dfrtp_2_49,dfrtp_2_61,enable
+dfrtp_2_43      D <- dfrtp_2_38,dfrtp_2_43,dfrtp_2_61,enable
+dfrtp_2_44      D <- dfrtp_2_37,dfrtp_2_44,dfrtp_2_61,enable
+dfrtp_2_45      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_45,dfrtp_2_46,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_46      D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_45,dfrtp_2_46,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_47      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_48      D <- dfrtp_2_44,dfrtp_2_48,dfrtp_2_61,enable
+dfrtp_2_49      D <- dfrtp_2_49,dfrtp_2_54,dfrtp_2_61,enable
+dfrtp_2_50      D <- I,dfrtp_2_37,dfrtp_2_40,dfrtp_2_41,dfrtp_2_44,dfrtp_2_47,dfrtp_2_48,dfrtp_2_50,dfrtp_2_51,dfrtp_2_53,dfrtp_2_61,enable
+dfrtp_2_51      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_52      D <- dfrtp_2_52,dfrtp_2_53,dfrtp_2_61,enable
+dfrtp_2_53      D <- I,dfrtp_2_53,dfrtp_2_61,enable
+dfrtp_2_54      D <- dfrtp_2_52,dfrtp_2_54,dfrtp_2_61,enable
+dfrtp_2_55      D <- dfrtp_2_55,dfrtp_2_58,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_2,dfstp_2_3,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfrtp_2_56      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_56,dfrtp_2_57,dfrtp_2_61,enable
+dfrtp_2_57      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_56,dfrtp_2_57,dfrtp_2_61,enable
+dfrtp_2_58      D <- dfrtp_2_58,dfrtp_2_59,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_3,dfstp_2_4,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfrtp_2_59      D <- dfrtp_2_55,dfrtp_2_59,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_1,dfstp_2_4,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfrtp_2_60      D <- dfrtp_2_58,dfrtp_2_59,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_1,dfstp_2_2,dfstp_2_3,dfstp_2_4,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfrtp_2_61      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_62      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_62,dfrtp_2_63,enable
+dfrtp_2_63      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_62,dfrtp_2_63,enable
+dfrtp_2_64      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_64,dfrtp_2_65,enable
+dfrtp_2_65      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_64,dfrtp_2_65,enable
+dfrtp_2_66      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_66,dfrtp_2_67,enable
+dfrtp_2_67      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_66,dfrtp_2_67,enable
+dfrtp_2_68      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_68,dfrtp_2_69,enable
+dfrtp_2_69      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_68,dfrtp_2_69,enable
+dfrtp_2_70      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_70,dfrtp_2_71,enable
+dfrtp_2_71      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_70,dfrtp_2_71,enable
+dfrtp_2_72      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_72,dfrtp_2_73,enable
+dfrtp_2_73      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_72,dfrtp_2_73,enable
+dfrtp_2_74      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_74,dfrtp_2_75,enable
+dfrtp_2_75      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_74,dfrtp_2_75,enable
+dfrtp_2_76      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_76,dfrtp_2_78,enable
+dfrtp_2_77      D <- dfrtp_2_1,dfrtp_2_10,dfrtp_2_11,dfrtp_2_12,dfrtp_2_13,dfrtp_2_14,dfrtp_2_15,dfrtp_2_16,dfrtp_2_18,dfrtp_2_19,dfrtp_2_2,dfrtp_2_22,dfrtp_2_23,dfrtp_2_24,dfrtp_2_28,dfrtp_2_29,dfrtp_2_3,dfrtp_2_30,dfrtp_2_31,dfrtp_2_32,dfrtp_2_35,dfrtp_2_36,dfrtp_2_39,dfrtp_2_4,dfrtp_2_45,dfrtp_2_46,dfrtp_2_5,dfrtp_2_50,dfrtp_2_56,dfrtp_2_57,dfrtp_2_6,dfrtp_2_61,dfrtp_2_62,dfrtp_2_63,dfrtp_2_64,dfrtp_2_65,dfrtp_2_66,dfrtp_2_67,dfrtp_2_68,dfrtp_2_69,dfrtp_2_7,dfrtp_2_70,dfrtp_2_71,dfrtp_2_72,dfrtp_2_73,dfrtp_2_74,dfrtp_2_75,dfrtp_2_76,dfrtp_2_77,dfrtp_2_78,dfrtp_2_79,dfrtp_2_8,dfrtp_2_80,dfrtp_2_81,dfrtp_2_82,dfrtp_2_84,dfrtp_2_9
+dfrtp_2_78      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_76,dfrtp_2_78,enable
+dfrtp_2_79      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_79,dfrtp_2_80,enable
+dfrtp_2_80      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_79,dfrtp_2_80,enable
+dfrtp_2_81      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_81,dfrtp_2_84,enable
+dfrtp_2_82      D <- dfrtp_2_61,dfrtp_2_82
+dfrtp_2_83      D <- dfrtp_2_1,dfrtp_2_10,dfrtp_2_11,dfrtp_2_12,dfrtp_2_13,dfrtp_2_14,dfrtp_2_15,dfrtp_2_16,dfrtp_2_18,dfrtp_2_19,dfrtp_2_2,dfrtp_2_22,dfrtp_2_23,dfrtp_2_24,dfrtp_2_28,dfrtp_2_29,dfrtp_2_3,dfrtp_2_30,dfrtp_2_31,dfrtp_2_32,dfrtp_2_35,dfrtp_2_36,dfrtp_2_39,dfrtp_2_4,dfrtp_2_45,dfrtp_2_46,dfrtp_2_5,dfrtp_2_50,dfrtp_2_56,dfrtp_2_57,dfrtp_2_6,dfrtp_2_61,dfrtp_2_62,dfrtp_2_63,dfrtp_2_64,dfrtp_2_65,dfrtp_2_66,dfrtp_2_67,dfrtp_2_68,dfrtp_2_69,dfrtp_2_7,dfrtp_2_70,dfrtp_2_71,dfrtp_2_72,dfrtp_2_73,dfrtp_2_74,dfrtp_2_75,dfrtp_2_76,dfrtp_2_78,dfrtp_2_79,dfrtp_2_8,dfrtp_2_80,dfrtp_2_81,dfrtp_2_82,dfrtp_2_83,dfrtp_2_84,dfrtp_2_9
+dfrtp_2_84      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_81,dfrtp_2_84,enable
+dfstp_2_1       D <- dfrtp_2_55,dfrtp_2_58,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_1,dfstp_2_2,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfstp_2_2       D <- dfrtp_2_58,dfrtp_2_59,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_2,dfstp_2_3,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfstp_2_3       D <- dfrtp_2_55,dfrtp_2_58,dfrtp_2_59,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_1,dfstp_2_2,dfstp_2_3,dfstp_2_4,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfstp_2_4       D <- I,dfrtp_2_55,dfrtp_2_58,dfrtp_2_60,dfrtp_2_61,dfrtp_2_82,dfstp_2_1,dfstp_2_2,dfstp_2_3,dfstp_2_4,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4,enable
+dfxtp_2_1       D <- dfrtp_2_82,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4
+dfxtp_2_2       D <- dfrtp_2_82,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4
+dfxtp_2_3       D <- dfrtp_2_82,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4
+dfxtp_2_4       D <- dfrtp_2_82,dfxtp_2_1,dfxtp_2_2,dfxtp_2_3,dfxtp_2_4
+```
+
+This kind of confirms the 2-bit pair thing I said above. E.g., looking at 66 and 67:
+
+```
+dfrtp_2_66      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_66,dfrtp_2_67,enable
+dfrtp_2_67      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_66,dfrtp_2_67,enable
+```
+
+They depend on the exact same set of inputs.
+
+## All notable things from the work above:
+
+### 4-bit counter:
+
+Registers `dfrtp_2_40/41/47/51` have no `I` in their code, so they are probably timing / addressing logic, and not anything to do with the data / processing. This are the exact registers for the 0-10 binary counter from before.
+
+```
+dfrtp_2_40      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_41      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_61,enable
+dfrtp_2_47      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+dfrtp_2_51      D <- dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+```
+
+### `n96` and `n136` pairings/ parallelism:
+
+The 44 FF pairs split cleanly in two and kind of complement each other(?) So looking at 7 and 70 below:
+
+```
+dfrtp_2_7       D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_7,dfrtp_2_8,enable
+dfrtp_2_70      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,dfrtp_2_70,dfrtp_2_71,enable
+```
+
+Of course they all depend on `enable`, and reg 61, which is the entire design gated by `n896 = ~Q61 & enable`. And what we observed before with each register being part of a 2-bit pair, so 7/8 and 70/71. If we remove those and compare the two again:
+
+```
+# ignoring enable/gated enable and 2-bit pair twin
+dfrtp_2_7       D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51
+dfrtp_2_70      D <- I,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51
+```
+
+Now here we see that 7's dependencies are a superset of 70's, the difference is that 7 has the extra dependencies of 17/20/25/26.
+
+BUT, the common registers here are the exact ones from the 0-10 counter! So removing that, we get:
+
+```
+# ignoring enable/gated enable, 2-bit pair twin, and the 0-10 counter registers
+dfrtp_2_7       D <- I,dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26
+dfrtp_2_70      D <- I
+```
+
+So 70 seems to process the input more directly than 7. The other registers pair similarly. Based on this, we can partition the 44 two-bit registers into two groups, the ones from `n96` and the ones from `n136`. The `n136` group is the one that has the extra dependencies of 17/20/25/26, and the `n96` group does not.
+
+Searching for the string `"dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26"`, it appears 22 times in the total output from above! This suggests that the registers 17/20/25/26 are also some 4-bit sequence/counter (potentially dependent on more than just the input `I`).
+
+### Registers 17/20/25/26 are also a counter
+
+    Looking at 17/20/25/26:
+
+    ```
+    dfrtp_2_17      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+    dfrtp_2_20      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+    dfrtp_2_25      D <- dfrtp_2_17,dfrtp_2_20,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+    dfrtp_2_26      D <- dfrtp_2_17,dfrtp_2_25,dfrtp_2_26,dfrtp_2_40,dfrtp_2_41,dfrtp_2_47,dfrtp_2_51,dfrtp_2_61,enable
+    ```
+
+    Here we see they only depend on eachother, the 0-10 counter registers, and the enable signal(s).
+
+    Wrote `workspace/counter.py` to simulate the circuit under this 4-bit counter for a given number of clock cycles, and this basically confirms it. So 17/20/25/26 increment whenever the first 4-bit counter reaches 10, and on that count, the first counter resets to 0.
+
+    ```
+    $ uv run python workspace/counter.py 200
+    [output omitted for brevity, but its literally just two counters lol]
+    ```
+
+    Once the system reaches clock cycle 121 (when the second counter is 10 and the first counter reaches 10), all counters go to zero and stay there indefinitely. That's 11^2, another time number 11 has shown up.
+
+### Another counter:
+
+Looking at registers 1-6,9,10:
+
+```
+dfrtp_2_10      D <- I,dfrtp_2_1,dfrtp_2_10,dfrtp_2_2,dfrtp_2_3,dfrtp_2_4,dfrtp_2_5,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_5       D <- I,dfrtp_2_1,dfrtp_2_2,dfrtp_2_3,dfrtp_2_4,dfrtp_2_5,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_4       D <- I,dfrtp_2_1,dfrtp_2_2,dfrtp_2_3,dfrtp_2_4,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_1       D <- I,dfrtp_2_1,dfrtp_2_2,dfrtp_2_3,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_6       D <- I,dfrtp_2_2,dfrtp_2_3,dfrtp_2_6,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_3       D <- I,dfrtp_2_2,dfrtp_2_3,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_2       D <- I,dfrtp_2_2,dfrtp_2_61,dfrtp_2_9,enable
+dfrtp_2_9       D <- I,dfrtp_2_61,dfrtp_2_9,enable
+```
+
+We can see that each one depends on the previous ones, and the last one (9) depends on 61 and itself. This is very likely ANOTHER counter, but this one is a 9-bit counter, and it DOES depend on `I`.
+
+Simulating it in `workspace/big_counter.py` confirms this, and it counts the number of clock cycles that `I` is high for (limited by the 121 cycle limit that we observed before). This makes me think part of success going high is this counter reaching a certain number? But given the netlist, there's also other logic involved.
+
+### What a register pair does
