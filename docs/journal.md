@@ -2672,3 +2672,149 @@ So substitute the four states into `n3493`, the condition that trips `D18` (and 
 So this basically says every span of 11 cycles must contain exactly 2 pulses of `I` being high, and the rest low.
 
 This is like a complement to the mod 11 constraint that applied to all the `n136` pairs, except this is applying to `cycle // 11` positions, if that makes sense. I guess another way to think of it would be that the `n136` pairs are ensuring exactly 2 pulses per column, whereas this is ensuring exactly 2 pulses per row, if you think of the 121 cycles as a 11x11 grid. Still unsure what the `n96` pairs are constraining, but they are also ensuring maximum of 2 pulses, just not as easily interpretable as a grid.
+
+#### `dfrtp_2_50`:
+
+The cone for `dfrtp_2_50` is `{I, 37, 40, 41, 44, 47, 48, 50, 51, 53, 61, enable}`.
+
+Straight away seeing those 4-bit counter registers(`40`, `41`, `47`, `51`), so if using the grid visualisation, it's still doing an operation on a row. `50` being there suggests it's a latching FF similar to `18`, but will verify this. The other registers are `37, 44, 48, 53`. Inspecting the orignial `fpgraph.py` output, these registers are a little peculiar, they are part of a long chain of dependencies(reordered below for clarity):
+
+```
+dfrtp_2_53      D <- I, dfrtp_2_53
+dfrtp_2_52      D <- dfrtp_2_52,dfrtp_2_53
+dfrtp_2_54      D <- dfrtp_2_52,dfrtp_2_54
+dfrtp_2_49      D <- dfrtp_2_49,dfrtp_2_54
+dfrtp_2_42      D <- dfrtp_2_42,dfrtp_2_49
+dfrtp_2_38      D <- dfrtp_2_38,dfrtp_2_42
+dfrtp_2_43      D <- dfrtp_2_38,dfrtp_2_43
+dfrtp_2_33      D <- dfrtp_2_33,dfrtp_2_43
+dfrtp_2_34      D <- dfrtp_2_33,dfrtp_2_34
+dfrtp_2_37      D <- dfrtp_2_34,dfrtp_2_37
+dfrtp_2_44      D <- dfrtp_2_37,dfrtp_2_44
+dfrtp_2_48      D <- dfrtp_2_44,dfrtp_2_48
+```
+
+It's 12 in length, and each one only depends on the previos one. So instinct says it's a shift register?
+
+Inspecting it (script to exclude the power related parts):
+
+```py
+uv run python -c "
+import sys; sys.path.insert(0,'work')
+import cone
+for n in [53,52,54,49,42,38,43,33,34,37,44,48]:
+    f = f'dfrtp_2_{n}'
+    _, cellname, fn, conns = cone.gate_of(cone.dpin(f))
+    cell = cellname.split('__')[-1].rsplit('_',1)[0] + '_' + cellname.rsplit('_',1)[-1]
+    pins = {k: conns[k] for k in ('A0','A1','S')}
+    print(f'{f:12s} <- {cell} {fn}  {pins}')
+"
+```
+
+Output:
+
+```
+dfrtp_2_53   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3046', 'A1': 'I', 'S': 'n896'}
+dfrtp_2_52   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3065', 'A1': 'n3046', 'S': 'n896'}
+dfrtp_2_54   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n2996', 'A1': 'n3065', 'S': 'n896'}
+dfrtp_2_49   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n2952', 'A1': 'n2996', 'S': 'n896'}
+dfrtp_2_42   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3031', 'A1': 'n2952', 'S': 'n896'}
+dfrtp_2_38   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3345', 'A1': 'n3031', 'S': 'n896'}
+dfrtp_2_43   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3346', 'A1': 'n3345', 'S': 'n896'}
+dfrtp_2_33   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3276', 'A1': 'n3346', 'S': 'n896'}
+dfrtp_2_34   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3266', 'A1': 'n3276', 'S': 'n896'}
+dfrtp_2_37   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3180', 'A1': 'n3266', 'S': 'n896'}
+dfrtp_2_44   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3067', 'A1': 'n3180', 'S': 'n896'}
+dfrtp_2_48   <- mux2_1 ((A0 & ~S) | (A1 & S))  {'A0': 'n3044', 'A1': 'n3067', 'S': 'n896'}
+```
+
+And yeah, that basically guarantees that it's a 12-bit shift register.
+
+Continuing with the rest of the register 50 fgraph, we have equations:
+
+`n3048 = Q47|Q40|Q41|Q51`, i.e., the 4-bit counter is not at zero, this must exclude triggering logic at the start of a row, since the row at cycle 0/11/22/.. would be empty, as it has not been read in yet.
+
+Assuming `n3048` is true, then we have:
+
+`D50 = (I & en & n2948) | Q50`, so the latch behaviour I suspected is true.
+
+Following `n2948`, we have:
+
+`n2948 = Q44 | (n2981 & Q37) | (n3048 != 0 & (Q48 | Q53))`.
+
+Following `n2981`, we have `n2981 = Q51 | Q41 | ~Q40 | ~Q47`, which is the De-Morgan's law equivalent of 4-bit counter being at 10, i.e., the end of a row. It doesn't look the same as the counter=10 logic in `dfrtp_2_18`, but it is equivalent.
+
+So if there was a pulse on `I` 11 cycles ago and `I` is high now, then `D50` will be 1, and success will never go high. But also if it was 10 cycles ago and this is NOT the end. But ALSO if `n3048` is false AND either `Q48` or `Q53` is high (i.e., one or 12 cycles ago) then `D50` will also be 1.
+
+This is some weird logic. Using the grid visualisation again for a sec, it's like enforcing the following rules:
+
+- pulses cannot be consecutive (1 cycle apart)
+- pulses cannot be above/below one another in the same column (11 cycles apart)
+- pulses cannot be diagonal (10 or 12 cycles apart implements this via checking up left and up right from the current 1 pulse)
+
+This kind of reminds me of a brain rot mobile game I occasionally play called "Meowdoku" (pic attached below) where you are given a grid and need to place cats(markers) but can only have 1 per row, 1 per column, and they cannot be in any of the 8 neighbouring squares. Each cell in the grid has a colour and you can only place one cat per colour region.
+
+Image:
+![Meowdoku](./meowdoku.jpg)
+
+Except here it's 2 per row and col, and always 11x11 grid.
+
+Perhaps the `n96` pairs are enforcing a per-region constraint, like the colour regions in Meowdoku? Let me visualise it:
+
+![Coloured Grid](./coloured_grid.png)
+
+The colouring regions actually works perfectly! Let me solve this, and see if it works.
+
+Another possible easter egg, we see the letters "J", "S", and "C" diagonally top left to bottom right. Probably standing for "Jane Street Capital", "Jane Street Competition" or "Jane Street Challenge".
+
+![Solved grid](./solved_grid.png)
+
+Okay, if this ISNT the solution then I don't know what is, since it satisfies all the constraints and there isn't any remaining logic in the cone of `success` that we haven't looked at yet.
+
+Trying it: in `workspace/solve_cat.py`:
+
+```
+import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
+from harness import get_fresh_sim
+
+KEY = "00000001010" \
++     "10000100000" \
++     "00000001010" \
++     "10100000000" \
++     "00001010000" \
++     "00100000100" \
++     "00001000001" \
++     "01000010000" \
++     "00010000001" \
++     "00000100100" \
++     "01010000000"
+bits = [int(c) for c in KEY]
+sim = get_fresh_sim()
+
+for i in range(len(bits)):
+    b = bits[i] if i < len(bits) else 0
+    v = sim.step({'clk':0,'rst_n':1,'enable':1,'I': b})
+    if v['success']:
+        print(f"Success went high on bit {i}")
+        break
+else:
+    print("success never went high :(")
+```
+
+```sh
+$ uv run python workspace/solve_cat.py
+success never went high :(
+```
+
+I was so sure. Luckily after a few seconds contemplating my life, I realised that `success` was registered, so it would only go high AFTER the last clock cycle (at the clock cycle number 121). Fixing that minor timing issue:
+
+```sh
+$ uv run python workspace/solve_cat.py
+Success went high on bit 121
+```
+
+Finally, a solution T.T
+
+I have lots more ideas for analysis and stuff, but given it's past 3am yet again, leaving here for now.
