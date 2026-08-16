@@ -2168,6 +2168,66 @@ Reading the walk even more:
   - n4194 -> 3 \* 2 = 6 leaves
   - 22 leaves in total
 
-For a tree of pure ANDs, this is probably a big comparator, checking some state property? So current working hypothesis is that `n121` and `n98` are some flags, and `n147` are checking some state property, and if all three are true, then `success` goes high.
+For a tree of pure ANDs, this is probably a big comparator, checking some state property? So current working hypothesis is that `n121` and `n98` are some flags, and `n147` is checking some state property, and if all three are true, then `success` goes high.
 
 22 might be related to the 11-state counter I found a few days ago?
+
+### Reading Leaves:
+
+Added `workspace/leaves.py` to read the leaves of a net's fan in tree programatically since it took me way too long to read the `walk` output manually.
+
+```sh
+uv run python workspace/leaves.py n96 n136
+n96: 22 leaves
+        ~dfrtp_2_22.Q
+        dfrtp_2_23.Q
+        dfrtp_2_19.Q
+        ~dfrtp_2_24.Q
+        ~dfrtp_2_31.Q
+        dfrtp_2_30.Q
+        ~dfrtp_2_28.Q
+        dfrtp_2_29.Q
+        dfrtp_2_11.Q
+        ~dfrtp_2_12.Q
+        ~dfrtp_2_7.Q
+        dfrtp_2_8.Q
+        ~dfrtp_2_13.Q
+        dfrtp_2_15.Q
+        dfrtp_2_16.Q
+        ~dfrtp_2_14.Q
+        ~dfrtp_2_39.Q
+        dfrtp_2_36.Q
+        dfrtp_2_32.Q
+        ~dfrtp_2_35.Q
+        ~dfrtp_2_45.Q
+        dfrtp_2_46.Q
+n136: 22 leaves
+        ~dfrtp_2_70.Q
+        dfrtp_2_71.Q
+        dfrtp_2_68.Q
+        ~dfrtp_2_69.Q
+        ~dfrtp_2_74.Q
+        dfrtp_2_75.Q
+        ~dfrtp_2_73.Q
+        dfrtp_2_72.Q
+        dfrtp_2_63.Q
+        ~dfrtp_2_62.Q
+        ~dfrtp_2_57.Q
+        dfrtp_2_56.Q
+        ~dfrtp_2_67.Q
+        dfrtp_2_66.Q
+        dfrtp_2_64.Q
+        ~dfrtp_2_65.Q
+        ~dfrtp_2_78.Q
+        dfrtp_2_76.Q
+        dfrtp_2_79.Q
+        ~dfrtp_2_80.Q
+        ~dfrtp_2_81.Q
+        dfrtp_2_84.Q
+```
+
+So this is 44 flops total (22 FFs for each of the two deep AND trees). For each of them, exactly 11 of the driving FFs are inverted, and 11 are not. Most of them are pairs, like "22 low and 23 high", or "67 low and 66 high", etc. So possibly these are pairs rather than individual flags. I hope that's the case because it effectively halves the amount of analysis I'm about to do. So maybe each of `n96` and `n136` is checking that 11 2-bit values are all `01` or `10`.
+
+Given how many times 11 or a multiple of it has come up this is almost definitely something related to the circuit's function.
+
+But essentially this target state is now defined as a total of 50 FFs at a specific value. 22 2-bit pair values at `01` or `10`, and 6 other conditions: `dfrtp_2_50 = 0`, `dfrtp_2_18 = 0`, `dfrtp_2_1/2/3 = 1`, and `n4123` resolving to `dfrtp_2_4/5/10 = 0`.
