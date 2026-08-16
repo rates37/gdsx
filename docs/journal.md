@@ -2168,8 +2168,6 @@ Reading the walk even more:
   - n4194 -> 3 \* 2 = 6 leaves
   - 22 leaves in total
 
-- For `n136` there are also EXACTLY 22 leaf terms
-
-For a tree of pure ANDs, this is probably a big comparator, checking some state property? So current workig hypothesis is that `n121` is some flag, and `n98` and `n147` are checking some state property, and if all three are true, then `success` goes high.
+For a tree of pure ANDs, this is probably a big comparator, checking some state property? So current working hypothesis is that `n121` and `n98` are some flags, and `n147` are checking some state property, and if all three are true, then `success` goes high.
 
 22 might be related to the 11-state counter I found a few days ago?
