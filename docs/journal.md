@@ -2047,3 +2047,129 @@ On the real puzzle:
 ```
 
 Not much informative there sadly.
+
+## Yet Another Attempt At Decoding the Puzzle
+
+Again, I think I've added enough capabilities to the tool to start trying to decode the puzzle. My hope is that once one or two pieces are figured out, the rest would follow easier. Also, I'll move to just writing scripts since that's faster, rather than integrating with the tool straight away. Once (if) I figure out the puzzle, will be able to see what features are actually useful to include in the tool and what features prove to be effectively useless.
+
+I had the idea to turn this into a web-based game, so hopefully I can use AI to implement that game before submission date.
+
+### Harness
+
+For quick scripting, made a harness that loads the puzzle and pickles it for faster use (no need to re-parse .gds every time). Done in `workspace/harness.py`.
+
+`fresh()` creates a new simulator form the cached (global) netlist, calls `sim.reset()`, but also pulses the `rst_n` line to get the circuit into the true reset state (as per puzzle description).
+
+### What drives success:
+
+We know `success` is the goal output, so need to see what drives it. Created `cone.py` to express a given net as a boolean formula over inputs and internal FF outputs. Also has a `walk(net, depth)` function to pretty print the fan in tree.
+
+```py
+import sys
+sys.path.insert(0, 'workspace')
+import cone
+
+print(cone.gate_of('success'))
+```
+
+Output:
+
+```
+('dfrtp_2_83', 'sky130_fd_sc_hd__dfrtp_2', 'IQ', {'CLK': 'n230', 'D': 'n149', 'Q': 'success', 'RESET_B': 'rst_n', 'VGND': 'VGND', 'VPWR': 'VPWR'})
+```
+
+So a single FF, `dfrtp_2_83` with its `D` pin connected to `n149`. Then we need to see what makes that go high:
+
+```py
+uv run python -c "
+import sys
+sys.path.insert(0, 'workspace')
+import cone
+
+print(cone.walk('n149', depth=4))"
+```
+
+Output:
+
+```
+n149 <- a32o_2_5 (a32o_2)  (((A1 & A2) & A3) | (B1 & B2))  {'A1': 'n121', 'A2': 'n98', 'A3': 'n147', 'B1': 'success', 'B2': 'n124'}
+ n121 <- inv_2_13 (inv_2)  ~A  {'A': 'n2951'}
+  n2951 = <dfrtp_2_50.Q>
+ n98 <- and2_2_16 (and2_2)  (A & B)  {'A': 'n200', 'B': 'n97'}
+  n200 <- inv_2_6 (inv_2)  ~A  {'A': 'n3499'}
+   n3499 = <dfrtp_2_18.Q>
+  n97 <- and4_2_3 (and4_2)  (((A & B) & C) & D)  {'A': 'n4097', 'B': 'n3939', 'C': 'n4246', 'D': 'n4123'}
+   n4097 = <dfrtp_2_2.Q>
+   n3939 = <dfrtp_2_3.Q>
+   n4246 = <dfrtp_2_1.Q>
+   n4123 <- nor3_2_1 (nor3_2)  ((~A & ~B) & ~C)  {'A': 'n3932', 'B': 'n4021', 'C': 'n4114'}
+    n3932 = <dfrtp_2_4.Q>
+    n4021 = <dfrtp_2_5.Q>
+    n4114 <- or3_2_8 (or3_2)  ((A | B) | C)  {'A': 'n4071', 'B': 'n3924', 'C': 'n3995'}
+ n147 <- and4b_2_4 (and4b_2)  (((~A_N & B) & C) & D)  {'A_N': 'n223', 'B': 'n151', 'C': 'n96', 'D': 'n136'}
+  n223 = <dfrtp_2_82.Q>
+  n151 = <dfrtp_2_61.Q>
+  n96 <- and3_2_3 (and3_2)  ((A & B) & C)  {'A': 'n4312', 'B': 'n4318', 'C': 'n4194'}
+   n4312 <- and4_2_1 (and4_2)  (((A & B) & C) & D)  {'A': 'n5232', 'B': 'n4296', 'C': 'n5068', 'D': 'n5191'}
+    n5232 <- and2b_2_10 (and2b_2)  (~A_N & B)  {'A_N': 'n5251', 'B': 'n5363'}
+    n4296 <- and2_2_9 (and2_2)  (A & B)  {'A': 'n5261', 'B': 'n5243'}
+    n5068 <- and2b_2_12 (and2b_2)  (~A_N & B)  {'A_N': 'n4784', 'B': 'n5063'}
+    n5191 <- and2b_2_11 (and2b_2)  (~A_N & B)  {'A_N': 'n5186', 'B': 'n5163'}
+   n4318 <- and4_2_2 (and4_2)  (((A & B) & C) & D)  {'A': 'n4315', 'B': 'n5664', 'C': 'n4313', 'D': 'n4300'}
+    n4315 <- and2_2_5 (and2_2)  (A & B)  {'A': 'n5456', 'B': 'n5567'}
+    n5664 <- and2b_2_5 (and2b_2)  (~A_N & B)  {'A_N': 'n5479', 'B': 'n5729'}
+    n4313 <- and2b_2_7 (and2b_2)  (~A_N & B)  {'A_N': 'n5544', 'B': 'n5254'}
+    n4300 <- and2_2_6 (and2_2)  (A & B)  {'A': 'n4335', 'B': 'n5561'}
+   n4194 <- and3_2_2 (and3_2)  ((A & B) & C)  {'A': 'n5043', 'B': 'n4924', 'C': 'n4314'}
+    n5043 <- and2b_2_15 (and2b_2)  (~A_N & B)  {'A_N': 'n5000', 'B': 'n4916'}
+    n4924 <- and2_2_11 (and2_2)  (A & B)  {'A': 'n4920', 'B': 'n5119'}
+    n4314 <- and2b_2_16 (and2b_2)  (~A_N & B)  {'A_N': 'n4885', 'B': 'n1522'}
+  n136 <- and3_2_17 (and3_2)  ((A & B) & C)  {'A': 'n2972', 'B': 'n2978', 'C': 'n2980'}
+   n2972 <- and4_2_7 (and4_2)  (((A & B) & C) & D)  {'A': 'n1038', 'B': 'n944', 'C': 'n853', 'D': 'n962'}
+    n1038 <- and2b_2_26 (and2b_2)  (~A_N & B)  {'A_N': 'n1140', 'B': 'n985'}
+    n944 <- and2_2_14 (and2_2)  (A & B)  {'A': 'n1026', 'B': 'n946'}
+    n853 <- and2b_2_28 (and2b_2)  (~A_N & B)  {'A_N': 'n618', 'B': 'n586'}
+    n962 <- and2b_2_27 (and2b_2)  (~A_N & B)  {'A_N': 'n890', 'B': 'n995'}
+   n2978 <- and4_2_8 (and4_2)  (((A & B) & C) & D)  {'A': 'n1416', 'B': 'n1447', 'C': 'n37', 'D': 'n2957'}
+    n1416 <- and2_2_12 (and2_2)  (A & B)  {'A': 'n1374', 'B': 'n1366'}
+    n1447 <- and2b_2_21 (and2b_2)  (~A_N & B)  {'A_N': 'n1239', 'B': 'n1500'}
+    n37 <- and2b_2_25 (and2b_2)  (~A_N & B)  {'A_N': 'n1122', 'B': 'n1355'}
+    n2957 <- and2_2_13 (and2_2)  (A & B)  {'A': 'n1245', 'B': 'n1337'}
+   n2980 <- and3_2_15 (and3_2)  ((A & B) & C)  {'A': 'n628', 'B': 'n846', 'C': 'n837'}
+    n628 <- and2b_2_29 (and2b_2)  (~A_N & B)  {'A_N': 'n623', 'B': 'n615'}
+    n846 <- and2_2_17 (and2_2)  (A & B)  {'A': 'n788', 'B': 'n784'}
+    n837 <- and2b_2_30 (and2b_2)  (~A_N & B)  {'A_N': 'n661', 'B': 'n817'}
+ success = <dfrtp_2_83.Q>
+ n124 <- nand2b_2_24 (nand2b_2)  (A_N | ~B)  {'A_N': 'n223', 'B': 'n151'}
+  n223 = <dfrtp_2_82.Q>
+  n151 = <dfrtp_2_61.Q>
+None
+```
+
+So `n149` is driven by a `a32o_2` with the equation `(((A1 & A2) & A3) | (B1 & B2))`, and each input is: `{'A1': 'n121', 'A2': 'n98', 'A3': 'n147', 'B1': 'success', 'B2': 'n124'}`
+
+We can rewrite this a bit more clearly:
+
+```
+D (success) = (n121 & n98 & n147) | (success & n124)
+```
+
+So it feeds itself as long as `n124` holds. But the thing that drives it high in the first place is specifically the `(n121 & n98 & n147)` term.
+
+Reading the walk even more:
+
+- `n121` is `inv2(n2951)`, and `n2951` is the output of `dfrtp_2_50`, so `n121` is high when that flop is low.
+
+- `n98 = n200 & n97`. Applying similar logic as above and unravelling, this expands to `n98 = ~Q(dfrtp_2_18) & n97`, so `dfrtp_2_18` must be low, and `n97` must be high. `n97` is a 4-input AND gate, basically ensuring that `dfrtp_2_2`, `dfrtp_2_3`, `dfrtp_2_1`, and `n4123` are all high. `n4123` is a `nor3` that resolves to `dfrtp_2_4 = dfrtp_2_5 = 0` and another `or3` after that. This one is pretty deep
+
+- Looking at `n147`: `n147 = ~n223 & n151 & n96 & n136`. `n223` and `n151` are FF outputs (`dfrtp_2_82`, `dfrtp_2_61`), but `n96` and `n136` are each on top of `and3` or `and4`s if `and2`/`and2b`s.
+  - n4312 -> 4 \* 2 = 8 leaves
+  - n4318 -> 4 \* 2 = 8 leaves
+  - n4194 -> 3 \* 2 = 6 leaves
+  - 22 leaves in total
+
+- For `n136` there are also EXACTLY 22 leaf terms
+
+For a tree of pure ANDs, this is probably a big comparator, checking some state property? So current workig hypothesis is that `n121` is some flag, and `n98` and `n147` are checking some state property, and if all three are true, then `success` goes high.
+
+22 might be related to the 11-state counter I found a few days ago?
