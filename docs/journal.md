@@ -2855,3 +2855,5 @@ Success went high on bit 121
 ```
 
 Googling this, I found that this is a reference to the star battle puzzle, which is basically what the Meowdoku game is heavily based on.
+
+Now that the puzzle is solved, plan is to integrate missing functionality into the gdsx tool, and then attempt to make a game out of this idea.
