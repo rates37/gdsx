@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .external import yosys
 from .netlist import Instance, Netlist
 
 # yosys gate -> (sky130 cell, {yosys port: sky130 pin})
@@ -86,7 +85,7 @@ RECIPES = (
 
 
 def yosys_available() -> bool:
-    return shutil.which("yosys") is not None
+    return yosys.available()
 
 
 def synthesize(
@@ -98,12 +97,8 @@ def synthesize(
     src = workdir / f"{top}.v"
     src.write_text(source)
     out = workdir / f"{stem}.json"
-    script = workdir / f"{stem}.ys"
-    script.write_text(recipe.script(src, top, out))
 
-    proc = subprocess.run(["yosys", "-q", str(script)], capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"yosys failed:\n{proc.stdout}\n{proc.stderr}")
+    yosys.run(recipe.script(src, top, out))
     return json.loads(out.read_text())
 
 

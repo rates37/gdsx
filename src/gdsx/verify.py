@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from . import primitives
+from .external import yosys
 
 SCRIPT = """\
 read_verilog {primitives} {reference}
@@ -81,7 +80,7 @@ class YosysMissing(Exception):
 
 
 def available() -> bool:
-    return shutil.which("yosys") is not None
+    return yosys.available()
 
 
 @dataclass
@@ -109,17 +108,16 @@ class EquivalenceResult:
 
 
 def _run(script_text: str, workdir: Path, tag: str) -> EquivalenceResult:
-    if not available():
-        raise YosysMissing("yosys not found, please install it")
     workdir.mkdir(parents=True, exist_ok=True)
-    script = workdir / f"{tag}.ys"
-    script.write_text(script_text)
-    proc = subprocess.run(
-        ["yosys", str(script)], capture_output=True, text=True, cwd=Path.cwd()
-    )
-    log = proc.stdout + proc.stderr
+    try:
+        stdout = yosys.run(script_text, cwd=Path.cwd())
+        log, proven = stdout, True
+    except yosys.YosysUnavailable as exc:
+        raise YosysMissing("yosys not found, please install it") from exc
+    except yosys.YosysFailed as exc:
+        log, proven = exc.stdout + exc.stderr, False
     (workdir / f"{tag}.log").write_text(log)
-    return EquivalenceResult(proven=proc.returncode == 0, log=log)
+    return EquivalenceResult(proven=proven, log=log)
 
 
 def _primitive_library(workdir: Path) -> Path:
