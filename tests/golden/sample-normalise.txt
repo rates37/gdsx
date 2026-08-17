@@ -1,0 +1,18 @@
+79 -> 76 instances, 86 -> 83 nets
+3 cells removed, 3 nets merged
+     3 buffers collapsed
+     0 inverter pairs collapsed
+     0 cells folded to a constant
+     0 cells degenerated into a wire
+     0 cells driving nothing
+     0 nets known constant
+
+buffers
+  clkbuf_16_1          sky130_fd_sc_hd__clkbuf_16 n431 := n5
+  clkbuf_16_2          sky130_fd_sc_hd__clkbuf_16 n5 := clk
+  clkbuf_16_3          sky130_fd_sc_hd__clkbuf_16 n113 := clk
+  wrote out/adder_demo.json
+  wrote out/adder_demo.v
+  wrote out/adder_demo.generic.v
+  wrote out/adder_demo.generic.json
+  wrote out/adder_demo.dot

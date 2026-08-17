@@ -206,7 +206,7 @@ def _transitive_depth(group: list[str], info: dict[str, _FlopInfo]) -> dict[str,
         if node in path:
             return set()  # a cycle: counters depend on themselves
         out = set()
-        for dep in info[node].depends & inside:
+        for dep in sorted(info[node].depends & inside):
             out.add(dep)
             out |= walk(dep, path | {node})
         reach[node] = out

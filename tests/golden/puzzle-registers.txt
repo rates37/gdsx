@@ -1,0 +1,12 @@
+3 registers over 92 flops
+
+    1 x accumulator
+        reg_dfrtp_2_40  <- reg_dfstp_2_1, reg_dfxtp_2_1   [feedback through a carry bit]
+    1 x LFSR
+        reg_dfstp_2_1  <- reg_dfrtp_2_40, reg_dfxtp_2_1   [shift with 10 parity taps]
+    1 x state register
+        reg_dfxtp_2_1  <- reg_dfrtp_2_40   [depends on itself]
+
+  Structural: what feeds what, and what is in the way. Nothing here has
+  been proven, and a register that does something the idiom library has
+  no name for is reported by its topology alone.

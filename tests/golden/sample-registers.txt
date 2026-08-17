@@ -1,0 +1,9 @@
+2 registers over 16 flops
+
+    2 x shift register
+        reg_A   [bits feed the next]
+        reg_B   [bits feed the next]
+
+  Structural: what feeds what, and what is in the way. Nothing here has
+  been proven, and a register that does something the idiom library has
+  no name for is reported by its topology alone.

@@ -1,0 +1,17 @@
+728 placed cells
+52 cell rows, pitch 5.44
+
+BANDS along x
+  0:     23.46 ..     23.46  (   0.00 wide)    1 cells
+  1:     25.76 ..     30.82  (   5.06 wide)   19 cells
+  2:     33.12 ..     36.34  (   3.22 wide)    8 cells
+  3:     39.56 ..     42.78  (   3.22 wide)    6 cells
+  4:     57.50 ..     57.50  (   0.00 wide)    1 cells
+  5:     65.32 ..     65.32  (   0.00 wide)    1 cells
+  6:     69.46 ..     95.22  (  25.76 wide)   99 cells
+  7:     97.52 ..     97.52  (   0.00 wide)    1 cells
+  8:    100.74 ..    102.58  (   1.84 wide)    3 cells
+  9:    104.88 ..    105.34  (   0.46 wide)    2 cells
+  10:    108.10 ..    129.26  (  21.16 wide)  201 cells
+  11:    146.28 ..    146.28  (   0.00 wide)    2 cells
+  12:    149.50 ..    188.60  (  39.10 wide)  384 cells

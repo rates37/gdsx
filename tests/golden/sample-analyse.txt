@@ -1,0 +1,17 @@
+registers
+  reg_A: 8-bit shift register <- A
+    dfrtp_2_12 -> dfrtp_2_10 -> dfrtp_2_15 -> dfrtp_2_11 -> dfrtp_2_14 -> dfrtp_2_13 -> dfrtp_2_16 
+-> dfrtp_2_9
+  reg_B: 8-bit shift register <- B
+    dfrtp_2_2 -> dfrtp_2_5 -> dfrtp_2_4 -> dfrtp_2_6 -> dfrtp_2_1 -> dfrtp_2_8 -> dfrtp_2_3 -> 
+dfrtp_2_7
+
+blocks (functional match, with the gates backing each call)
+  reg_A: 8-bit shift register  (16 cells)
+  reg_B: 8-bit shift register  (16 cells)
+  clock_tree: buffers driving the flop clocks  (3 cells)
+  sum: 9-bit adder -> reg_A + reg_B, proven by SAT  (41 cells)
+  cmp_S: comparator on sum -> S  (3 cells)
+
+operators (proven over the full input space)
+  S = (reg_A + reg_B == 496)

@@ -1,0 +1,23 @@
+inputs
+
+  I              input  data (reaches 58 flops)
+  clk            input  clock (drives the flop clock pins)
+  enable         input  gate (held at 0 nothing changes)
+  rst_n          input  reset (drives the flop set/clear pins, asserted 0)
+
+outputs
+
+  O[0]           static
+  O[1]           static
+  O[2]           static
+  O[3]           static
+  O[4]           static
+  O[5]           static
+  O[6]           static
+  O[7]           static
+  success        static
+
+  Clock and reset are structural; the rest is measured by driving the
+  design. A port called 'data' is one that changes the state and cannot
+  be shown to freeze it, and 'static' means an output that did not move
+  in the window -- a UART's byte needs a whole frame, so widen it.

@@ -1,0 +1,6 @@
+79 placed cells
+13 cell rows, pitch 5.44
+
+BANDS along x
+  0:     22.08 ..     39.56  (  17.48 wide)   35 cells
+  1:     57.50 ..     83.26  (  25.76 wide)   44 cells
