@@ -22,6 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import product
 
+from .core.graph import Graph
 from .functions import lookup
 from .netlist import Instance, Netlist
 
@@ -114,19 +115,6 @@ class _Aliases:
             return False
         self.parent[loser] = winner
         return True
-
-
-def _drivers(nl: Netlist) -> dict[str, tuple[Instance, str]]:
-    """net -> the instance and pin that drives it"""
-    out: dict[str, tuple[Instance, str]] = {}
-    for inst in nl.instances:
-        cell = lookup(inst.cell)
-        if cell is None:
-            continue
-        for pin in cell.outputs:
-            if pin in inst.connections:
-                out[inst.connections[pin]] = (inst, pin)
-    return out
 
 
 def _identity(cell) -> tuple[str, str] | None:
@@ -250,9 +238,10 @@ def normalise(
     changed = True
     while changed:
         changed = False
+        graph = Graph(Netlist(nl.top, list(live.values())))
         drivers = {
-            net: pair
-            for net, pair in _drivers(Netlist(nl.top, list(live.values()))).items()
+            net: (graph.by_name[ref.instance], ref.pin)
+            for net, ref in graph.driver.items()
         }
 
         for inst in list(live.values()):

@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import verify
-from .analyse import Analysis, Bus, Register, OPERATOR_VERILOG, cone_instances
+from .analyse import Analysis, Bus, Register, OPERATOR_VERILOG
+from .core.graph import Graph
 from .functions import clock_nets, generic_name, lookup, output_net
 from .liberty import variables
 from .netlist import Netlist, _chunks
@@ -100,6 +101,7 @@ def _output_nets(nl: Netlist, register: Register) -> list[str] | None:
 def build(nl: Netlist, analysis: Analysis) -> Lift:
     """Turn what the analysis recovered into RTL. Keep the rest as gates"""
     lift = Lift(verilog="")
+    graph = Graph(nl)
     body: list[str] = []
     driven: set[str] = set()  # nets the lifted RTL now drives
     vectors: dict[str, str] = {}  # register name -> declared vector
@@ -147,7 +149,9 @@ def build(nl: Netlist, analysis: Analysis) -> Lift:
             f"  assign {_concat(bus.nets)} = {bus.name};",
             "",
         ]
-        produced = cone_instances(nl, set(bus.nets), driven)
+        produced = graph.cone(
+            set(bus.nets), stop=frozenset(driven), returns="instances"
+        )
         lift.lifted |= produced
         driven |= set(bus.nets)
         vectors[bus.name] = bus.name
@@ -176,7 +180,9 @@ def build(nl: Netlist, analysis: Analysis) -> Lift:
         if rendered is None:
             continue
         body += [f"  assign {predicate.output} = {rendered};", ""]
-        lift.lifted |= cone_instances(nl, {predicate.output}, driven)
+        lift.lifted |= graph.cone(
+            {predicate.output}, stop=frozenset(driven), returns="instances"
+        )
         driven.add(predicate.output)
         lift.statements.append(predicate.text)
 

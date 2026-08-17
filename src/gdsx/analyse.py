@@ -19,11 +19,13 @@ from __future__ import annotations
 import random
 import re
 import tempfile
+import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from itertools import product
 from pathlib import Path
 
+from .core.graph import Graph
 from .functions import (
     async_nets,
     base_name,
@@ -88,48 +90,18 @@ class Analysis:
     notes: list[str] = field(default_factory=list)
 
 
-def _drivers(nl: Netlist) -> dict[str, tuple[str, str]]:
-    """returns mapping of net -> (instance name, output pin) that drives it
-
-    A cell can drive several nets: `fa` produces SUM and COUT, a `dfbbp` both Q
-    and Q_N.
-    """
-    out = {}
-    for inst in nl.instances:
-        cell = lookup(inst.cell)
-        if cell is None:
-            continue
-        for pin in cell.functions:
-            if pin in inst.connections:
-                out[inst.connections[pin]] = (inst.name, pin)
-    return out
-
-
 def support(nl: Netlist, net: str) -> set[str]:
     """Everything the net depends on, stopping at flop outputs and ports
     Returns a mix of instance names (flip flops) and net names (ports/constants)
+
+    Deprecated: use `core.graph.Graph.support`.
     """
-    by_name = {i.name: i for i in nl.instances}
-    drivers = _drivers(nl)
-    seen: set[str] = set()
-    result: set[str] = set()
-    stack = [net]
-    while stack:
-        n = stack.pop()
-        if n in seen or n in nl.power_nets:
-            continue
-        seen.add(n)
-        if n not in drivers:
-            result.add(n)  # a port, or an undriven net
-            continue
-        inst_name, _ = drivers[n]
-        inst = by_name[inst_name]
-        if is_sequential(inst.cell):
-            result.add(inst_name)
-            continue
-        cell = lookup(inst.cell)
-        stack.extend(inst.connections[p] for p in cell.inputs if p in inst.connections)
-    return result
+    warnings.warn(
+        "gdsx.analyse.support is deprecated; use gdsx.core.graph.Graph.support",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Graph(nl).support(net)
 
 
 @dataclass
@@ -139,12 +111,13 @@ class _FlopInfo:
     ports: set[str]  # top-level ports in its next-state cone
 
 
-def _roots(nl: Netlist, nets: set[str]) -> frozenset:
+def _roots(graph: Graph, nets: set[str]) -> frozenset:
     """What ultimately drives these nets: ports, or the flops behind them"""
-    return frozenset().union(*(support(nl, n) for n in nets)) if nets else frozenset()
+    return frozenset().union(*(graph.support(n) for n in nets)) if nets else frozenset()
 
 
 def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
+    graph = Graph(nl)
     flops = [i for i in nl.instances if is_sequential(i.cell)]
     names = {f.name for f in flops}
     info = {}
@@ -153,7 +126,7 @@ def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
         # next_state may involve several pins,
         # so the data cone is the union over all of them
         deps = set().union(
-            *(support(nl, net) for net in data_nets(cell, f.connections))
+            *(graph.support(net) for net in data_nets(cell, f.connections))
         )
         # Signature on what drives the clock and reset, not on the net itself.
         # A buffered clock tree gives every few flops their own clock net, which
@@ -161,8 +134,8 @@ def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
         info[f.name] = _FlopInfo(
             signature=(
                 base_name(f.cell),
-                _roots(nl, clock_nets(cell, f.connections)),
-                _roots(nl, async_nets(cell, f.connections)),
+                _roots(graph, clock_nets(cell, f.connections)),
+                _roots(graph, async_nets(cell, f.connections)),
             ),
             depends=deps & names,
             ports={d for d in deps if d in nl.ports},
@@ -711,29 +684,23 @@ def find_bus(
 
 
 def cone_nets(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
-    """Every net feeding `nets`, walking back but never through `stop`"""
-    drivers = _drivers(nl)
-    by_name = {i.name: i for i in nl.instances}
-    seen: set[str] = set()
-    stack = list(nets)
-    while stack:
-        net = stack.pop()
-        if net in seen or net in stop or net not in drivers:
-            continue
-        seen.add(net)
-        inst = by_name[drivers[net][0]]
-        if is_sequential(inst.cell):
-            continue
-        cell = lookup(inst.cell)
-        stack.extend(inst.connections[p] for p in cell.inputs if p in inst.connections)
-    return seen
+    """Every net feeding `nets`, walking back but never through `stop`
+
+    Deprecated: use `core.graph.Graph.cone`.
+    """
+    warnings.warn(
+        "gdsx.analyse.cone_nets is deprecated; use gdsx.core.graph.Graph.cone",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Graph(nl).cone(nets, stop=frozenset(stop))
 
 
 def _is_intermediate(nl: Netlist, inner: Bus, outer: Bus) -> bool:
     """True if `inner` is a step on the way to `outer` rather than a result"""
     if inner.width >= outer.width:
         return False
-    upstream = cone_nets(nl, set(outer.nets), set())
+    upstream = Graph(nl).cone(set(outer.nets))
     # Nets the two buses share are part of `outer` already (a ripple adder's
     # sum bit 0 is its propagate bit 0), so they are not evidence either way.
     return (set(inner.nets) - set(outer.nets)) <= upstream
@@ -795,7 +762,9 @@ def prove_bus(nl: Netlist, bus: Bus, registers: list[Register], workdir) -> bool
     for k, net in enumerate(bus.nets):
         rename[net] = f"y_{k}"
 
-    instances = cone_instances(nl, set(bus.nets), set(rename) - set(bus.nets))
+    instances = Graph(nl).cone(
+        set(bus.nets), stop=frozenset(set(rename) - set(bus.nets)), returns="instances"
+    )
     if not instances:
         return False
 
@@ -930,24 +899,17 @@ def find_buses(
 
 
 def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
-    """Instances driving `nets`, walking back but never through `stop`"""
-    drivers = _drivers(nl)
-    by_name = {i.name: i for i in nl.instances}
-    seen: set[str] = set()
-    found: set[str] = set()
-    stack = list(nets)
-    while stack:
-        net = stack.pop()
-        if net in seen or net in stop or net in nl.power_nets or net not in drivers:
-            continue
-        seen.add(net)
-        inst = by_name[drivers[net][0]]
-        found.add(inst.name)
-        if is_sequential(inst.cell):
-            continue
-        cell = lookup(inst.cell)
-        stack.extend(inst.connections[p] for p in cell.inputs if p in inst.connections)
-    return found
+    """Instances driving `nets`, walking back but never through `stop`
+
+    Deprecated: use `core.graph.Graph.cone(..., returns="instances")`.
+    """
+    warnings.warn(
+        "gdsx.analyse.cone_instances is deprecated; "
+        'use gdsx.core.graph.Graph.cone(..., returns="instances")',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Graph(nl).cone(nets, stop=frozenset(stop), returns="instances")
 
 
 # How a bus claim was established
@@ -986,8 +948,18 @@ def split_datapath(
         for inst in nl.instances
         if is_sequential(inst.cell)
     } - {None}
-    producer = cone_instances(nl, set(bus.nets), flop_outputs)
-    consumer = cone_instances(nl, {output}, set(bus.nets) | flop_outputs) - producer
+    graph = Graph(nl)
+    producer = graph.cone(
+        set(bus.nets), stop=frozenset(flop_outputs), returns="instances"
+    )
+    consumer = (
+        graph.cone(
+            {output},
+            stop=frozenset(set(bus.nets) | flop_outputs),
+            returns="instances",
+        )
+        - producer
+    )
     return bus, producer, consumer
 
 
@@ -998,6 +970,7 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
     simulator = Simulator(nl)
     inputs = inputs or {p: 0 for p, d in nl.ports.items() if d == "input"}
 
+    graph = Graph(nl)
     by_name = {i.name: i for i in nl.instances}
     flop_outputs = {
         output_net(lookup(by_name[f].cell), by_name[f].connections)
@@ -1011,7 +984,9 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
                 for f in reg.flops
             )
         )
-        support_gates = cone_instances(nl, feeding, flop_outputs)
+        support_gates = graph.cone(
+            feeding, stop=frozenset(flop_outputs), returns="instances"
+        )
         result.blocks.append(
             Block(
                 reg.name,
@@ -1027,7 +1002,7 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
             for f in reg.flops
         )
     )
-    clock_tree = cone_instances(nl, clocks, flop_outputs)
+    clock_tree = graph.cone(clocks, stop=frozenset(flop_outputs), returns="instances")
     if clock_tree:
         result.blocks.append(
             Block("clock_tree", "buffers driving the flop clocks", clock_tree)

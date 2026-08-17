@@ -21,11 +21,10 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from .analyse import support
+from .core.graph import Graph
 from .functions import async_nets, clock_nets, is_sequential, lookup
 from .netlist import Netlist
 from .sim import Simulator
-from .xref import fanout
 
 CYCLES = 12
 
@@ -52,6 +51,7 @@ def _control_nets(nl: Netlist) -> tuple[set[str], set[str]]:
     so the port itself is never on a flop pin, and looking only at the pins
     finds the buffer outputs and calls the actual clock input inert
     """
+    graph = Graph(nl)
     clocks: set[str] = set()
     resets: set[str] = set()
     for inst in nl.instances:
@@ -59,14 +59,15 @@ def _control_nets(nl: Netlist) -> tuple[set[str], set[str]]:
         if cell is None or not cell.is_sequential:
             continue
         for net in clock_nets(cell, inst.connections):
-            clocks |= {r for r in support(nl, net) if r in nl.ports}
+            clocks |= {r for r in graph.support(net) if r in nl.ports}
         for net in async_nets(cell, inst.connections):
-            resets |= {r for r in support(nl, net) if r in nl.ports}
+            resets |= {r for r in graph.support(net) if r in nl.ports}
     return clocks, resets
 
 
 def _reach(nl: Netlist) -> dict[str, int]:
     """How many flops each port can affect, by forward reachability."""
+    graph = Graph(nl)
     counts = {}
     flop_inputs: dict[str, set[str]] = {}
     for inst in nl.instances:
@@ -81,7 +82,7 @@ def _reach(nl: Netlist) -> dict[str, int]:
         if direction != "input":
             continue
         seen = {port}
-        for level in fanout(nl, port, depth=24, through_flops=False):
+        for level in graph.fanout(port, depth=24, through_flops=False):
             seen |= set(level)
         counts[port] = len({f for net in seen for f in flop_inputs.get(net, ())})
     return counts
@@ -184,6 +185,7 @@ def inputs(nl: Netlist, cycles: int = CYCLES, facts=None) -> list[Port]:
     reach = _reach(nl)
     quiet = _quiet(nl)
     stated = facts.port_kinds() if facts is not None else {}
+    graph = Graph(nl)
     found = []
 
     for name, direction in sorted(nl.ports.items()):
@@ -216,7 +218,9 @@ def inputs(nl: Netlist, cycles: int = CYCLES, facts=None) -> list[Port]:
         elif port.reach == 0:
             port.kind, port.evidence = "combinational", "reaches no flop"
             if not any(
-                name in _cone(nl, out) for out in nl.ports if nl.ports[out] == "output"
+                name in graph.support(out)
+                for out in nl.ports
+                if nl.ports[out] == "output"
             ):
                 port.kind, port.evidence = "unused", "reaches nothing"
         else:
@@ -239,12 +243,6 @@ def inputs(nl: Netlist, cycles: int = CYCLES, facts=None) -> list[Port]:
                 port.evidence = f"reaches {port.reach} flops"
         found.append(port)
     return found
-
-
-def _cone(nl: Netlist, output: str) -> set[str]:
-    from .analyse import support
-
-    return support(nl, output)
 
 
 def outputs(

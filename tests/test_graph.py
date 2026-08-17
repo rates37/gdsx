@@ -5,7 +5,7 @@ import pathlib
 import sys
 
 import pytest
-from gdsx import analyse, config, loader, netlist, normalise, xref
+from gdsx import analyse, loader, netlist, xref
 from gdsx.core.graph import CombinationalLoop, Graph, LeafKind
 from gdsx.core.netlist import Instance, Netlist
 from gdsx.sim import Simulator
@@ -52,19 +52,14 @@ def chain() -> Netlist:
 #! the indices
 
 
-def test_driver_index_matches_all_four_driver_maps(both):
+def test_the_driver_index_names_one_pin_per_driven_net(both):
     for nl in both:
         graph = Graph(nl)
-        plain = {net: (ref.instance, ref.pin) for net, ref in graph.driver.items()}
-        assert plain == analyse._drivers(nl)
-        assert {net: (graph.by_name[i], p) for net, (i, p) in plain.items()} == (
-            normalise._drivers(nl)
-        )
-        driven_by, reads, drives = xref._graph(nl)
-        assert {net: ref.instance for net, ref in graph.driver.items()} == driven_by
-        for name in driven_by.values():
-            assert graph._reads(name) == reads[name]
-            assert graph._drives(name) == drives[name]
+        for net, ref in graph.driver.items():
+            inst = graph.by_name[ref.instance]
+            assert inst.connections[ref.pin] == net
+            assert ref.pin in graph.cell_of[ref.instance].functions
+            assert ref.direction == "output"
 
 
 def test_every_instance_is_indexed_including_ones_the_library_rejects(both):

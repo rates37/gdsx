@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from . import xref
+from .core.graph import Graph
 from .netlist import Netlist
 
 
@@ -112,7 +112,7 @@ def extract(
 ) -> Region:
     """Everything in `box`, as a netlist with the cut nets promoted to ports"""
     inside = within(points, box, extents)
-    carved = xref.sub_netlist(nl, set(inside), name or f"{nl.top}_region")
+    carved = Graph(nl).subgraph(set(inside), name or f"{nl.top}_region")
 
     inputs = sorted(p for p, d in carved.ports.items() if d == "input")
     outputs = sorted(p for p, d in carved.ports.items() if d == "output")

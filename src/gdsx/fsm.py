@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import product
 
-from .analyse import Register, load_state, read_state, support
+from .analyse import Register, load_state, read_state
+from .core.graph import Graph
 from .functions import data_nets, lookup
 from .netlist import Netlist
 from .sim import Simulator
@@ -89,11 +90,12 @@ def _relevant_inputs(nl: Netlist, register: Register, exclude: set[str]) -> list
     """
     by_name = {i.name: i for i in nl.instances}
 
+    graph = Graph(nl)
     seen: set[str] = set()
     for flop in register.flops:
         inst = by_name[flop]
         for net in data_nets(lookup(inst.cell), inst.connections):
-            seen |= {d for d in support(nl, net) if d in nl.ports}
+            seen |= {d for d in graph.support(net) if d in nl.ports}
     return sorted(p for p in seen - exclude if nl.ports[p] == "input")
 
 

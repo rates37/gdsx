@@ -7,6 +7,7 @@ which lets the analysis force register contents and sweep
 from __future__ import annotations
 from dataclasses import dataclass, field
 
+from .core.graph import Graph
 from .functions import is_sequential, lookup
 from .liberty import Cell, evaluate
 from .netlist import Instance, Netlist
@@ -34,7 +35,9 @@ class Simulator:
             (self.flops if is_sequential(inst.cell) else self.combinational).append(
                 (inst, cell)
             )
-        self.combinational = _topological(self.combinational, self._sources())
+        pairs = {inst.name: (inst, cell) for inst, cell in self.combinational}
+        order = Graph(self.netlist).topo(sources=self._sources())
+        self.combinational = [pairs[inst.name] for inst in order]
         self.reset()
 
     # setup
@@ -192,28 +195,3 @@ class Simulator:
         return sense
 
 
-def _topological(gates, sources: set[str]):
-    """Order combinational gates so every gate runs after its drivers"""
-    pending = list(gates)
-    known = set(sources)
-    ordered = []
-    while pending:
-        ready = [
-            g
-            for g in pending
-            if all(
-                g[0].connections[p] in known
-                for p in g[1].inputs
-                if p in g[0].connections
-            )
-        ]
-        if not ready:
-            stuck = ", ".join(f"{i.name}" for i, _ in pending[:5])
-            raise ValueError(f"combinational loop or undriven input near: {stuck}")
-        for inst, cell in ready:
-            known.update(
-                inst.connections[p] for p in cell.functions if p in inst.connections
-            )
-        ordered += ready
-        pending = [g for g in pending if g not in ready]
-    return ordered

@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import idiom
-from .analyse import cone_nets, Register, _survey
+from .analyse import Register, _survey
+from .core.graph import Graph
 from .functions import data_nets, is_sequential, lookup, output_net
 from .netlist import Netlist
 
@@ -53,7 +54,7 @@ def _next_state_cone(nl: Netlist, register: Register) -> set[str]:
         cell = lookup(inst.cell)
         if cell is not None and cell.is_sequential:
             direct |= data_nets(cell, inst.connections)
-    return direct | cone_nets(nl, direct, set())
+    return direct | Graph(nl).cone(direct)
 
 
 def classify(
