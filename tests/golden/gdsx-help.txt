@@ -1,0 +1,26 @@
+                                                                                                    
+ Usage: gdsx [OPTIONS] COMMAND [ARGS]...                                                            
+                                                                                                    
+ Extract a gate-level netlist from a standard-cell GDS.                                             
+                                                                                                    
+╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────╮
+│ inspect    Report hierarchy, layers, cell mix and whether the GDS is self-contained              │
+│ pins       Dump the pin oracle for every logic cell used in the design                           │
+│ extract    Trace the routing and write the netlist (Verilog + JSON + dot)                        │
+│ normalise  Collapse buffers and inverter pairs, propagate constants                              │
+│ region     Carve a physical area of the die out as a netlist of its own                          │
+│ placement  Read the floorplan as evidence, cell rows, functional bands, ordered arrays           │
+│ guards     What has to be true for each register to change, (i.e., enables)                      │
+│ map        Colour a grouping onto the layout's own coordinates                                   │
+│ ports      What each pin is for: clock, reset, gate, data                                        │
+│ registers  What kind of thing each register is                                                   │
+│ analyse    Recover registers and identify what the logic computes                                │
+│ solve      Work out how to drive the design so an output goes high                               │
+│ fsm        Recover state machines by exploring each register's reachable states                  │
+│ lift       Recover RTL from the gate netlist and prove the recovery is faithful                  │
+│ verify     Prove the extracted netlist equivalent to a reference RTL (needs yosys installed)     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+

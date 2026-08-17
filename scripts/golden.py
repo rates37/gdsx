@@ -15,6 +15,7 @@ GOLDEN = ROOT / "tests" / "golden"
 
 CASES = [
     # (name, argv)
+    ("gdsx-help", ["--help"]),
     ("sample-inspect", ["inspect", "samples/sample.gds"]),
     ("sample-pins", ["pins", "samples/sample.gds"]),
     ("sample-extract", ["extract", "samples/sample.gds", "-o", "{tmp}"]),

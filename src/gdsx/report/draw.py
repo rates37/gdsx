@@ -2,7 +2,27 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from rich.console import Console
+from rich.markup import escape
+
+from ..physical import draw as _draw
 from ..physical.draw import Placement
+
+
+def render(
+    console: Console,
+    placed: list[Placement],
+    groups: dict[str, str],
+    out: Path,
+    top: str,
+    label: str,
+) -> None:
+    console.print(escape(report(placed, groups, _draw.spread(placed, groups))))
+    console.print(
+        f"wrote {_draw.write(out, _draw.draw(placed, groups, f'{top} by {label}'))}"
+    )
 
 
 def report(

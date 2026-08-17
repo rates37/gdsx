@@ -2,7 +2,19 @@
 
 from __future__ import annotations
 
+from rich.console import Console
+from rich.markup import escape
+
+from ..netlist import Netlist
 from ..normalise import Normalisation
+
+
+def render(console: Console, nl: Netlist, result: Normalisation) -> None:
+    console.print(
+        f"{len(nl.instances)} -> {len(result.netlist.instances)} instances, "
+        f"{len(nl.nets)} -> {len(result.netlist.nets)} nets"
+    )
+    console.print(escape(report(result)))
 
 
 def report(result: Normalisation) -> str:

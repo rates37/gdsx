@@ -4,7 +4,28 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from rich.console import Console
+from rich.markup import escape
+
+from ..physical import placement as _geo
 from ..physical.placement import Ordering, bands, pitch, rows
+
+
+def render(
+    console: Console,
+    points: dict[str, tuple[float, float]],
+    groups: dict[str, list[str]] | None,
+    axis: str,
+    ordered: dict | None,
+) -> None:
+    console.print(escape(report(points, groups, axis)))
+    if not ordered:
+        return
+    console.print("\n[bold]ORDERED ARRAYS[/]")
+    for name, indexed in ordered.items():
+        result = _geo.ordering(name, {k: int(v) for k, v in indexed.items()}, points)
+        if result is not None:
+            console.print("  " + escape(describe_ordering(result)))
 
 
 def report(
