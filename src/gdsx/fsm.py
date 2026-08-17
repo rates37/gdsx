@@ -90,7 +90,7 @@ def _relevant_inputs(nl: Netlist, register: Register, exclude: set[str]) -> list
     """
     by_name = {i.name: i for i in nl.instances}
 
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     seen: set[str] = set()
     for flop in register.flops:
         inst = by_name[flop]

@@ -77,7 +77,7 @@ def npn(table: int, width: int) -> int:
 def evaluate_cone(nl: Netlist, output: str, leaves: list[str]) -> int | None:
     """The truth table of `output` as a function of `leaves`"""
 
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     # The instances between the leaves and the output. A sequential one in the
     # way means this is not a combinational function of the leaves.
     inside = graph.cone({output}, stop=frozenset(leaves), returns="instances")
@@ -111,7 +111,7 @@ def evaluate_cone(nl: Netlist, output: str, leaves: list[str]) -> int | None:
 
 def cuts(nl: Netlist, limit: int = MAX_CUT) -> dict[str, list[frozenset[str]]]:
     """The k-feasible cuts of every net: which small sets of nets it is a function of"""
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     found: dict[str, list[frozenset[str]]] = {}
 
     def compute(net: str, depth: int = 0) -> list[frozenset[str]]:

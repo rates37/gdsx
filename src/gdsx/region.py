@@ -112,7 +112,7 @@ def extract(
 ) -> Region:
     """Everything in `box`, as a netlist with the cut nets promoted to ports"""
     inside = within(points, box, extents)
-    carved = Graph(nl).subgraph(set(inside), name or f"{nl.top}_region")
+    carved = Graph.of(nl).subgraph(set(inside), name or f"{nl.top}_region")
 
     inputs = sorted(p for p, d in carved.ports.items() if d == "input")
     outputs = sorted(p for p, d in carved.ports.items() if d == "output")

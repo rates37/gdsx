@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import rtl_fixtures
 from gdsx import interface, synth
-from gdsx.cli import _build
+from gdsx.core.context import Design
 
 needs_yosys = pytest.mark.skipif(
     not synth.yosys_available(), reason="yosys not installed"
@@ -64,7 +64,7 @@ def test_a_serial_input_at_its_idle_level_is_not_a_gate(tmp_path):
 
 @needs_yosys
 def test_a_clock_is_still_a_clock_when_it_is_buffered(tmp_path):
-    nl = _build(Path("samples/puzzle.gds"), None, None, None)
+    nl = Design.open(Path("samples/puzzle.gds")).netlist
     kinds = {port.name: port.kind for port in interface.inputs(nl)}
     assert kinds["clk"] == "clock"
     assert kinds["enable"] == "gate"

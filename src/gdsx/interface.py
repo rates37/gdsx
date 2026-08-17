@@ -51,7 +51,7 @@ def _control_nets(nl: Netlist) -> tuple[set[str], set[str]]:
     so the port itself is never on a flop pin, and looking only at the pins
     finds the buffer outputs and calls the actual clock input inert
     """
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     clocks: set[str] = set()
     resets: set[str] = set()
     for inst in nl.instances:
@@ -67,7 +67,7 @@ def _control_nets(nl: Netlist) -> tuple[set[str], set[str]]:
 
 def _reach(nl: Netlist) -> dict[str, int]:
     """How many flops each port can affect, by forward reachability."""
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     counts = {}
     flop_inputs: dict[str, set[str]] = {}
     for inst in nl.instances:
@@ -185,7 +185,7 @@ def inputs(nl: Netlist, cycles: int = CYCLES, facts=None) -> list[Port]:
     reach = _reach(nl)
     quiet = _quiet(nl)
     stated = facts.port_kinds() if facts is not None else {}
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     found = []
 
     for name, direction in sorted(nl.ports.items()):

@@ -238,7 +238,7 @@ def normalise(
     changed = True
     while changed:
         changed = False
-        graph = Graph(Netlist(nl.top, list(live.values())))
+        graph = Graph.of(Netlist(nl.top, list(live.values())))
         drivers = {
             net: (graph.by_name[ref.instance], ref.pin)
             for net, ref in graph.driver.items()

@@ -101,7 +101,7 @@ def _output_nets(nl: Netlist, register: Register) -> list[str] | None:
 def build(nl: Netlist, analysis: Analysis) -> Lift:
     """Turn what the analysis recovered into RTL. Keep the rest as gates"""
     lift = Lift(verilog="")
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     body: list[str] = []
     driven: set[str] = set()  # nets the lifted RTL now drives
     vectors: dict[str, str] = {}  # register name -> declared vector

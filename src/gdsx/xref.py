@@ -53,7 +53,7 @@ def fanin(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).fanin(net, depth, through_flops)
+    return Graph.of(nl).fanin(net, depth, through_flops)
 
 
 def fanout(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
@@ -66,7 +66,7 @@ def fanout(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).fanout(net, depth, through_flops)
+    return Graph.of(nl).fanout(net, depth, through_flops)
 
 
 def between(
@@ -81,7 +81,7 @@ def between(
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).between(sources, sinks, through_flops=through_flops)
+    return Graph.of(nl).between(sources, sinks, through_flops=through_flops)
 
 
 def sub_netlist(nl: Netlist, instances: set[str], name: str | None = None) -> Netlist:
@@ -94,7 +94,7 @@ def sub_netlist(nl: Netlist, instances: set[str], name: str | None = None) -> Ne
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).subgraph(instances, name)
+    return Graph.of(nl).subgraph(instances, name)
 
 
 def report(found: Xref) -> str:
@@ -113,7 +113,7 @@ def report(found: Xref) -> str:
 
 
 def cone_report(nl: Netlist, net: str, depth: int, through_flops: bool) -> str:
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     lines = []
     for label, levels in (
         ("upstream", graph.fanin(net, depth, through_flops)),

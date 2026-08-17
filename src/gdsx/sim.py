@@ -36,7 +36,7 @@ class Simulator:
                 (inst, cell)
             )
         pairs = {inst.name: (inst, cell) for inst, cell in self.combinational}
-        order = Graph(self.netlist).topo(sources=self._sources())
+        order = Graph.of(self.netlist).topo(sources=self._sources())
         self.combinational = [pairs[inst.name] for inst in order]
         self.reset()
 

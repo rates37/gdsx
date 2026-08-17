@@ -87,8 +87,8 @@ def _substitute(expression: str, pins: tuple[str, ...], values: dict[str, str]) 
 class Graph:
     """The single traversal API. Built once per netlist, cached on Design.
 
-    Every index is built in __post_init__ in ONE pass over instances.
-    Nothing in this class rebuilds an index lazily.
+    Every index is built in __post_init__ in one pass over instances.
+    Nothing in this class rebuilds a index lazily.
     """
 
     netlist: Netlist
@@ -100,6 +100,25 @@ class Graph:
     driver: dict[str, Ref] = field(init=False)  # net -> the ONE pin driving it
     readers: dict[str, list[Ref]] = field(init=False)  # net -> pins reading it
     seq: frozenset[str] = field(init=False)  # sequential instance names
+
+    @classmethod
+    def of(cls, nl: Netlist) -> "Graph":
+        """The graph for `nl`, built once and then kept on `nl` itself
+
+        Every index is a pure function of the netlist, so the second caller to
+        ask for one wants the first caller's. Deliberately not a module-level
+        cache and not `lru_cache`: this one dies with the netlist, so a worker
+        that drops a design drops its indices with it.
+        """
+        got = nl.__dict__.get("_graph")
+        if got is None:
+            got = nl.__dict__["_graph"] = cls(nl)
+        return got
+
+    @staticmethod
+    def forget(nl: Netlist) -> None:
+        """Drop the graph `of` is holding on `nl`, so the next one is rebuilt"""
+        nl.__dict__.pop("_graph", None)
 
     def __post_init__(self) -> None:
         by_name: dict[str, Instance] = {}

@@ -53,6 +53,30 @@ def chain() -> Netlist:
 #! the indices
 
 
+def test_of_builds_one_graph_per_netlist_and_keeps_it_there():
+    first, second = chain(), chain()
+    assert Graph.of(first) is Graph.of(first)
+    assert Graph.of(first) is not Graph.of(second), "two netlists, two graphs"
+    assert Graph.of(first).netlist is first
+
+
+def test_of_leaves_the_netlist_itself_alone():
+    """The memo lives in __dict__, not in a field, so nothing about the netlist
+    as a value changes: equality, repr and to_dict() are untouched."""
+    nl, same = chain(), chain()
+    Graph.of(nl)
+    assert nl == same
+    assert nl.to_dict() == same.to_dict()
+    assert "_graph" not in repr(nl)
+
+
+def test_forget_makes_the_next_graph_a_fresh_one():
+    nl = chain()
+    first = Graph.of(nl)
+    Graph.forget(nl)
+    assert Graph.of(nl) is not first
+
+
 def test_the_driver_index_names_one_pin_per_driven_net(both):
     for nl in both:
         graph = Graph(nl)
@@ -353,15 +377,39 @@ def test_formula_never_matches_a_pin_name_inside_a_longer_one(both):
 #! layering
 
 
+def _at_import_time(tree: ast.Module):
+    """Every node that runs when the module is imported
+
+    Function bodies are skipped, and so is a `TYPE_CHECKING` block: neither
+    runs at import time, which is the thing being measured.
+    """
+    stack = list(tree.body)
+    while stack:
+        node = stack.pop()
+        yield node
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if isinstance(node, ast.If) and "TYPE_CHECKING" in ast.dump(node.test):
+            continue
+        stack.extend(ast.iter_child_nodes(node))
+
+
 def test_core_imports_nothing_heavy():
     """core/ may import stdlib, cells knowledge, and core/ — nothing else.
 
-    A static check on purpose: `import gdsx.core.graph` runs the package
-    __init__, which still pulls typer and klayout until R9 makes it lazy.
+    Split by scope, because the two halves protect different things. At module
+    scope the rule is absolute: importing anything from core/ must not drag the
+    extraction or analysis stack in with it, or the browser cannot load core at
+    all. Inside a function body, `core/context.py` alone may reach upward —
+    `Design` is the handle that opens a GDS and runs analyses, so it has to call
+    them, and deferring the import is what keeps import time clean. Nothing else
+    in core/ gets that latitude.
     """
     allowed = {"functions", "liberty", "netlist", "graph"}
+    may_defer = {"context.py"}
     for path in sorted(CORE.glob("*.py")):
         tree = ast.parse(path.read_text())
+        eager = {id(node) for node in _at_import_time(tree)}
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -371,5 +419,15 @@ def test_core_imports_nothing_heavy():
                 if node.level == 0:  # absolute: must be stdlib
                     root = (node.module or "").split(".")[0]
                     assert root in sys.stdlib_module_names, (path.name, node.module)
-                else:  # relative: must stay inside the allowlist
-                    assert node.module in allowed, (path.name, node.module)
+                elif id(node) in eager or path.name not in may_defer:
+                    # relative: must stay inside the allowlist. `from .x import y`
+                    # names the module in `module`; `from . import x` names it in
+                    # the aliases instead, and asserting on `module` there says
+                    # only "None" about a file that may be importing anything.
+                    named = (
+                        [node.module]
+                        if node.module
+                        else [alias.name for alias in node.names]
+                    )
+                    for name in named:
+                        assert name in allowed, (path.name, name)

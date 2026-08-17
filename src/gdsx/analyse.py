@@ -101,7 +101,7 @@ def support(nl: Netlist, net: str) -> set[str]:
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).support(net)
+    return Graph.of(nl).support(net)
 
 
 @dataclass
@@ -117,7 +117,7 @@ def _roots(graph: Graph, nets: set[str]) -> frozenset:
 
 
 def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     flops = [i for i in nl.instances if is_sequential(i.cell)]
     names = {f.name for f in flops}
     info = {}
@@ -693,14 +693,14 @@ def cone_nets(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).cone(nets, stop=frozenset(stop))
+    return Graph.of(nl).cone(nets, stop=frozenset(stop))
 
 
 def _is_intermediate(nl: Netlist, inner: Bus, outer: Bus) -> bool:
     """True if `inner` is a step on the way to `outer` rather than a result"""
     if inner.width >= outer.width:
         return False
-    upstream = Graph(nl).cone(set(outer.nets))
+    upstream = Graph.of(nl).cone(set(outer.nets))
     # Nets the two buses share are part of `outer` already (a ripple adder's
     # sum bit 0 is its propagate bit 0), so they are not evidence either way.
     return (set(inner.nets) - set(outer.nets)) <= upstream
@@ -762,7 +762,7 @@ def prove_bus(nl: Netlist, bus: Bus, registers: list[Register], workdir) -> bool
     for k, net in enumerate(bus.nets):
         rename[net] = f"y_{k}"
 
-    instances = Graph(nl).cone(
+    instances = Graph.of(nl).cone(
         set(bus.nets), stop=frozenset(set(rename) - set(bus.nets)), returns="instances"
     )
     if not instances:
@@ -909,7 +909,7 @@ def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
         DeprecationWarning,
         stacklevel=2,
     )
-    return Graph(nl).cone(nets, stop=frozenset(stop), returns="instances")
+    return Graph.of(nl).cone(nets, stop=frozenset(stop), returns="instances")
 
 
 # How a bus claim was established
@@ -948,7 +948,7 @@ def split_datapath(
         for inst in nl.instances
         if is_sequential(inst.cell)
     } - {None}
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     producer = graph.cone(
         set(bus.nets), stop=frozenset(flop_outputs), returns="instances"
     )
@@ -970,7 +970,7 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
     simulator = Simulator(nl)
     inputs = inputs or {p: 0 for p, d in nl.ports.items() if d == "input"}
 
-    graph = Graph(nl)
+    graph = Graph.of(nl)
     by_name = {i.name: i for i in nl.instances}
     flop_outputs = {
         output_net(lookup(by_name[f].cell), by_name[f].connections)

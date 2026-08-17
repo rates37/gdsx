@@ -11,10 +11,11 @@ import typer
 
 from . import config, connectivity, interface, loader, netlist
 from . import analyse as analysis
+from .core.context import Design
 from . import floorplan as _fp
 from . import fsm as control
 from . import geometry as _geo
-from . import guards as _guards
+from . import lef
 from . import lift as lifting
 from . import normalise as _normalise
 from . import region as _region
@@ -52,17 +53,17 @@ def _load(gds: Path, tech: Optional[Path], top: Optional[str]) -> loader.Design:
 def _macros(design: loader.Design, path: Optional[Path]) -> dict:
     if path is None:
         return {}
-    from . import lef
 
     return lef.read(path, design.dbu)
 
 
-def _build(gds: Path, tech, top, lef_path) -> "netlist.Netlist":
-    """The netlist for whatever was passed: a layout, or a netlist JSON"""
-    if gds.suffix == ".json":
-        return netlist.Netlist.from_dict(_json.loads(gds.read_text()))
-    design = _load(gds, tech, top)
-    return netlist.build(design, macros=_macros(design, lef_path))
+def _design(gds: Path, tech, top, lef_path) -> Design:
+    """A handle on whatever was passed: a layout, or a netlist JSON
+
+    One per command. Everything the command then asks for (the netlist, the
+    graph, the analyses) is worked out once and held on it.
+    """
+    return Design.open(gds, tech=tech, top=top, lef=lef_path)
 
 
 @app.command()
@@ -173,7 +174,7 @@ def normalise(
     Structure-preserving, nothing is resynthesised, so what comes out is the
     same design with the place-and-route scaffolding removed.
     """
-    nl = _build(gds, tech, top, lef)
+    nl = _design(gds, tech, top, lef).netlist
     result = _normalise.normalise(nl, fold=fold, clean=clean)
 
     console.print(
@@ -337,8 +338,7 @@ def guards(
     lef: Optional[Path] = LefOpt,
 ):
     """What has to be true for each register to change, (i.e., enables)"""
-    nl = _build(gds, tech, top, lef)
-    result = _guards.find(nl, min_fanout=fanout)
+    result = _design(gds, tech, top, lef).guards(min_fanout=fanout)
     console.print(escape(result.report()))
 
 
@@ -393,8 +393,8 @@ def ports(
     lef: Optional[Path] = LefOpt,
 ):
     """What each pin is for: clock, reset, gate, data"""
-    nl = _build(gds, tech, top, lef)
-    console.print(escape(interface.report(interface.describe(nl, cycles))))
+    design = _design(gds, tech, top, lef)
+    console.print(escape(interface.report(design.interface(cycles))))
 
 
 @app.command()
@@ -406,9 +406,9 @@ def registers(
 ):
     """What kind of thing each register is"""
 
-    nl = _build(gds, tech, top, lef)
-    found = analysis.resolve_bit_order(nl, analysis.find_registers(nl))
-    roles = sequential.classify(nl, found)
+    design = _design(gds, tech, top, lef)
+    nl = design.netlist
+    roles = sequential.classify(nl, design.registers(ordered=True))
     console.print(escape(sequential.report(nl, roles, sequential.pipelines(roles))))
 
 
@@ -421,7 +421,7 @@ def analyse(
 ):
     """Recover registers and identify what the logic computes"""
 
-    nl = _build(gds, tech, top, lef)
+    nl = _design(gds, tech, top, lef).netlist
     result = analysis.analyse(nl)
 
     console.print("[bold]registers[/]")
@@ -465,16 +465,15 @@ def solve(
 ):
     """Work out how to drive the design so an output goes high"""
 
-    nl = _build(gds, tech, top, lef)
+    design = _design(gds, tech, top, lef)
+    nl = design.netlist
     mode, solutions = analysis.solve(nl, output, limit)
     if mode is None:
         console.print("[red]could not work out how to load the registers[/]")
         raise typer.Exit(1)
 
     console.print(f"drive: [bold]{mode.description}[/]")
-    registers = [
-        r for r in analysis.find_registers(nl) if r.serial_input and r.width > 1
-    ]
+    registers = [r for r in design.registers() if r.serial_input and r.width > 1]
     console.print(f"\nshowing {len(solutions)} input(s) that assert {output}:")
     for values, verified in solutions:
         loaded = ", ".join(f"{r.serial_input}={v}" for r, v in zip(registers, values))
@@ -490,9 +489,9 @@ def fsm(
     lef: Optional[Path] = LefOpt,
 ):
     """Recover state machines by exploring each register's reachable states"""
-    nl = _build(gds, tech, top, lef)
-    registers = analysis.find_registers(nl)
-    machines = control.find_state_machines(nl, registers)
+    design = _design(gds, tech, top, lef)
+    nl = design.netlist
+    machines = control.find_state_machines(nl, design.registers())
 
     if not machines:
         console.print(
@@ -517,7 +516,7 @@ def lift(
     lef: Optional[Path] = LefOpt,
 ):
     """Recover RTL from the gate netlist and prove the recovery is faithful"""
-    nl = _build(gds, tech, top, lef)
+    nl = _design(gds, tech, top, lef).netlist
     result = lifting.build(nl, analysis.analyse(nl))
 
     console.print("[bold]recovered[/]")
@@ -568,7 +567,7 @@ def verify(
     lef: Optional[Path] = LefOpt,
 ):
     """Prove the extracted netlist equivalent to a reference RTL (needs yosys installed)"""
-    nl = _build(gds, tech, top, lef)
+    nl = _design(gds, tech, top, lef).netlist
     paths = netlist.write_all(nl, out)
     generic = next(p for p in paths if p.name.endswith(".generic.v"))
 

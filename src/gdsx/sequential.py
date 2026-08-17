@@ -54,7 +54,7 @@ def _next_state_cone(nl: Netlist, register: Register) -> set[str]:
         cell = lookup(inst.cell)
         if cell is not None and cell.is_sequential:
             direct |= data_nets(cell, inst.connections)
-    return direct | Graph(nl).cone(direct)
+    return direct | Graph.of(nl).cone(direct)
 
 
 def classify(
