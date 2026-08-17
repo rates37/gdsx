@@ -1,0 +1,41 @@
+registers
+  reg_dfrtp_2_40: 84-bit feedback register, bit order unknown
+    dfrtp_2_40 -> dfrtp_2_41 -> dfrtp_2_47 -> dfrtp_2_51 -> dfrtp_2_26 -> dfrtp_2_17 -> dfrtp_2_20 
+-> dfrtp_2_25 -> dfrtp_2_61 -> dfrtp_2_53 -> dfrtp_2_82 -> dfrtp_2_9 -> dfrtp_2_11 -> dfrtp_2_12 -> 
+dfrtp_2_13 -> dfrtp_2_14 -> dfrtp_2_15 -> dfrtp_2_16 -> dfrtp_2_19 -> dfrtp_2_2 -> dfrtp_2_21 -> 
+dfrtp_2_22 -> dfrtp_2_23 -> dfrtp_2_24 -> dfrtp_2_27 -> dfrtp_2_28 -> dfrtp_2_29 -> dfrtp_2_30 -> 
+dfrtp_2_31 -> dfrtp_2_32 -> dfrtp_2_35 -> dfrtp_2_36 -> dfrtp_2_39 -> dfrtp_2_45 -> dfrtp_2_46 -> 
+dfrtp_2_52 -> dfrtp_2_56 -> dfrtp_2_57 -> dfrtp_2_62 -> dfrtp_2_63 -> dfrtp_2_64 -> dfrtp_2_65 -> 
+dfrtp_2_66 -> dfrtp_2_67 -> dfrtp_2_68 -> dfrtp_2_69 -> dfrtp_2_7 -> dfrtp_2_70 -> dfrtp_2_71 -> 
+dfrtp_2_72 -> dfrtp_2_73 -> dfrtp_2_74 -> dfrtp_2_75 -> dfrtp_2_76 -> dfrtp_2_78 -> dfrtp_2_79 -> 
+dfrtp_2_8 -> dfrtp_2_80 -> dfrtp_2_81 -> dfrtp_2_84 -> dfrtp_2_18 -> dfrtp_2_3 -> dfrtp_2_54 -> 
+dfrtp_2_49 -> dfrtp_2_6 -> dfrtp_2_60 -> dfrtp_2_1 -> dfrtp_2_42 -> dfrtp_2_55 -> dfrtp_2_58 -> 
+dfrtp_2_59 -> dfrtp_2_38 -> dfrtp_2_4 -> dfrtp_2_43 -> dfrtp_2_5 -> dfrtp_2_10 -> dfrtp_2_33 -> 
+dfrtp_2_34 -> dfrtp_2_37 -> dfrtp_2_44 -> dfrtp_2_48 -> dfrtp_2_50 -> dfrtp_2_77 -> dfrtp_2_83
+  reg_dfstp_2_1: 4-bit feedback register, bit order unknown
+    dfstp_2_1 -> dfstp_2_2 -> dfstp_2_3 -> dfstp_2_4
+  reg_dfxtp_2_1: 4-bit feedback register, bit order unknown
+    dfxtp_2_1 -> dfxtp_2_2 -> dfxtp_2_3 -> dfxtp_2_4
+
+blocks (functional match, with the gates backing each call)
+  reg_dfrtp_2_40: 84-bit feedback register, bit order unknown  (504 cells)
+  reg_dfstp_2_1: 4-bit feedback register, bit order unknown  (32 cells)
+  reg_dfxtp_2_1: 4-bit feedback register, bit order unknown  (13 cells)
+  clock_tree: buffers driving the flop clocks  (17 cells)
+
+operators (proven over the full input space)
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+  input space too large to sweep exhaustively
+
+not attributed to a block: 176 cells (a2111oi_2, a211o_2, a211oi_2, a21o_2, a21oi_2, a22o_2, 
+a22oi_2, a311o_2, a31o_2, a31oi_2, and2_2, and2b_2, and3_2, and3b_2, and4b_2, and4bb_2, clkbuf_4, 
+conb_1, inv_2, mux2_1, nand2_2, nand2b_2, nor2_2, nor3_2, nor3b_2, nor4b_2, o211a_2, o21a_2, 
+o21ai_2, o21ba_2, o21bai_2, o221a_2, o22a_2, o31a_2, o32a_2, o32ai_2, or2_2, or3_2, or3b_2, or4b_2, 
+xnor2_2, xor2_2)
