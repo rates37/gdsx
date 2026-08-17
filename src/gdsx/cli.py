@@ -12,9 +12,9 @@ import typer
 from . import config, connectivity, interface, loader, netlist
 from . import analyse as analysis
 from .core.context import Design
-from . import floorplan as _fp
+from .physical import draw as _fp
 from . import fsm as control
-from . import geometry as _geo
+from .physical import placement as _geo
 from . import lef
 from . import lift as lifting
 from . import normalise as _normalise

@@ -11,8 +11,8 @@ import colorsys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .loader import Design
-from .netlist import Netlist
+from ..loader import Design
+from ..netlist import Netlist
 
 WIDTH = 1200
 MARGIN = 20
@@ -123,8 +123,7 @@ def draw(
 
 
 def spread(placed: list[Placement], groups: dict[str, str]) -> dict[str, float]:
-    """How tightly each group sits together, as a fraction of the die
-    """
+    """How tightly each group sits together, as a fraction of the die"""
     by_name = {p.name: p for p in placed}
     xs = [p.x for p in placed]
     ys = [p.y for p in placed]

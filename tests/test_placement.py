@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from gdsx import geometry
+from gdsx.physical import placement as geometry
 
 
 def grid(spec: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:

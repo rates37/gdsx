@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 
-from gdsx import floorplan
+from gdsx.physical import draw as floorplan
 
 
 def test_every_netlist_instance_gets_a_position(sample, sample_netlist):
