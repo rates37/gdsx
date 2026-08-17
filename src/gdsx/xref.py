@@ -4,23 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .core.netlist import Instance, Netlist, Ref  # noqa: F401  (Ref re-exported)
 from .functions import is_sequential, lookup
-from .netlist import Instance, Netlist
 from .pins import direction_of
-
-
-@dataclass(frozen=True)
-class Ref:
-    """One pin on one instance, and which way it faces"""
-
-    instance: str
-    pin: str
-    cell: str
-    direction: str  # input | output | power
-
-    def __str__(self) -> str:
-        arrow = "<-" if self.direction == "output" else "->"
-        return f"{arrow} {self.instance}.{self.pin} ({self.cell})"
 
 
 @dataclass
