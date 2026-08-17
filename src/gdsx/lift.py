@@ -13,6 +13,7 @@ from pathlib import Path
 
 from . import verify
 from .analyse import Analysis, Bus, Register, OPERATOR_VERILOG
+from .analysis.registers import describe
 from .core.graph import Graph
 from .functions import clock_nets, generic_name, lookup, output_net
 from .liberty import variables
@@ -118,7 +119,7 @@ def build(nl: Netlist, analysis: Analysis) -> Lift:
 
         width = register.width
         body += [
-            f"  // {register.description}",
+            f"  // {describe(register)}",
             f"  reg [{width - 1}:0] {register.name};",
             f"  always @({clock_edge} or {reset_edge})",
             f"    if ({guard}) {register.name} <= {width}'d0;",
@@ -129,7 +130,7 @@ def build(nl: Netlist, analysis: Analysis) -> Lift:
         lift.lifted |= set(register.flops)
         driven |= set(outputs)
         vectors[register.name] = register.name
-        lift.statements.append(f"{register.name}: {register.description}")
+        lift.statements.append(f"{register.name}: {describe(register)}")
 
     # buses
     datapath = [r for r in analysis.registers if r.name in vectors and r.width > 1]

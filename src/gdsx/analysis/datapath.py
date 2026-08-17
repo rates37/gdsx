@@ -24,7 +24,7 @@ from ..netlist import Netlist, to_cone_verilog
 from ..sim import Simulator
 from ..sim.state import load_state
 from .. import verify
-from .registers import Analysis, Block, Register, find_registers
+from .registers import Analysis, Block, Register, describe, find_registers
 from .solve import identify
 
 
@@ -412,7 +412,7 @@ def analyse(nl: Netlist, inputs: dict[str, int] | None = None) -> Analysis:
         result.blocks.append(
             Block(
                 reg.name,
-                reg.description,
+                describe(reg),
                 set(reg.flops) | support_gates,
             )
         )

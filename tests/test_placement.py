@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from gdsx.physical import placement as geometry
+from gdsx.report import placement as report_placement
 
 
 def grid(spec: dict[str, tuple[float, float]]) -> dict[str, tuple[float, float]]:
@@ -94,7 +95,7 @@ def test_compactness_prefers_a_tight_group():
 
 def test_report_breaks_bands_down_by_group():
     points = {"a1": (0.0, 0.0), "a2": (1.0, 0.0), "b1": (100.0, 0.0)}
-    text = geometry.report(points, {"alpha": ["a1", "a2"], "beta": ["b1"]}, "x")
+    text = report_placement.report(points, {"alpha": ["a1", "a2"], "beta": ["b1"]}, "x")
 
     assert "alpha" in text and "beta" in text
     assert "2 cell rows" not in text  # all on one row

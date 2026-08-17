@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 import rtl_fixtures
 from gdsx import analyse, synth
+from gdsx.analysis.registers import describe
 from gdsx.sim import Simulator
 
 needs_yosys = pytest.mark.skipif(
@@ -129,4 +130,4 @@ def test_a_register_with_nothing_to_read_it_off_stays_unordered(tmp_path):
     resolved = analyse.resolve_bit_order(nl, registers)
     assert len(resolved) == 1
     assert not resolved[0].ordered
-    assert "bit order unknown" in resolved[0].description
+    assert "bit order unknown" in describe(resolved[0])

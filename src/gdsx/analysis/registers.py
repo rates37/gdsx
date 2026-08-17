@@ -50,10 +50,10 @@ class Register:
     def width(self) -> int:
         return len(self.flops)
 
-    @property
-    def description(self) -> str:
-        order = "" if self.ordered else ", bit order unknown"
-        return f"{self.width}-bit {self.kind}{order}"
+
+def describe(register: Register) -> str:
+    order = "" if register.ordered else ", bit order unknown"
+    return f"{register.width}-bit {register.kind}{order}"
 
 
 @dataclass

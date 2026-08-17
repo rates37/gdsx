@@ -1,6 +1,6 @@
 """Design analysis: register recovery, bit-order recovery, solving, datapath recovery."""
 
-from .registers import Register, Block, Analysis, find_registers
+from .registers import Register, Block, Analysis, find_registers, describe
 from .bitorder import indexed_ports, probe_positions, check_order, resolve_bit_order
 from .solve import Predicate, identify, sweep, solve
 from .datapath import (

@@ -9,8 +9,9 @@ from rich.markup import escape
 from rich.table import Table
 import typer
 
-from . import config, connectivity, interface, loader, netlist
+from . import config, connectivity, loader, netlist
 from . import analyse as analysis
+from .analysis.registers import describe as describe_register
 from .core.context import Design
 from .physical import draw as _fp
 from . import fsm as control
@@ -22,6 +23,14 @@ from . import region as _region
 from . import sequential
 from . import verify as equiv
 from .pins import PinOracle
+from .report import draw as report_draw
+from .report import fsm as report_fsm
+from .report import guards as report_guards
+from .report import interface as report_interface
+from .report import normalise as report_normalise
+from .report import placement as report_placement
+from .report import region as report_region
+from .report import sequential as report_sequential
 
 app = typer.Typer(
     add_completion=False, help="Extract a gate-level netlist from a standard-cell GDS."
@@ -181,7 +190,7 @@ def normalise(
         f"{len(nl.instances)} -> {len(result.netlist.instances)} instances, "
         f"{len(nl.nets)} -> {len(result.netlist.nets)} nets"
     )
-    console.print(escape(result.report()))
+    console.print(escape(report_normalise.report(result)))
     for path in netlist.write_all(result.netlist, out):
         console.print(f"  wrote {path}")
 
@@ -272,7 +281,7 @@ def region(
         return
 
     carved = _region.extract(nl, points, area, f"{nl.top}_{label or 'region'}", extents)
-    console.print(escape(carved.report()))
+    console.print(escape(report_region.report(carved)))
     if carved.inputs:
         console.print(
             "[dim]  inputs:  " + escape(", ".join(carved.inputs[:12])) + "[/]"
@@ -315,7 +324,7 @@ def placement(
     points = {p.name: (p.x, p.y) for p in _fp.placements(design, nl)}
 
     by_group = _json.loads(groups.read_text()) if groups else None
-    console.print(escape(_geo.report(points, by_group, axis)))
+    console.print(escape(report_placement.report(points, by_group, axis)))
 
     if ordered:
         console.print("\n[bold]ORDERED ARRAYS[/]")
@@ -324,7 +333,7 @@ def placement(
                 name, {k: int(v) for k, v in indexed.items()}, points
             )
             if result is not None:
-                console.print("  " + escape(str(result)))
+                console.print("  " + escape(report_placement.describe_ordering(result)))
 
 
 @app.command()
@@ -339,7 +348,7 @@ def guards(
 ):
     """What has to be true for each register to change, (i.e., enables)"""
     result = _design(gds, tech, top, lef).guards(min_fanout=fanout)
-    console.print(escape(result.report()))
+    console.print(escape(report_guards.report(result)))
 
 
 @app.command()
@@ -376,7 +385,7 @@ def map(
         console.print("[yellow]no placement in this file[/]")
         raise typer.Exit(1)
 
-    console.print(escape(_fp.report(placed, groups, _fp.spread(placed, groups))))
+    console.print(escape(report_draw.report(placed, groups, _fp.spread(placed, groups))))
     console.print(
         f"wrote {_fp.write(out, _fp.draw(placed, groups, f'{nl.top} by {groups_file.stem}'))}"
     )
@@ -394,7 +403,7 @@ def ports(
 ):
     """What each pin is for: clock, reset, gate, data"""
     design = _design(gds, tech, top, lef)
-    console.print(escape(interface.report(design.interface(cycles))))
+    console.print(escape(report_interface.report(design.interface(cycles))))
 
 
 @app.command()
@@ -409,7 +418,9 @@ def registers(
     design = _design(gds, tech, top, lef)
     nl = design.netlist
     roles = sequential.classify(nl, design.registers(ordered=True))
-    console.print(escape(sequential.report(nl, roles, sequential.pipelines(roles))))
+    console.print(
+        escape(report_sequential.report(nl, roles, sequential.pipelines(roles)))
+    )
 
 
 @app.command()
@@ -427,7 +438,7 @@ def analyse(
     console.print("[bold]registers[/]")
     for reg in result.registers:
         source = f" <- {reg.serial_input}" if reg.serial_input else ""
-        console.print(f"  {reg.name}: {reg.description}{source}")
+        console.print(f"  {reg.name}: {describe_register(reg)}{source}")
         console.print(f"    [dim]{' -> '.join(reg.flops)}[/]")
 
     console.print(
@@ -500,7 +511,7 @@ def fsm(
         )
         return
     for machine in machines:
-        console.print(escape(control.to_table(machine)))
+        console.print(escape(report_fsm.to_table(machine)))
         console.print()
 
 

@@ -1,6 +1,7 @@
 import pytest
 import rtl_fixtures
 from gdsx import analyse
+from gdsx.analysis.registers import describe
 from gdsx.functions import is_sequential
 from gdsx.sim import Simulator
 
@@ -34,7 +35,7 @@ def test_parallel_load_groups_but_admits_it_cannot_order(tmp_path):
     assert reg.width == 8
     assert reg.kind == "parallel register"
     assert not reg.ordered
-    assert "bit order unknown" in reg.description
+    assert "bit order unknown" in describe(reg)
 
 
 @needs_yosys

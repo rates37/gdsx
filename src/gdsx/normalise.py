@@ -54,38 +54,6 @@ class Normalisation:
             + len(self.dangling)
         )
 
-    def report(self) -> str:
-        out = [
-            f"{self.removed} cells removed, {len(self.merges)} nets merged",
-            f"  {len(self.buffers):4d} buffers collapsed",
-            f"  {len(self.inverter_pairs):4d} inverter pairs collapsed",
-            f"  {len(self.folded):4d} cells folded to a constant",
-            f"  {len(self.degenerate):4d} cells degenerated into a wire",
-            f"  {len(self.dangling):4d} cells driving nothing",
-            f"  {len(self.constants):4d} nets known constant",
-        ]
-        if self.buffers:
-            out.append("\nbuffers")
-            for inst, cell, src, dst in self.buffers:
-                out.append(f"  {inst:20s} {cell:10s} {dst} := {src}")
-        if self.inverter_pairs:
-            out.append("\ninverter pairs")
-            for inst, cell, src, dst in self.inverter_pairs:
-                out.append(f"  {inst:20s} {cell:10s} {dst} := {src}")
-        if self.degenerate:
-            out.append("\ndegenerate cells")
-            for inst, cell, src, dst in self.degenerate:
-                out.append(f"  {inst:20s} {cell:10s} {dst} := {src}")
-        if self.folded:
-            out.append("\nconstant folds")
-            for inst, cell, net, value in self.folded:
-                out.append(f"  {inst:20s} {cell:10s} {net} = {value}")
-        if self.dangling:
-            out.append("\ndriving nothing")
-            for inst, cell in self.dangling:
-                out.append(f"  {inst:20s} {cell}")
-        return "\n".join(out)
-
 
 class _Aliases:
     """Union-find over net names

@@ -76,18 +76,6 @@ class Region:
             return "a block with a lot of context"
         return "a fragment -- the boundary cuts through the logic"
 
-    def report(self) -> str:
-        return "\n".join(
-            [
-                f"region {self.box}",
-                f"  {len(self.inside)} of {self.total_cells} cells "
-                f"({len(self.inside) / self.total_cells:.0%})",
-                f"  {len(self.inputs)} inputs, {len(self.outputs)} outputs, "
-                f"{len(self.internal)} internal nets",
-                f"  cut ratio {self.cut_ratio:.2f} -- {self.verdict}",
-            ]
-        )
-
 
 def within(
     points: dict[str, tuple[float, float]],

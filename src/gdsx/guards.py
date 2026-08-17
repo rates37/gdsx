@@ -30,9 +30,6 @@ class Guard:
     def condition(self) -> str:
         return f"{self.net}" if self.value == 0 else f"!{self.net}"
 
-    def __str__(self) -> str:
-        return f"{self.flop} frozen when {self.net}={self.value}"
-
 
 @dataclass
 class Guards:
@@ -55,23 +52,6 @@ class Guards:
             key = tuple(sorted((g.net, g.value) for g in self.of(flop)))
             out[key].append(flop)
         return {k: sorted(v) for k, v in out.items()}
-
-    def report(self) -> str:
-        lines = [
-            f"{len(self.candidates)} candidate control nets tested against {len(self.flops)} flops",
-            f"{len({g.flop for g in self.guards})} flops have a recovered freeze condition, "
-            f"{len(self.ungated)} do not",
-            "",
-            "GROUPS  (flops that are enabled together)",
-        ]
-        for key, members in sorted(
-            self.groups().items(), key=lambda kv: (-len(kv[1]), kv[0])
-        ):
-            cond = ", ".join(f"{net}={value}" for net, value in key) or "(never frozen)"
-            lines.append(f"  {len(members):3d} flops frozen when {cond}")
-            for chunk in range(0, len(members), 6):
-                lines.append("        " + ", ".join(members[chunk : chunk + 6]))
-        return "\n".join(lines)
 
 
 def _state(nl: Netlist) -> dict[str, tuple[set[str], str]]:
