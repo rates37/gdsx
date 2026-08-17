@@ -7,10 +7,10 @@ which lets the analysis force register contents and sweep
 from __future__ import annotations
 from dataclasses import dataclass, field
 
-from .core.graph import Graph
-from .functions import is_sequential, lookup
-from .liberty import Cell, evaluate
-from .netlist import Instance, Netlist
+from ..core.graph import Graph
+from ..functions import is_sequential, lookup
+from ..liberty import Cell, evaluate
+from ..netlist import Instance, Netlist
 
 
 class UnsupportedCell(Exception):
@@ -193,5 +193,3 @@ class Simulator:
             on_low = evaluate(seq.clocked_on, pins_low)
             sense[inst.name] = 1 if on_high > on_low else -1
         return sense
-
-
