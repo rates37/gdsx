@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import re
 import sys
 
 import pytest
@@ -116,6 +117,26 @@ def test_a_flop_output_is_a_leaf_carrying_its_instance_and_pin(sample_netlist):
     assert (found.instance, found.pin, found.net) == (flop, "Q", net)
 
 
+def test_label_names_every_leaf_kind(sample_netlist):
+    graph = Graph(chain())
+    assert graph.label("VGND") == "0"
+    assert graph.label("VPWR") == "1"
+    assert graph.label("a") == "a"  # primary input: its own name
+    assert graph.label("nowhere") == "nowhere"  # undriven
+    assert graph.label("y") is None  # combinational: keep walking
+
+    sequential = Graph(sample_netlist)
+    flop = sorted(sequential.seq)[0]
+    assert sequential.label(sequential.by_name[flop].connections["Q"]) == f"{flop}.Q"
+
+
+def test_every_net_is_either_labelled_or_walkable(both):
+    for nl in both:
+        graph = Graph(nl)
+        for net in probe_nets(nl):
+            assert (graph.label(net) is None) is (graph.leaf(net) is None)
+
+
 #! traversal equivalence
 
 
@@ -177,6 +198,32 @@ def test_fanin_and_fanout_match_xref(both):
                     assert graph.fanout(net, depth, through) == xref.fanout(
                         nl, net, depth, through
                     ), (net, depth, through)
+
+
+def test_fanin_tree_keeps_the_gate_by_gate_shape():
+    graph = Graph(chain())
+    tree = graph.fanin_tree("z")
+    assert [(level, node.net) for level, node in tree.walk()] == [
+        (0, "z"),
+        (1, "y"),
+        (2, "n1"),
+        (3, "a"),
+        (2, "b"),
+    ]
+    node = {n.net: n for _, n in tree.walk()}
+    assert node["y"].driver.instance == "nand2_1"
+    assert node["a"].leaf.kind is LeafKind.PRIMARY_IN
+    for _, found in tree.walk():  # a node is a leaf or a gate. never both
+        assert (found.leaf is None) != (found.driver is None)
+
+
+def test_fanin_tree_honours_the_depth_and_expands_each_net_once(puzzle_netlist):
+    graph = Graph(puzzle_netlist)
+    net = graph.d_pin(sorted(graph.seq)[0])
+    nodes = list(graph.fanin_tree(net, depth=8).walk())
+    assert max(level for level, _ in nodes) <= 8
+    expanded = [found.net for _, found in nodes if found.children]
+    assert len(expanded) == len(set(expanded))
 
 
 def test_between_matches_xref(both):
@@ -263,6 +310,44 @@ def test_function_of_and_driver_of():
     assert graph.function_of("a") is None  # a primary input has no gate
     assert graph.driver_of("y").instance == "nand2_1"
     assert graph.driver_of("y").direction == "output"
+
+
+def test_formula_substitutes_every_gate_down_to_the_leaves():
+    graph = Graph(chain())
+    assert graph.formula("n1") == "~(a)"
+    assert graph.formula("y") == "(~(~(a)) | ~(b))"
+    assert graph.formula("z") == "((~(~(a)) | ~(b)))"
+    assert graph.formula("a") == "a"  # a leaf is its label
+    assert graph.formula("VGND") == "0"
+
+
+def test_formula_runs_out_of_depth_rather_than_forever():
+    graph = Graph(chain())
+    assert graph.formula("z", depth=0) == "z"
+    assert graph.formula("z", depth=1) == "(y)"
+
+    nl = Netlist(top="loop", power_nets={"VGND", "VPWR"})
+    nl.instances = [
+        Instance("inv_1", "sky130_fd_sc_hd__inv_1", {"A": "n2", "Y": "n1"}),
+        Instance("inv_2", "sky130_fd_sc_hd__inv_1", {"A": "n1", "Y": "n2"}),
+    ]
+    for inst in nl.instances:
+        for pin, net in inst.connections.items():
+            nl.nets.setdefault(net, []).append(f"{inst.name}/{pin}")
+    assert Graph(nl).formula("n1", depth=3) == "~(~(~(n2)))"
+
+
+def test_formula_never_matches_a_pin_name_inside_a_longer_one(both):
+    """`A2` must not be substituted as `A` followed by a stray `2`"""
+    for nl in both:
+        graph = Graph(nl)
+        wide = [
+            net
+            for net, ref in graph.driver.items()
+            if any(len(p) > 1 for p in (graph.cell_of[ref.instance].inputs or ()))
+        ]
+        for net in wide[:20]:
+            assert not re.search(r"\)\d", graph.formula(net, depth=2)), net
 
 
 #! layering

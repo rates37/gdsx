@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -38,6 +40,47 @@ class Leaf:
     net: str
     instance: str | None = None  # set only for FLOP_Q
     pin: str | None = None  # set only for FLOP_Q
+
+
+@dataclass
+class FaninNode:
+    """One net in a fan-in tree
+
+    `leaf` is set when the walk stopped here and `driver` when it did not;
+    exactly one of the two is None. Carries no formatting: a caller that wants
+    an indented listing gets its indents from `walk()`.
+    """
+
+    net: str
+    leaf: Leaf | None = None
+    driver: Ref | None = None
+    children: list[FaninNode] = field(default_factory=list)
+
+    def walk(self) -> Iterator[tuple[int, FaninNode]]:
+        """(level, node) depth first, children in cell-input order"""
+        stack = [(0, self)]
+        while stack:
+            level, node = stack.pop()
+            yield level, node
+            stack.extend((level + 1, kid) for kid in reversed(node.children))
+
+
+def _substitute(expression: str, pins: tuple[str, ...], values: dict[str, str]) -> str:
+    """Replace pin names in a Verilog expression with parenthesised sub-terms
+
+    Longest pin name first, so `A2` is never matched as `A` leaving a stray
+    `2` behind. A pin with no value (an unconnected one) is left as it stands.
+    """
+    if not pins:
+        return expression
+    longest_first = sorted(pins, key=len, reverse=True)
+    pattern = re.compile(
+        r"\b(" + "|".join(re.escape(pin) for pin in longest_first) + r")\b"
+    )
+    return pattern.sub(
+        lambda m: f"({values[m.group(0)]})" if m.group(0) in values else m.group(0),
+        expression,
+    )
 
 
 @dataclass
@@ -157,6 +200,25 @@ class Graph:
 
     def is_leaf(self, net: str) -> bool:
         return self.leaf(net) is not None
+
+    def label(self, net: str) -> str | None:
+        """A leaf's name as a formula refers to it, or None to keep walking
+
+        `"0"`/`"1"` for a constant, `"<instance>.<pin>"` for a flop output, and
+        the net's own name for a primary input or an undriven net. This is the
+        naming every hand-written cone walker invented for itself; `formula`
+        and any caller building an environment of leaf values share it.
+        """
+        found = self.leaf(net)
+        if found is None:
+            return None
+        if found.kind is LeafKind.CONST0:
+            return "0"
+        if found.kind is LeafKind.CONST1:
+            return "1"
+        if found.kind is LeafKind.FLOP_Q:
+            return f"{found.instance}.{found.pin}"
+        return found.net
 
     #! traversal
 
@@ -280,6 +342,32 @@ class Graph:
             seen |= nxt
             frontier = nxt
         return levels
+
+    def fanin_tree(self, net: str, *, depth: int = 3) -> FaninNode:
+        """The fan-in of `net` as a tree, expanded `depth` levels deep
+
+        Unlike `fanin`, which flattens each level into a set, this keeps the
+        gate-by-gate shape a cone listing needs. A net that re-converges appears
+        again as a node but is expanded only the first time it is reached, so a
+        re-converging cone stays finite; the walk stops at leaves regardless.
+        """
+        root = FaninNode(net)
+        expanded: set[str] = set()
+        stack = [(root, depth)]
+        while stack:
+            node, budget = stack.pop()
+            node.leaf = self.leaf(node.net)
+            if node.leaf is not None:
+                continue
+            node.driver = self.driver[node.net]
+            if node.net in expanded or budget <= 0:
+                continue
+            expanded.add(node.net)
+            node.children = [
+                FaninNode(n) for n in self._input_nets(node.driver.instance)
+            ]
+            stack.extend((kid, budget - 1) for kid in reversed(node.children))
+        return root
 
     def between(
         self, sources: set[str], sinks: set[str], *, through_flops: bool = True
@@ -468,3 +556,45 @@ class Graph:
         cell = self.cell_of[ref.instance]
         expr = cell.functions.get(ref.pin) if cell is not None else None
         return to_verilog(expr) if expr is not None else None
+
+    def formula(self, net: str, *, depth: int = 99) -> str:
+        """`net` as one Boolean expression over its leaves
+
+        `function_of` answers for a single gate; this substitutes each input
+        pin's own function in turn until it reaches a leaf, which it names as
+        `label` does. A net that runs out of `depth` stands for itself, so the
+        result is a finite string even across a combinational loop.
+        """
+        # Iterative and memoised on (net, depth): the substitution is a pure
+        # function of the pair, cones reach depth ~40, and a re-converging cone
+        # would otherwise re-expand the same net once per path.
+        done: dict[tuple[str, int], str] = {}
+        stack: list[tuple[str, int, bool]] = [(net, depth, False)]
+        while stack:
+            current, budget, resolved = stack.pop()
+            if (current, budget) in done:
+                continue
+            found = self.label(current)
+            if found is not None:
+                done[current, budget] = found
+                continue
+            if budget <= 0:
+                done[current, budget] = current
+                continue
+            ref = self.driver[current]
+            cell = self.cell_of[ref.instance]
+            conns = self.by_name[ref.instance].connections
+            if not resolved:
+                stack.append((current, budget, True))
+                stack.extend(
+                    (conns[pin], budget - 1, False)
+                    for pin in reversed(cell.inputs)
+                    if pin in conns
+                )
+                continue
+            done[current, budget] = _substitute(
+                self.function_of(current),
+                cell.inputs,
+                {p: done[conns[p], budget - 1] for p in cell.inputs if p in conns},
+            )
+        return done[net, depth]

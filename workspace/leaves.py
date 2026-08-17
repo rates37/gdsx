@@ -3,20 +3,20 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-import cone
-from gdsx.functions import lookup
+from harness import GRAPH
 
 
 def leaves(net, polarity=1, acc=None):
     acc = [] if acc is None else acc
-    lab = cone.leaf(net)
+    lab = GRAPH.label(net)
     if lab:
         acc.append((lab, polarity))
         return acc
 
-    _, c, f, connections = cone.gate_of(net)
-    short = c.replace("sky130_fd_sc_hd__", "")
-    cell = lookup(c)
+    ref = GRAPH.driver_of(net)
+    connections = GRAPH.by_name[ref.instance].connections
+    short = ref.cell.replace("sky130_fd_sc_hd__", "")
+    cell = GRAPH.cell_of[ref.instance]
     if short.startswith("and") and polarity == 1:
         for p in cell.inputs:
             if p in connections:
@@ -25,7 +25,7 @@ def leaves(net, polarity=1, acc=None):
         leaves(connections["A"], 1 - polarity, acc)
 
     else:
-        acc.append((f"<{net}:{short}:{f}>", polarity))
+        acc.append((f"<{net}:{short}:{GRAPH.function_of(net)}>", polarity))
     return acc
 
 

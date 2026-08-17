@@ -2,8 +2,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from harness import get_fresh_sim
-import fgraph
+from harness import GRAPH, get_fresh_sim
 
 # manually placed order so that adjacent ones are the registers that pair up to form each saturating 2 bit counter
 N96 = [
@@ -58,7 +57,7 @@ N136 = [
 ALL_FFS = N96 + N136
 
 # SUP[f] := set of FF names that f's D pin combinationally depend on
-SUP = {f: {x.split(".")[0] for x in fgraph.dsupport(f)} for f in ALL_FFS}
+SUP = {f: GRAPH.d_support(f) for f in ALL_FFS}
 
 
 def pair_up(ffs):
@@ -107,6 +106,6 @@ if __name__ == "__main__":
 
     print()
     # sanity check:
-    insensitive = [p for p,c in sensitivity.items() if len(c) == 0]
+    insensitive = [p for p, c in sensitivity.items() if len(c) == 0]
     if insensitive:
         print(f"{len(insensitive)} pairs didn't react to any pulses")
