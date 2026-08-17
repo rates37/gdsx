@@ -9,12 +9,42 @@ from dataclasses import dataclass, field
 
 from ..core.graph import Graph
 from ..functions import is_sequential, lookup
-from ..liberty import Cell, evaluate
+from ..liberty import Cell, Expr, evaluate
 from ..netlist import Instance, Netlist
 
 
 class UnsupportedCell(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class _Plan:
+    """One instance with its pin->net lookups already done.
+
+    `inst.connections[p]` is a dict hit per pin per gate per cycle, and the
+    answer never changes, so it is resolved once here instead. Unconnected pins
+    are absent from both tuples, which is what the `if p in inst.connections`
+    guards used to decide per cycle.
+
+    The pairs are stored zipped rather than as two parallel tuples on purpose:
+    `zip(a, b)` allocates an iterator, and at 636 gates times two settles per
+    cycle that allocation costs more than the lookups the plan removes.
+    """
+
+    inst: Instance
+    cell: Cell
+    reads: tuple[tuple[str, str], ...]  # (input pin, the net on it)
+    writes: tuple[tuple[str, Expr], ...]  # (net driven, the expression driving it)
+
+    @classmethod
+    def of(cls, inst: Instance, cell: Cell) -> "_Plan":
+        conns = inst.connections
+        return cls(
+            inst,
+            cell,
+            tuple((p, conns[p]) for p in cell.inputs if p in conns),
+            tuple((conns[p], e) for p, e in cell.functions.items() if p in conns),
+        )
 
 
 @dataclass
@@ -27,6 +57,12 @@ class Simulator:
         default_factory=set
     )  # undriven: ports and dangling pins
 
+    # Pre-resolved views of the two lists above, in the same order. Derived, so
+    # not constructor arguments. `combinational` and `flops` stay the pairs
+    # every caller outside this module already reads.
+    comb_plan: list[_Plan] = field(init=False, default_factory=list, repr=False)
+    flop_plan: list[_Plan] = field(init=False, default_factory=list, repr=False)
+
     def __post_init__(self) -> None:
         for inst in self.netlist.instances:
             cell = lookup(inst.cell)
@@ -38,7 +74,14 @@ class Simulator:
         pairs = {inst.name: (inst, cell) for inst, cell in self.combinational}
         order = Graph.of(self.netlist).topo(sources=self._sources())
         self.combinational = [pairs[inst.name] for inst in order]
+        self.comb_plan = [_Plan.of(inst, cell) for inst, cell in self.combinational]
+        self.flop_plan = [_Plan.of(inst, cell) for inst, cell in self.flops]
         self.reset()
+
+    @staticmethod
+    def _bind(plan: _Plan, values: dict[str, int]) -> dict[str, int]:
+        """This instance's input pin values, read straight off the plan"""
+        return {pin: values[net] for pin, net in plan.reads}
 
     # setup
 
@@ -90,31 +133,23 @@ class Simulator:
         )
         values.update(inputs)
 
-        for inst, cell in self.flops:
-            bound = self._state_values(inst, cell)
-            for pin, expr in cell.functions.items():
-                if pin in inst.connections:
-                    values[inst.connections[pin]] = evaluate(expr, bound)
+        for plan in self.flop_plan:
+            bound = self._state_values(plan.inst, plan.cell)
+            for net, expr in plan.writes:
+                values[net] = evaluate(expr, bound)
 
-        for inst, cell in self.combinational:
-            pins = {
-                p: values[inst.connections[p]]
-                for p in cell.inputs
-                if p in inst.connections
-            }
-            for pin, expr in cell.functions.items():
-                if pin in inst.connections:
-                    values[inst.connections[pin]] = evaluate(expr, pins)
+        # The hot loop of the whole library. `_bind` is inlined here, and only
+        # here, because at 636 gates times two settles per cycle the call frame
+        # is measurable.
+        for plan in self.comb_plan:
+            pins = {pin: values[net] for pin, net in plan.reads}
+            for net, expr in plan.writes:
+                values[net] = evaluate(expr, pins)
         return values
 
-    def _async_override(
-        self, inst: Instance, cell: Cell, values: dict[str, int]
-    ) -> int | None:
+    def _async_override(self, pins: dict[str, int], cell: Cell) -> int | None:
         # Async clear/preset wins over the clock whenever it is asserted
         seq = cell.sequential
-        pins = {
-            p: values[inst.connections[p]] for p in cell.inputs if p in inst.connections
-        }
         if seq.clear is not None and evaluate(seq.clear, pins):
             return 0
         if seq.preset is not None and evaluate(seq.preset, pins):
@@ -125,17 +160,13 @@ class Simulator:
         """One clock edge. Returns the settled values afterwards"""
         values = self.settle(inputs)
         nxt = {}
-        for inst, cell in self.flops:
-            pins = {
-                p: values[inst.connections[p]]
-                for p in cell.inputs
-                if p in inst.connections
-            }
-            override = self._async_override(inst, cell, values)
+        for plan in self.flop_plan:
+            pins = self._bind(plan, values)
+            override = self._async_override(pins, plan.cell)
             if override is not None:
-                nxt[inst.name] = override
+                nxt[plan.inst.name] = override
             else:
-                nxt[inst.name] = evaluate(cell.sequential.next_state, pins)
+                nxt[plan.inst.name] = evaluate(plan.cell.sequential.next_state, pins)
         self.state = nxt
         return self.settle(inputs)
 
@@ -144,26 +175,18 @@ class Simulator:
         was = self.settle(before)
         now = self.settle(after)
         nxt = dict(self.state)
-        for inst, cell in self.flops:
-            pins_was = {
-                p: was[inst.connections[p]]
-                for p in cell.inputs
-                if p in inst.connections
-            }
-            pins_now = {
-                p: now[inst.connections[p]]
-                for p in cell.inputs
-                if p in inst.connections
-            }
-            seq = cell.sequential
+        for plan in self.flop_plan:
+            pins_was = self._bind(plan, was)
+            pins_now = self._bind(plan, now)
+            seq = plan.cell.sequential
             rising = not evaluate(seq.clocked_on, pins_was) and evaluate(
                 seq.clocked_on, pins_now
             )
-            override = self._async_override(inst, cell, now)
+            override = self._async_override(pins_now, plan.cell)
             if override is not None:
-                nxt[inst.name] = override
+                nxt[plan.inst.name] = override
             elif rising:
-                nxt[inst.name] = evaluate(seq.next_state, pins_now)
+                nxt[plan.inst.name] = evaluate(seq.next_state, pins_now)
         self.state = nxt
         return self.settle(after)
 
@@ -177,19 +200,9 @@ class Simulator:
         low = self.settle({**inputs, clock: 0})
         high = self.settle({**inputs, clock: 1})
         sense = {}
-        for inst, cell in self.flops:
-            pins_low = {
-                p: low[inst.connections[p]]
-                for p in cell.inputs
-                if p in inst.connections
-            }
-            pins_high = {
-                p: high[inst.connections[p]]
-                for p in cell.inputs
-                if p in inst.connections
-            }
-            seq = cell.sequential
-            on_high = evaluate(seq.clocked_on, pins_high)
-            on_low = evaluate(seq.clocked_on, pins_low)
-            sense[inst.name] = 1 if on_high > on_low else -1
+        for plan in self.flop_plan:
+            seq = plan.cell.sequential
+            on_high = evaluate(seq.clocked_on, self._bind(plan, high))
+            on_low = evaluate(seq.clocked_on, self._bind(plan, low))
+            sense[plan.inst.name] = 1 if on_high > on_low else -1
         return sense
