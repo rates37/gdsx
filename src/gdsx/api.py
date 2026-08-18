@@ -426,6 +426,69 @@ def nets(handle: str, names_json: str | None = None) -> list:
 
 
 @_endpoint
+def sub_netlist(handle: str, instances_json: str, name: str | None = None) -> dict:
+    """Carve `instances` out as a standalone netlist, in the same shape
+    `extract` returns
+    """
+    design = _get(handle)
+    graph = design.graph
+    wanted = _parse(instances_json, "instances_json")
+    if not isinstance(wanted, list) or not wanted:
+        raise ApiError(
+            "bad_json", "instances_json must be a non-empty list of instance names"
+        )
+    missing = [n for n in wanted if n not in graph.by_name]
+    if missing:
+        raise ApiError("unknown_instance", f"no such instance: {missing[0]!r}")
+
+    sub = graph.subgraph(set(wanted), name=name)
+    return {
+        "netlist": sub.to_dict(),
+        "summary": {
+            "top": sub.top,
+            "instance_count": len(sub.instances),
+            "net_count": len(sub.nets),
+            "port_count": len(sub.ports),
+        },
+    }
+
+
+@_endpoint
+def layout(handle: str, instances_json: str | None = None) -> dict:
+    """A left-to-right layered layout of `instances` (or the whole design),
+    for a graph view the browser can draw without shipping graphviz
+
+    `instances_json` is the same shape `sub_netlist` takes; with none given,
+    lays out the whole design, which only succeeds under `analysis.layout.
+    MAX_NODES` -- fails with `too_many_nodes` above that on purpose, since a
+    728-gate hairball helps nobody. Sub-net first (`sub_netlist`) for a design
+    that big.
+    """
+    from .analysis.layout import TooManyNodes, layered
+
+    design = _get(handle)
+    graph = design.graph
+    wanted = _parse(instances_json, "instances_json")
+    if wanted is None:
+        nl = design.netlist
+    else:
+        if not isinstance(wanted, list) or not wanted:
+            raise ApiError(
+                "bad_json", "instances_json must be a non-empty list of instance names"
+            )
+        missing = [n for n in wanted if n not in graph.by_name]
+        if missing:
+            raise ApiError("unknown_instance", f"no such instance: {missing[0]!r}")
+        nl = graph.subgraph(set(wanted))
+
+    try:
+        got = layered(nl)
+    except TooManyNodes as exc:
+        raise ApiError("too_many_nodes", str(exc), {"count": exc.count}) from None
+    return serial.to_dict(got)
+
+
+@_endpoint
 def cone(
     handle: str,
     net: str,

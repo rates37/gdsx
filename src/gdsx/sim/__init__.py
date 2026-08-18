@@ -1,5 +1,6 @@
 """The gate-level simulator, the gate tape, and register/shift-mode helpers."""
 
+from .diff import Divergence, DiffResult, diff_models
 from .execute import TapeExecutor
 from .observe import Trace, bus, quiescent
 from .simulator import Simulator, UnsupportedCell

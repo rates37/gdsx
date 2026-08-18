@@ -252,6 +252,99 @@ def test_cone_rejects_an_unknown_net_and_a_bad_direction(handle):
     assert failure(api.cone(handle, net, direction="sideways"))["code"] == "bad_json"
 
 
+#! sub_netlist
+
+
+def test_sub_netlist_carves_out_the_chosen_instances(handle):
+    names = [v["name"] for v in unwrap(api.instances(handle))]
+    chosen = names[: max(1, len(names) // 4)]
+
+    data = unwrap(api.sub_netlist(handle, json.dumps(chosen)))
+    got_names = {inst["name"] for inst in data["netlist"]["instances"]}
+    assert got_names == set(chosen)
+    assert data["summary"]["instance_count"] == len(chosen)
+    assert data["summary"]["net_count"] == len(data["netlist"]["nets"])
+    assert data["summary"]["port_count"] == len(data["netlist"]["ports"])
+
+
+def test_sub_netlist_round_trips_into_load_netlist(handle):
+    names = [v["name"] for v in unwrap(api.instances(handle))]
+    chosen = names[: max(1, len(names) // 4)]
+    data = unwrap(api.sub_netlist(handle, json.dumps(chosen), name="a_slice"))
+    assert data["netlist"]["top"] == "a_slice"
+
+    loaded = unwrap(api.load_netlist(json.dumps(data["netlist"])))
+    assert loaded["top"] == "a_slice"
+    assert loaded["has_layout"] is False
+    api.close(loaded["handle"])
+
+
+def test_sub_netlist_rejects_an_unknown_instance(handle):
+    assert (
+        failure(api.sub_netlist(handle, json.dumps(["nope"])))["code"]
+        == "unknown_instance"
+    )
+
+
+def test_sub_netlist_rejects_an_empty_or_malformed_list(handle):
+    assert failure(api.sub_netlist(handle, json.dumps([])))["code"] == "bad_json"
+    assert failure(api.sub_netlist(handle, json.dumps({"a": 1})))["code"] == "bad_json"
+
+
+def test_sub_netlist_rejects_an_unknown_handle():
+    assert (
+        failure(api.sub_netlist("design-nope", json.dumps(["x"])))["code"]
+        == "bad_handle"
+    )
+
+
+#! layout
+
+
+def test_layout_of_a_chosen_block_stays_within_it(handle):
+    names = [v["name"] for v in unwrap(api.instances(handle))]
+    chosen = names[: max(1, len(names) // 4)]
+
+    got = unwrap(api.layout(handle, json.dumps(chosen)))
+    gate_labels = {n["label"] for n in got["nodes"] if n["kind"] == "gate"}
+    assert gate_labels == set(chosen)
+    assert got["n_layers"] >= 1
+    for node in got["nodes"]:
+        assert node["x"] == node["layer"] * 160
+        for edge in got["edges"]:
+            assert isinstance(edge["feedback"], bool)
+
+
+def test_layout_with_no_instances_lays_out_the_whole_small_design(handle):
+    whole = unwrap(api.layout(handle))
+    by_instances = unwrap(
+        api.layout(
+            handle, json.dumps([v["name"] for v in unwrap(api.instances(handle))])
+        )
+    )
+    assert {n["id"] for n in whole["nodes"]} == {n["id"] for n in by_instances["nodes"]}
+
+
+def test_layout_rejects_an_unknown_instance(handle):
+    assert (
+        failure(api.layout(handle, json.dumps(["nope"])))["code"] == "unknown_instance"
+    )
+
+
+def test_layout_rejects_an_empty_or_malformed_list(handle):
+    assert failure(api.layout(handle, json.dumps([])))["code"] == "bad_json"
+    assert failure(api.layout(handle, json.dumps({"a": 1})))["code"] == "bad_json"
+
+
+def test_layout_reports_too_many_nodes_over_the_cap(handle, monkeypatch):
+    from gdsx.analysis import layout as layout_module
+
+    monkeypatch.setattr(layout_module, "MAX_NODES", 1)
+    found = failure(api.layout(handle))
+    assert found["code"] == "too_many_nodes"
+    assert found["detail"]["count"] > 1
+
+
 #! analyses
 
 

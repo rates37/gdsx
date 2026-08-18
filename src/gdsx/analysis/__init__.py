@@ -6,6 +6,7 @@ from .grouping import mutual
 from .constraints import Constraint, System, from_sensitivity
 from .weights import Weight, infer
 from .decode import Orbit, OrbitKind, selects, orbit
+from .layout import Layout, LayoutEdge, LayoutNode, MAX_NODES, TooManyNodes, layered
 from .justify import (
     Choice,
     Requirements,
