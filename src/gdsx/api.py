@@ -162,6 +162,44 @@ class GateView:
 
 
 @dataclass
+class FlopView:
+    """One state element of a gate tape, as indices into the value array
+
+    `rst` and `set` are ALWAYS active high and `clk` always active high,
+    whatever the cell's own polarity (the compiler emits the inversion as a
+    `NOT` op instead). `-1` means the cell has no such pin.
+    """
+
+    d: int
+    q: int
+    clk: int
+    rst: int
+    set: int
+    kind: int  # 0=DFF 1=DFFR 2=DFFS 3=DFFSR 4=DLATCH; informational
+
+
+@dataclass
+class TapeView:
+    """A compiled design: the op stream both executors run
+
+    `ops` is a flat stride-6 stream, `[opcode, out, in0, in1, in2, in3]` per op,
+    topologically ordered so one forward pass settles the design. Values are 0
+    or 1 only.
+    """
+
+    tape_version: int
+    n_nets: int
+    n_flops: int
+    n_ops: int
+    inputs: list[int]  # primary input net ids, in net-name order
+    ops: list[int]
+    flops: list[FlopView]
+    consts: list[list[int]]  # [net id, 0|1], applied before the ops run
+    names: dict[str, int] = field(default_factory=dict)
+    flop_names: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ConeNode:
     net: str
     gate: GateView | None = None
@@ -708,15 +746,44 @@ def sim_run(handle: str, vectors_json: str, watch_json: str | None = None) -> di
 
 @_endpoint
 def sim_compile(handle: str) -> dict:
-    """The gate tape for this design -- not built yet"""
-    _get(handle)  # so a bad handle still reports as a bad handle
-    raise ApiError("unimplemented", "sim_compile needs the gate tape")
+    """The gate tape for this design: the op stream the JS executor runs
+
+    Sending the tape once and scrubbing locally is the point.
+    """
+    from .sim import compile as compile_tape
+    from .sim.tape import UnconnectedPin, UnsupportedFunction
+
+    design = _get(handle)
+    try:
+        tape = compile_tape(design.netlist)
+    except UnsupportedFunction as exc:
+        raise ApiError(
+            "unsupported_cell",
+            str(exc),
+            {"cell": exc.cell, "pin": exc.pin},
+        ) from None
+    except UnconnectedPin as exc:
+        raise ApiError("unconnected_pin", str(exc)) from None
+    return serial.to_dict(
+        TapeView(
+            tape_version=tape.tape_version,
+            n_nets=tape.n_nets,
+            n_flops=tape.n_flops,
+            n_ops=tape.n_ops,
+            inputs=list(tape.inputs),
+            ops=list(tape.ops),
+            flops=[FlopView(f.d, f.q, f.clk, f.rst, f.set, f.kind) for f in tape.flops],
+            consts=[list(pair) for pair in tape.consts],
+            names=dict(tape.names),
+            flop_names=list(tape.flop_names),
+        )
+    )
 
 
 def render_bundle(handle: str, lod: int = 0) -> bytes:
     """The binary render bundle for the die view -- not built yet
 
-    The only function that answers in `bytes`. Until L12 lands it answers with
+    The only function that answers in `bytes`. Until this lands it answers with
     a UTF-8 encoded error envelope, so the JS side has one thing to check.
     """
     try:

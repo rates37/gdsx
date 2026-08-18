@@ -253,9 +253,7 @@ def test_fsm_transitions_survive_json(handle):
     # `transitions` is keyed by a (state, inputs) tuple and `moore_outputs` by an
     # int; both would be lost or mangled by json.dumps if left as dicts
     for machine in unwrap(api.fsm(handle))["machines"]:
-        assert all(
-            set(t) == {"state", "input", "next"} for t in machine["transitions"]
-        )
+        assert all(set(t) == {"state", "input", "next"} for t in machine["transitions"])
         assert all(set(m) == {"state", "outputs"} for m in machine["moore_outputs"])
 
 
@@ -271,7 +269,9 @@ def test_truth_table_needs_no_handle():
     assert [r["inputs"] for r in data["rows"]][-1] == {"A": 1, "B": 1}
 
     assert failure(api.truth_table("nope"))["code"] == "unknown_cell"
-    assert failure(api.truth_table("sky130_fd_sc_hd__dfrtp_2"))["code"] == "unknown_cell"
+    assert (
+        failure(api.truth_table("sky130_fd_sc_hd__dfrtp_2"))["code"] == "unknown_cell"
+    )
 
 
 #! simulation
@@ -305,10 +305,22 @@ def test_sim_run_rejects_rubbish(handle):
     assert failure(api.sim_run(handle, "[]", '["nope"]'))["code"] == "unknown_net"
 
 
-def test_the_unbuilt_endpoints_say_which_work_order_they_need(handle):
-    error = failure(api.sim_compile(handle))
-    assert error["code"] == "unimplemented" and "L11" in error["message"]
+def test_sim_compile_returns_a_runnable_tape(handle):
+    """The payload the JS executor runs, checked as a contract not as a number
 
+    Values are 0 or 1 only and operand slots are net ids or -1, so the JS side
+    can index straight into a typed array without validating first.
+    """
+    data = unwrap(api.sim_compile(handle))
+    assert data["tape_version"] >= 1
+    assert data["n_ops"] * 6 == len(data["ops"])
+    assert all(-1 <= value < data["n_nets"] for value in data["ops"])
+    assert len(data["flops"]) == data["n_flops"] == len(data["flop_names"])
+    assert all(value in (0, 1) for _, value in data["consts"])
+    assert set(data["inputs"]) <= set(data["names"].values())
+
+
+def test_the_unbuilt_endpoints_say_which_work_order_they_need(handle):
     raw = api.render_bundle(handle)
     assert isinstance(raw, bytes), "render payloads are bytes, not JSON strings"
     error = failure(raw.decode("utf-8"))

@@ -6,6 +6,7 @@ import fixtures
 from gdsx import config, loader, netlist
 
 SAMPLE = Path(__file__).resolve().parents[1] / "samples" / "sample.gds"
+PUZZLE = Path(__file__).resolve().parents[1] / "samples" / "puzzle.gds"
 
 
 @pytest.fixture(scope="session")
@@ -21,6 +22,12 @@ def sample(tech):
 @pytest.fixture(scope="session")
 def sample_netlist(sample):
     return netlist.build(sample)
+
+
+@pytest.fixture(scope="session")
+def puzzle_netlist(tech):
+    """The 728-instance design. Session scoped."""
+    return netlist.build(loader.load(PUZZLE, tech))
 
 
 @pytest.fixture(scope="session")

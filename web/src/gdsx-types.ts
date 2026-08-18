@@ -12,6 +12,16 @@ export interface ConeNode {
   truncated: boolean;
 }
 
+export interface FlopView {
+  d: number;
+  q: number;
+  clk: number;
+  /** always ACTIVE HIGH whatever the cell's polarity -- the compiler emits the inversion as a NOT op. -1 = the cell has no such pin */
+  rst: number;
+  set: number;
+  kind: number;
+}
+
 export interface GateView {
   instance: string;
   cell: string;
@@ -45,4 +55,19 @@ export interface RefView {
   pin: string;
   cell: string;
   direction: string;
+}
+
+export interface TapeView {
+  tape_version: number;
+  n_nets: number;
+  n_flops: number;
+  n_ops: number;
+  inputs: number[];
+  /** flat, stride 6: [opcode, out, in0, in1, in2, in3] per op, topologically ordered. -1 in an operand slot means the opcode does not read it. Values are 0 or 1 ONLY -- never test truthiness */
+  ops: number[];
+  flops: FlopView[];
+  /** [net id, 0|1] pairs seeded into the value array BEFORE the caller's inputs and before the op stream runs */
+  consts: number[][];
+  names: Record<string, number>;
+  flop_names: string[];
 }

@@ -27,7 +27,14 @@ from gdsx import api  # noqa: E402
 # Root dataclasses exposed across the JSON boundary.
 # Every other emitted interface is reached transitively
 # by walking these fields.
-ROOTS = [api.RefView, api.NetView, api.InstanceView, api.GateView, api.ConeNode]
+ROOTS = [
+    api.RefView,
+    api.NetView,
+    api.InstanceView,
+    api.GateView,
+    api.ConeNode,
+    api.TapeView,
+]
 
 
 FIELD_DOCS: dict[tuple[str, str], str] = {
@@ -40,6 +47,19 @@ FIELD_DOCS: dict[tuple[str, str], str] = {
     ("InstanceView", "connections"): (
         "pin -> net. Pins the layout did not connect are ABSENT, not zero -- "
         "always guard with `pin in connections`"
+    ),
+    ("TapeView", "ops"): (
+        "flat, stride 6: [opcode, out, in0, in1, in2, in3] per op, "
+        "topologically ordered. -1 in an operand slot means the opcode does "
+        "not read it. Values are 0 or 1 ONLY -- never test truthiness"
+    ),
+    ("TapeView", "consts"): (
+        "[net id, 0|1] pairs seeded into the value array BEFORE the caller's "
+        "inputs and before the op stream runs"
+    ),
+    ("FlopView", "rst"): (
+        "always ACTIVE HIGH whatever the cell's polarity -- the compiler emits "
+        "the inversion as a NOT op. -1 = the cell has no such pin"
     ),
     ("ConeNode", "truncated"): (
         "true = there is more below and the walk stopped. Never inferred from "

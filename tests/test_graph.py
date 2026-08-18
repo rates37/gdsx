@@ -16,11 +16,6 @@ CORE = pathlib.Path(__file__).resolve().parents[1] / "src" / "gdsx" / "core"
 
 
 @pytest.fixture(scope="session")
-def puzzle_netlist(tech):
-    return netlist.build(loader.load(PUZZLE, tech))
-
-
-@pytest.fixture(scope="session")
 def both(sample_netlist, puzzle_netlist):
     return [sample_netlist, puzzle_netlist]
 
