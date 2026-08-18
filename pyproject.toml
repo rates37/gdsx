@@ -8,8 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "pyyaml>=6.0.3",
-    "scipy>=1.18.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -19,6 +18,9 @@ cli = [
 ]
 native = [
     "klayout>=0.30.10",
+]
+solve = [
+    "scipy>=1.18.0",
 ]
 
 [project.scripts]
