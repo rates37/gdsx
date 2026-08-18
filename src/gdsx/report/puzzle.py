@@ -13,6 +13,7 @@ def render_bake(console: Console, result: BakeResult) -> None:
         f"{result.instances} instances, {result.nets} nets"
     )
     console.print(f"  naming digest {result.naming_hash[:16]}")
+    console.print(f"  {result.hint_tiers} hint tiers")
     if result.bundle_path is not None:
         size = result.bundle_path.stat().st_size
         console.print(f"  wrote {result.bundle_path} ({size:,} bytes)")

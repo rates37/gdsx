@@ -8,6 +8,7 @@ A puzzle bundle is one directory (optionally zipped to `<id>.gdsxpuzzle`):
     netlist.json    precomputed extraction                 (written by `bake`)
     render.bin      die-view bundle                        (written by `bake`)
     tape.bin        compiled gate tape                     (written by `bake`)
+    hints.json      graded hint tree, tiers 0-4             (written by `bake`)
 
 Everything here works from `design.gds` and the two authored JSON files; none
 of it shells out to another tool. Building a puzzle from RTL (`gdsx puzzle
@@ -21,7 +22,9 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import guards as guards_mod
 from . import netlist as netlist_mod
+from .analysis.registers import find_registers
 from .core.context import Design
 from .core.graph import Graph
 from .functions import async_nets, clock_nets, lookup
@@ -35,6 +38,7 @@ SOLUTION = "solution.json"
 NETLIST_JSON = "netlist.json"
 RENDER_BIN = "render.bin"
 TAPE_BIN = "tape.bin"
+HINTS_JSON = "hints.json"
 
 
 class PuzzleError(RuntimeError):
@@ -52,6 +56,87 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
+#! hints
+
+
+def _tier0_hint(nl) -> str:
+    """`inspect`-level: instance and sequential-cell counts, nothing else"""
+    sequential = sum(
+        1
+        for inst in nl.instances
+        if (cell := lookup(inst.cell)) is not None and cell.is_sequential
+    )
+    return f"{len(nl.instances)} instances, {sequential} sequential"
+
+
+def _tier1_hint(nl) -> str:
+    """`guards`-level: how many registers have no recovered freeze condition"""
+    result = guards_mod.find(nl)
+    ungated = len(result.ungated)
+    return (
+        f"{ungated} of {len(result.flops)} registers have no recovered "
+        f"freeze condition"
+    )
+
+
+def _tier2_hint(nl) -> str:
+    """`analyse.find_registers`-level: how the flops group into registers"""
+    registers = find_registers(nl)
+    if not registers:
+        return "the flops do not group into any registers by shared control and data flow"
+    widest = max(registers, key=lambda r: r.width)
+    return (
+        f"the flops form {len(registers)} register groups; the largest is "
+        f"{widest.name} ({widest.width} members)"
+    )
+
+
+def _tier3_hint(nl, solution: dict) -> str | None:
+    """`xref.fanin`-level: the D cone of whatever net `solution.json` calls
+    success. `None` for puzzles that are not the "reach a value" genre --
+    there is nothing to point `fanin` at."""
+    if solution.get("answer_kind") != "sequence":
+        return None
+    success_port = solution["verify"]["predicate"]["port"]
+    graph = Graph.of(nl)
+    ref = graph.driver_of(success_port)
+    if ref is None:
+        return f"{success_port} has no driver in the netlist"
+    if ref.instance not in graph.seq:
+        return (
+            f"{success_port} is driven combinationally by {ref.instance} "
+            f"({ref.cell}), not by a register"
+        )
+    leaves = len(graph.d_support(ref.instance))
+    return (
+        f"{success_port} is driven by one flop ({ref.instance}); its D cone "
+        f"has {leaves} leaves"
+    )
+
+
+def generate_hints(nl, solution: dict) -> list[dict]:
+    """Tiers 0-3, computed from the netlist itself, plus tier 4 if the
+    author wrote one into `solution.json`'s optional `hint` field.
+
+    Every generated hint is an analysis the player could run with the CLI or
+    API themselves (`inspect`, `guards`, `find_registers`, `fanin`) -- never
+    something only visible from the source. That is the whole point: a hint
+    that shows something the tools cannot is a spoiler, not a hint.
+    """
+    tiers = [
+        {"tier": 0, "text": _tier0_hint(nl)},
+        {"tier": 1, "text": _tier1_hint(nl)},
+        {"tier": 2, "text": _tier2_hint(nl)},
+    ]
+    tier3 = _tier3_hint(nl, solution)
+    if tier3 is not None:
+        tiers.append({"tier": 3, "text": tier3})
+    authored = solution.get("hint")
+    if authored:
+        tiers.append({"tier": 4, "text": authored})
+    return tiers
+
+
 #! bake
 
 
@@ -62,6 +147,7 @@ class BakeResult:
     instances: int
     nets: int
     naming_hash: str
+    hint_tiers: int
 
 
 def _tape_bundle(nl) -> bytes:
@@ -79,7 +165,7 @@ def bake(puzzle_dir: Path, *, zip_bundle: bool = True) -> BakeResult:
     """
     manifest = _read_json(_require(puzzle_dir, MANIFEST))
     gds_path = _require(puzzle_dir, DESIGN_GDS)
-    _require(puzzle_dir, SOLUTION)
+    solution = _read_json(_require(puzzle_dir, SOLUTION))
 
     design = Design.open(gds_path)
     layout = design.layout
@@ -90,6 +176,8 @@ def bake(puzzle_dir: Path, *, zip_bundle: bool = True) -> BakeResult:
     (puzzle_dir / NETLIST_JSON).write_text(netlist_mod.to_json(nl))
     (puzzle_dir / RENDER_BIN).write_bytes(build_render(layout, conn, net_names).pack())
     (puzzle_dir / TAPE_BIN).write_bytes(_tape_bundle(nl))
+    hints = generate_hints(nl, solution)
+    (puzzle_dir / HINTS_JSON).write_text(json.dumps({"tiers": hints}, indent=2) + "\n")
 
     bundle_path = None
     if zip_bundle:
@@ -106,6 +194,7 @@ def bake(puzzle_dir: Path, *, zip_bundle: bool = True) -> BakeResult:
         instances=len(nl.instances),
         nets=len(nl.nets),
         naming_hash=netlist_mod.naming_digest(nl),
+        hint_tiers=len(hints),
     )
 
 
