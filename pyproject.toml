@@ -8,14 +8,21 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "klayout>=0.30.10",
     "pyyaml>=6.0.3",
     "scipy>=1.18.0",
+]
+
+[project.optional-dependencies]
+cli = [
     "typer>=0.27.1",
+    "rich",
+]
+native = [
+    "klayout>=0.30.10",
 ]
 
 [project.scripts]
-gdsx = "gdsx:main"
+gdsx = "gdsx.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.8.9,<0.9.0"]
@@ -24,6 +31,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "gdsx[cli,native]",
 ]
 
 [tool.pytest.ini_options]
