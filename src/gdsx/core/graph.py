@@ -65,6 +65,29 @@ class FaninNode:
             stack.extend((level + 1, kid) for kid in reversed(node.children))
 
 
+@dataclass
+class FanoutNode:
+    """One net in a fan-out tree
+
+    The mirror of `FaninNode`. `consumer` is the input pin this net was reached
+    through, and is None only on the root. A net whose consumers were not
+    expanded (because the depth budget ran out, because it was expanded
+    already, or because a flop stopped the walk) has no children.
+    """
+
+    net: str
+    consumer: Ref | None = None
+    children: list["FanoutNode"] = field(default_factory=list)
+
+    def walk(self) -> Iterator[tuple[int, "FanoutNode"]]:
+        """(level, node) depth first, children in net-name order"""
+        stack = [(0, self)]
+        while stack:
+            level, node = stack.pop()
+            yield level, node
+            stack.extend((level + 1, kid) for kid in reversed(node.children))
+
+
 def _substitute(expression: str, pins: tuple[str, ...], values: dict[str, str]) -> str:
     """Replace pin names in a Verilog expression with parenthesised sub-terms
 
@@ -387,6 +410,56 @@ class Graph:
             ]
             stack.extend((kid, budget - 1) for kid in reversed(node.children))
         return root
+
+    def fanout_tree(
+        self, net: str, *, depth: int = 3, through_flops: bool = False
+    ) -> FanoutNode:
+        """The fan-out of `net` as a tree, expanded `depth` levels deep
+
+        The mirror of `fanin_tree`: where that walks from a net to its driver's
+        inputs, this walks to each reader's outputs. Re-convergence is handled
+        the same way -- a net reached twice appears twice but is expanded only
+        once -- so the tree stays finite. Stops at flops unless `through_flops`,
+        for the same reason every other traversal here does.
+        """
+        root = FanoutNode(net)
+        expanded: set[str] = set()
+        stack = [(root, depth)]
+        while stack:
+            node, budget = stack.pop()
+            if node.net in expanded or budget <= 0:
+                continue
+            expanded.add(node.net)
+            node.children = [
+                FanoutNode(driven, ref)
+                for ref, driven in self.readers_out(node.net, through_flops)
+            ]
+            stack.extend((kid, budget - 1) for kid in reversed(node.children))
+        return root
+
+    def readers_out(
+        self, net: str, through_flops: bool = False
+    ) -> list[tuple[Ref, str]]:
+        """(reading pin, net that instance drives) for everything reading `net`
+
+        One entry per instance per driven net, in netlist order then net-name
+        order, so the walk is deterministic. An instance reading `net` on two
+        pins is reported once, through the first of them. Flops are dropped
+        unless `through_flops`, which is what `fanout` does. Past a flop you
+        are in the next clock cycle, which is a different question.
+        """
+        if net in self.netlist.power_nets:
+            return []
+        out: list[tuple[Ref, str]] = []
+        seen: set[str] = set()
+        for ref in self.readers.get(net, ()):
+            if ref.instance in seen:
+                continue
+            seen.add(ref.instance)
+            if not through_flops and ref.instance in self.seq:
+                continue
+            out.extend((ref, driven) for driven in sorted(self._drives(ref.instance)))
+        return out
 
     def between(
         self, sources: set[str], sinks: set[str], *, through_flops: bool = True

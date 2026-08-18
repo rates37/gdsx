@@ -250,6 +250,61 @@ def test_fanin_tree_honours_the_depth_and_expands_each_net_once(puzzle_netlist):
     assert len(expanded) == len(set(expanded))
 
 
+def test_fanout_tree_mirrors_fanin_tree_on_the_chain():
+    graph = Graph(chain())
+    tree = graph.fanout_tree("a")
+    assert [(level, node.net) for level, node in tree.walk()] == [
+        (0, "a"),
+        (1, "n1"),
+        (2, "y"),
+        (3, "z"),
+    ]
+    node = {n.net: n for _, n in tree.walk()}
+    assert node["a"].consumer is None, "the root was not reached through a pin"
+    assert (node["y"].consumer.instance, node["y"].consumer.pin) == ("nand2_1", "A")
+    assert node["z"].children == [], "the depth budget stopped here"
+
+
+def test_fanout_tree_agrees_with_fanout_levels(puzzle_netlist):
+    graph = Graph(puzzle_netlist)
+    for net in probe_nets(puzzle_netlist, 20):
+        for through in (False, True):
+            tree = graph.fanout_tree(net, depth=3, through_flops=through)
+            nodes = list(tree.walk())
+            levels = graph.fanout(net, depth=3, through_flops=through)
+            # The tree never reaches anything the level walk does not. The
+            # converse does not hold: like `fanin_tree`, a net is expanded only
+            # the first time it is reached, so one found late on a long path
+            # stays truncated when a shorter path finds it again.
+            reached = {n.net for level, n in nodes if level > 0}
+            assert reached <= {n for level in levels for n in level} | {net}
+            # The first level is the one place the two must agree exactly
+            assert {n.net for level, n in nodes if level == 1} - {net} == set(
+                levels[0] if levels else []
+            ) - {net}
+
+
+def test_fanout_tree_stops_at_flops_unless_asked(puzzle_netlist):
+    graph = Graph(puzzle_netlist)
+    flop = sorted(graph.seq)[0]
+    net = graph.d_pin(flop)
+    stopped = graph.fanout_tree(net, depth=4)
+    assert [(level, n.net) for level, n in stopped.walk()] == [
+        (0, net)
+    ], "a flop's D pin fans out to nothing"
+    through = graph.fanout_tree(net, depth=4, through_flops=True)
+    assert {n.consumer.instance for level, n in through.walk() if level == 1} == {flop}
+
+
+def test_fanout_tree_honours_the_depth_and_expands_each_net_once(puzzle_netlist):
+    graph = Graph(puzzle_netlist)
+    port = next(p for p, d in puzzle_netlist.ports.items() if d == "input")
+    nodes = list(graph.fanout_tree(port, depth=6, through_flops=True).walk())
+    assert max(level for level, _ in nodes) <= 6
+    expanded = [found.net for _, found in nodes if found.children]
+    assert len(expanded) == len(set(expanded)), "a re-converging net re-expanded"
+
+
 def test_between_matches_xref(both):
     for nl in both:
         graph = Graph(nl)
