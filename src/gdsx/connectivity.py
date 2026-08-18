@@ -102,6 +102,40 @@ def _shapes(design: Design, ld: tuple[int, int]):
     return design.layout.shapes_rec(design.top, idx)
 
 
+def _order(cluster: geo.Cluster) -> tuple[int, int, int, int]:
+    """Sort key for a cluster: its bounding box, bottom-left first.
+
+    The bounding box is the only thing every backend agrees on. A cluster's
+    rectangle decomposition differs between them, so a key counting or
+    comparing pieces would reintroduce exactly the divergence this removes.
+    """
+    bb = cluster.bbox
+    return (bb.bottom, bb.left, bb.top, bb.right)
+
+
+def _canonical(clusters: list[geo.Cluster], layer: str) -> list[geo.Cluster]:
+    """Routing-layer clusters in a backend-independent order.
+
+    Cluster order is net numbering: the first cluster on the first routing
+    layer is `n0`. Each geometry backend finds the same clusters but emits
+    them in its own order (klayout's is its merge scanline's, which is not
+    reproducible in pure Python) so the order is imposed here instead, at
+    the one place where the numbering is decided.
+    """
+    ordered = sorted(clusters, key=_order)
+    for i in range(1, len(ordered)):
+        if _order(ordered[i]) == _order(ordered[i - 1]):
+            # Falling back on the backend's own order here would make net
+            # names depend on the backend, which is the whole thing this
+            # exists to prevent. Fail loudly instead.
+            raise ValueError(
+                f"two clusters on layer {layer} share the bounding box "
+                f"{ordered[i].bbox}, so cluster order is ambiguous and net "
+                "names would depend on the geometry backend"
+            )
+    return ordered
+
+
 def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
     """Trace connectivity. `extra` adds shapes per routing layer"""
     uf = UnionFind()
@@ -118,14 +152,20 @@ def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
                 extra.get(rl.name, ()),
             )
         )
+        clusters = _canonical(clusters, rl.name)
         ids = [uf.add() for _ in clusters]
         conn.index[rl.name] = PointIndex(clusters, ids)
 
     conn.n_clusters = len(uf.parent)
 
-    # 2. Via stitching:
+    # 2. Via stitching: also in canonical order, because the union sequence
+    # decides which cluster id ends up the root of each net, and the root is
+    # the net's number. Ties need no resolving here -- two vias with the same
+    # extent stitch the same pair of clusters, in either order.
     for via in design.tech.vias:
-        for cluster in geo.merge_clusters(_shapes(design, via.layer)):
+        for cluster in sorted(
+            geo.merge_clusters(_shapes(design, via.layer)), key=_order
+        ):
             pt = cluster.bbox.center()
             lo = conn.cluster_at(via.below, pt)
             hi = conn.cluster_at(via.above, pt)

@@ -10,6 +10,7 @@ import pytest
 from gdsx import config, geo
 from gdsx.geo import types as g
 from gdsx.geo.klayout_backend import KLayoutBackend, to_box
+from gdsx.geo.pure_backend import PureBackend
 
 SAMPLES = [Path("samples/sample.gds"), Path("samples/puzzle.gds")]
 ROUTING = [(67, 20), (68, 20), (67, 44), (68, 44)]
@@ -33,10 +34,37 @@ def test_unknown_backend_is_rejected():
         geo.use("quantum")
 
 
-def test_the_pure_backend_says_it_is_not_written_yet():
-    backend = geo.use("pure")
-    with pytest.raises(NotImplementedError, match="not implemented yet"):
-        backend.read_file(SAMPLES[0])
+@pytest.mark.parametrize(
+    "sample",
+    [SAMPLES[0], pytest.param(SAMPLES[1], marks=pytest.mark.slow)],
+)
+@pytest.mark.parametrize("ld", ROUTING)
+def test_pure_clusters_are_the_same_clusters_klayout_finds(sample, ld):
+    """The pure backend's components, against the oracle.
+
+    Order is deliberately not compared: klayout emits merged polygons in its
+    own scanline order, which is not reproducible and which
+    `connectivity.trace` overrides with a canonical sort before numbering.
+    What must match is the set of clusters.
+    """
+    theirs = KLayoutBackend()
+    their_layout = theirs.read_file(sample)
+    their_top = their_layout.top_cells()[0]
+    their_clusters = theirs.merge_clusters(
+        their_layout.shapes_rec(their_top, their_layout.layer_index(ld))
+    )
+
+    mine = PureBackend()
+    my_layout = mine.read_file(sample)
+    my_top = my_layout.top_cells()[0]
+    my_clusters = mine.merge_clusters(
+        my_layout.shapes_rec(my_top, my_layout.layer_index(ld))
+    )
+
+    assert len(my_clusters) == len(their_clusters)
+    assert sorted(str(c.bbox) for c in my_clusters) == sorted(
+        str(c.bbox) for c in their_clusters
+    )
 
 
 def test_reading_bytes_matches_reading_the_file():

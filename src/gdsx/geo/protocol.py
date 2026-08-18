@@ -96,7 +96,10 @@ class Backend(Protocol):
         """Group shapes into connected components under "touches or overlaps"
 
         Touching counts: two shapes that share exactly one edge are one cluster.
-        The returned order fixes cluster numbering, and therefore every `n<id>`
-        net name, so it must be stable.
+
+        The returned order is unspecified, and backends do differ: klayout
+        emits its merge scanline's order, which nothing else can reproduce.
+        `connectivity.trace` sorts clusters into a canonical order before it
+        numbers them, so net names do not depend on which backend ran.
         """
         ...
