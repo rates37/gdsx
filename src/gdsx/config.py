@@ -98,14 +98,12 @@ def _read_raw(path: Path) -> dict:
     return yaml.safe_load(path.read_text())
 
 
-def load(path: Path | str | None = None) -> TechConfig:
-    # Loads a technology configuration, preferring the baked JSON and
-    # falling back to the YAML source (which requires pyyaml) if no JSON
-    # config is available.
-    if path is None:
-        path = DEFAULT_JSON_CONFIG if DEFAULT_JSON_CONFIG.exists() else DEFAULT_CONFIG
-    raw = _read_raw(Path(path))
+def from_raw(raw: dict) -> TechConfig:
+    """A TechConfig from an already-parsed config document
 
+    Split out of `load` for callers that have the document but no file to read
+    it from.
+    """
     # Convert the parsed config into configuration objects
     return TechConfig(
         pdk=raw["pdk"],
@@ -131,3 +129,12 @@ def load(path: Path | str | None = None) -> TechConfig:
         power_pins=set(raw["power_pins"]),
         nonlogic_prefixes=tuple(raw["nonlogic_prefixes"]),
     )
+
+
+def load(path: Path | str | None = None) -> TechConfig:
+    # Loads a technology configuration, preferring the baked JSON and
+    # falling back to the YAML source (which requires pyyaml) if no JSON
+    # config is available.
+    if path is None:
+        path = DEFAULT_JSON_CONFIG if DEFAULT_JSON_CONFIG.exists() else DEFAULT_CONFIG
+    return from_raw(_read_raw(Path(path)))
