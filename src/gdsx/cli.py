@@ -20,6 +20,7 @@ from . import (
     sequential,
 )
 from . import lift as lifting, normalise as _normalise, verify as equiv
+from . import puzzle as puzzle_mod
 from .core.context import Design
 from .physical import draw as _fp, placement as _geo
 from .pins import PinOracle
@@ -39,9 +40,10 @@ from .report import (
 from .report import (
     pins as report_pins,
     placement as report_placement,
+    puzzle as report_puzzle,
     region as report_region,
-    sequential as report_sequential,
 )
+from .report import sequential as report_sequential
 from .report import solve as report_solve, verify as report_verify
 
 app = typer.Typer(
@@ -417,6 +419,80 @@ def verify(
         raise typer.Exit(1)
     if not report_verify.render(console, result, out, structural):
         raise typer.Exit(1)
+
+
+puzzle_app = typer.Typer(
+    add_completion=False, help="Author, check and inspect `.gdsxpuzzle` bundles."
+)
+app.add_typer(puzzle_app, name="puzzle")
+
+PuzzleDirArg = typer.Argument(
+    ...,
+    exists=True,
+    file_okay=False,
+    help="a puzzle directory (manifest.json, design.gds, solution.json, ...)",
+)
+
+
+@puzzle_app.command("bake")
+def puzzle_bake(
+    puzzle_dir: Path = PuzzleDirArg,
+    zip_bundle: bool = typer.Option(
+        True, "--zip/--no-zip", help="also write <id>.gdsxpuzzle next to the directory"
+    ),
+) -> None:
+    """Regenerate netlist.json, render.bin and tape.bin from design.gds"""
+    try:
+        result = puzzle_mod.bake(puzzle_dir, zip_bundle=zip_bundle)
+    except puzzle_mod.PuzzleError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+    report_puzzle.render_bake(console, result)
+
+
+@puzzle_app.command("verify")
+def puzzle_verify(puzzle_dir: Path = PuzzleDirArg) -> None:
+    """Re-solve the puzzle and check the intended solution.
+
+    Asserts: the key raises `success` on the extracted netlist (not the
+    RTL); extraction is naming-stable; and the constraint structure
+    solution.json describes is the one the netlist implements.
+    """
+    try:
+        result = puzzle_mod.verify(puzzle_dir)
+    except puzzle_mod.PuzzleError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+    if not report_puzzle.render_verify(console, result):
+        raise typer.Exit(1)
+
+
+@puzzle_app.command("stats")
+def puzzle_stats(puzzle_dir: Path = PuzzleDirArg) -> None:
+    """Gate/flop counts and difficulty metrics"""
+    try:
+        result = puzzle_mod.stats(puzzle_dir)
+    except puzzle_mod.PuzzleError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+    report_puzzle.render_stats(console, result)
+
+
+@puzzle_app.command("build")
+def puzzle_build() -> None:
+    """Synthesise + place + route RTL into a new puzzle (yosys + OpenLane)
+
+    Not implemented: the OpenLane flow that produced samples/puzzle.gds is
+    not reproducible in this environment (no `openlane` binary, no PDK-ready
+    OpenLane container image available locally), so this command has not
+    been written against a flow nobody could run to check it. See
+    docs/game/library-changes.md L16 for the fallback under consideration.
+    """
+    console.print(
+        "[yellow]not implemented[/] -- the yosys+OpenLane flow is not "
+        "reproducible in this environment"
+    )
+    raise typer.Exit(1)
 
 
 def main() -> None:

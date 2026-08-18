@@ -12,12 +12,12 @@ reviewed decision, never to make the test pass.
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
 import pytest
 
 from gdsx.core.context import Design
+from gdsx.netlist import naming_digest
 
 SAMPLE = Path("samples/sample.gds")
 PUZZLE = Path("samples/puzzle.gds")
@@ -31,13 +31,7 @@ EXPECTED = {
 
 
 def _digest(path: Path) -> str:
-    """A hash over every name extraction invents, in a fixed order"""
-    nl = Design.open(path).netlist
-    lines = [f"top {nl.top}"]
-    lines += [f"inst {i.name} {i.cell}" for i in nl.instances]  # placement order
-    lines += [f"net {n}" for n in sorted(nl.nets)]
-    lines += [f"port {n} {d}" for n, d in sorted(nl.ports.items())]
-    return hashlib.sha256("\n".join(lines).encode()).hexdigest()
+    return naming_digest(Design.open(path).netlist)
 
 
 def test_sample_names_are_unchanged():

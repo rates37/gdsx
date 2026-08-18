@@ -1,6 +1,7 @@
 """Turn traced connectivity into a named netlist and emit it"""
 
 from __future__ import annotations
+import hashlib
 import json
 import re
 from collections import defaultdict
@@ -200,6 +201,21 @@ def ident(name: str) -> str:
 
 def to_json(nl: Netlist) -> str:
     return json.dumps(nl.to_dict(), indent=2)
+
+
+def naming_digest(nl: Netlist) -> str:
+    """A hash over every name extraction invents, in a fixed order
+
+    The contract `tests/test_naming_stable.py` freezes and `gdsx puzzle
+    verify` checks a fresh extraction against: instance placement order, nets
+    sorted by name, ports sorted by name. Two netlists with this digest equal
+    named every instance, net and port identically.
+    """
+    lines = [f"top {nl.top}"]
+    lines += [f"inst {i.name} {i.cell}" for i in nl.instances]  # placement order
+    lines += [f"net {n}" for n in sorted(nl.nets)]
+    lines += [f"port {n} {d}" for n, d in sorted(nl.ports.items())]
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest()
 
 
 def to_generic_dict(nl: Netlist) -> dict:

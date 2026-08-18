@@ -22,5 +22,6 @@
 │ fsm        Recover state machines by exploring each register's reachable states                  │
 │ lift       Recover RTL from the gate netlist and prove the recovery is faithful                  │
 │ verify     Prove the extracted netlist equivalent to a reference RTL (needs yosys installed)     │
+│ puzzle     Author, check and inspect `.gdsxpuzzle` bundles.                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
