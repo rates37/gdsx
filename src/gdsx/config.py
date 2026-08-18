@@ -10,11 +10,13 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import datafiles
+
 # Default configuration files (defaults to sky130 for the puzzle). The YAML is
 # the source of truth; the JSON is baked from it at build time
 # and committed, so loading the default config does not require pyyaml.
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "sky130.yaml"
-DEFAULT_JSON_CONFIG = DEFAULT_CONFIG.with_suffix(".json")
+DEFAULT_CONFIG = datafiles.data_file("sky130.yaml")
+DEFAULT_JSON_CONFIG = datafiles.data_file("sky130.json")
 
 
 @dataclass(frozen=True)

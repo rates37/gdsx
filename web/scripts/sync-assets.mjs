@@ -63,13 +63,16 @@ for (const wheel of wheels) {
   copy(path.join(distDir, wheel), path.join(wheelOut, wheel));
 }
 
-// 3. Baked puzzle netlist -> public/samples/
-const sampleSrc = path.join(repoDir, "samples", "puzzle.netlist.json");
-const sampleOut = path.join(publicDir, "samples", "puzzle.netlist.json");
-if (existsSync(sampleSrc)) {
-  copy(sampleSrc, sampleOut);
-} else {
-  console.warn(`warning: ${sampleSrc} not found, skipping`);
+// 3. Puzzle assets -> public/samples/: the baked netlist, the baked
+// render bundle the die view draws (L12, `uv run python scripts/bake_render.py`),
+// and the GDS itself so re-extraction in the browser can be timed.
+for (const name of ["puzzle.netlist.json", "puzzle.render.bin", "puzzle.gds"]) {
+  const src = path.join(repoDir, "samples", name);
+  if (existsSync(src)) {
+    copy(src, path.join(publicDir, "samples", name));
+  } else {
+    console.warn(`warning: ${src} not found, skipping`);
+  }
 }
 
-console.log("Synced pyodide runtime, gdsx wheel(s), and puzzle netlist into public/");
+console.log("Synced pyodide runtime, gdsx wheel(s), and puzzle assets into public/");

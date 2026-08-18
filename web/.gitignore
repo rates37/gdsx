@@ -4,3 +4,4 @@ public/pyodide/
 public/wheel/
 public/samples/
 *.tsbuildinfo
+m0-shots/

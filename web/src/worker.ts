@@ -32,6 +32,23 @@ async function boot(): Promise<PyodideInterface> {
   return pyodide;
 }
 
+// A JS `Uint8Array` arrives in Python as a JsProxy, not as `bytes`, so
+// `api.open_design(gds_bytes)` fails with "a bytes-like object is required,
+// not 'pyodide.ffi.JsProxy'". Copy it into real `bytes` at the boundary --
+// the endpoints that take binary (`open_design`, `cache_key`) all want
+// `bytes`, and this is the only place that knows it crossed from JS.
+function toPython(arg: unknown, pyodide: PyodideInterface): unknown {
+  if (arg instanceof ArrayBuffer) arg = new Uint8Array(arg);
+  if (arg instanceof Uint8Array) {
+    // `to_bytes()` is the JsProxy buffer method; it copies into real `bytes`.
+    const asBytes = pyodide.runPython(
+      "lambda buf: buf.to_bytes() if hasattr(buf, 'to_bytes') else bytes(buf)",
+    ) as (x: unknown) => unknown;
+    return asBytes(arg);
+  }
+  return arg;
+}
+
 function getPyodide(): Promise<PyodideInterface> {
   if (!pyodideReady) pyodideReady = boot();
   return pyodideReady;
@@ -48,7 +65,7 @@ const worker = {
     const api = pyodide.pyimport("gdsx.api");
     const fn = api[name];
     if (fn === undefined) throw new Error(`gdsx.api has no endpoint '${name}'`);
-    const result: string = fn(...args);
+    const result: string = fn(...args.map((a) => toPython(a, pyodide)));
     return JSON.parse(result) as Envelope;
   },
 };

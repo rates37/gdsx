@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-DEFAULT_CELLS = (
-    Path(__file__).resolve().parents[2] / "config" / "sky130_fd_sc_hd.cells.json"
-)
+from . import datafiles
+
+DEFAULT_CELLS = datafiles.data_file("sky130_fd_sc_hd.cells.json")
 
 # Boolean expression parsing
 
