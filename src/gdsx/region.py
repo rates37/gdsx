@@ -153,7 +153,7 @@ def extents_of(layout, placed: list) -> dict[str, tuple[float, float]]:
     out: dict[str, tuple[float, float]] = {}
     for p in placed:
         if p.cell not in sizes:
-            bb = layout.layout.cell(p.cell).bbox()
+            bb = layout.layout.cell_bbox(p.cell)
             sizes[p.cell] = (
                 (bb.width() * layout.dbu, bb.height() * layout.dbu)
                 if bb

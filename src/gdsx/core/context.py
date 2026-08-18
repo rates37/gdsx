@@ -156,7 +156,7 @@ class Design:
         return self._memo("layout", self._open_layout)
 
     def _open_layout(self):
-        from .. import config, loader  # deferred: loader imports klayout
+        from .. import config, loader  # deferred: loader pulls in the geo backend
 
         tech = (
             self.tech

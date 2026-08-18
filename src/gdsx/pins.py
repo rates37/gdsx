@@ -11,8 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import klayout.db as db
-
+from .geo import types as g
 from .loader import Design
 
 # Fallback for cells the library doesn't describe. sky130_fd_sc_hd is
@@ -39,7 +38,7 @@ def direction_of(cell_name: str, pin: str) -> str:
 class Pin:
     name: str
     layer: str  # routing layer name, e.g. "li1"
-    point: db.Point  # in cell local coordinates
+    point: g.Point  # in cell local coordinates
 
     @property
     def is_power(self) -> bool:
@@ -70,7 +69,7 @@ class PinOracle:
     def signal_pins(self, cell_name: str) -> list[Pin]:
         return [p for p in self.pins(cell_name) if not p.is_power]
 
-    def rects(self, cell_name: str) -> list[tuple[str, db.Box]]:
+    def rects(self, cell_name: str) -> list[tuple[str, g.Box]]:
         """LEF pin rectangles for a cell, in cell-local coordinates
 
         Empty for GDS-sourced cells
@@ -81,7 +80,7 @@ class PinOracle:
         layers = {rl.name for rl in self.design.tech.routing}
         macro = self.macros[cell_name]
         return [
-            (rect.layer, db.Box(rect.left, rect.bottom, rect.right, rect.top))
+            (rect.layer, g.Box(rect.left, rect.bottom, rect.right, rect.top))
             for pin in macro.pins.values()
             for rect in pin.rects
             if rect.layer in layers
@@ -98,23 +97,21 @@ class PinOracle:
                 if rect.layer not in layers:
                     continue
                 x, y = rect.center
-                pins.append(Pin(pin.name, rect.layer, db.Point(x, y)))
+                pins.append(Pin(pin.name, rect.layer, g.Point(x, y)))
         return pins
 
     def _read(self, cell_name: str) -> list[Pin]:
-        cell = self.design.layout.cell(cell_name)
-        if cell is None:
+        if not self.design.layout.has_cell(cell_name):
             return []
         pins: list[Pin] = []
         for rl in self.design.tech.routing:
             idx = self.design.index_of(rl.pin)
             if idx is None:
                 continue
-            for shape in cell.shapes(idx).each():
-                if not shape.is_text():
+            for shape in self.design.layout.shapes(cell_name, idx):
+                if not isinstance(shape, g.Text):
                     continue
-                text = shape.text
-                pins.append(Pin(text.string, rl.name, db.Point(text.x, text.y)))
+                pins.append(Pin(shape.string, rl.name, shape.point))
         return pins
 
 
@@ -141,9 +138,9 @@ def bond_pins(design: Design, conn, oracle: PinOracle) -> int:
     return bonded
 
 
-def abstract_shapes(design: Design, oracle: PinOracle) -> dict[str, list[db.Box]]:
+def abstract_shapes(design: Design, oracle: PinOracle) -> dict[str, list[g.Box]]:
     """Pin rectangles of LEF-sourced cells placed in global coordinates"""
-    extra: dict[str, list[db.Box]] = {}
+    extra: dict[str, list[g.Box]] = {}
     for cell_name, trans in design.instances():
         for layer, box in oracle.rects(cell_name):
             extra.setdefault(layer, []).append(trans * box)

@@ -5,11 +5,11 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-import klayout.db as db
 
 from .connectivity import Connectivity, trace
 from .core.netlist import Instance, Netlist  # noqa: F401  (re-exported)
 from .functions import generic_name, lookup
+from .geo import types as g
 from .loader import Design
 from .pins import PinOracle, direction_of
 
@@ -36,7 +36,7 @@ def build(
         conn = trace(design, abstract_shapes(design, oracle))
         bond_pins(design, conn, oracle)
 
-    nl = Netlist(top=design.top.name)
+    nl = Netlist(top=design.top)
 
     #  collect pin -> net id, keeping instances in a stable placement order
     # A pin often carries several labels, so collect refs in a set, one entry
@@ -101,12 +101,12 @@ def _top_labels(design: Design, conn: Connectivity) -> dict[int, set[str]]:
         idx = design.index_of(rl.pin)
         if idx is None:
             continue
-        for shape in design.top.shapes(idx).each():
-            if not shape.is_text():
+        for shape in design.layout.shapes(design.top, idx):
+            if not isinstance(shape, g.Text):
                 continue
-            net_id = conn.net_at(rl.name, db.Point(shape.text.x, shape.text.y))
+            net_id = conn.net_at(rl.name, shape.point)
             if net_id is not None:
-                labels[net_id].add(shape.text.string)
+                labels[net_id].add(shape.string)
     return labels
 
 
