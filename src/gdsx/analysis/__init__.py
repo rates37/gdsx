@@ -3,6 +3,8 @@ recovery, backward justification."""
 
 from .registers import Register, Block, Analysis, find_registers, describe
 from .grouping import mutual
+from .weights import Weight, infer
+from .decode import Orbit, OrbitKind, selects, orbit
 from .justify import (
     Choice,
     Requirements,

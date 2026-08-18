@@ -22,7 +22,7 @@ from gdsx.core.context import Design
 SAMPLE = Path("samples/sample.gds")
 PUZZLE = Path("samples/puzzle.gds")
 
-# sha256 of the name digest below, frozen when L3's canonical cluster order
+# sha256 of the name digest below, frozen when canonical cluster order
 # landed. The pure and klayout backends both produce these.
 EXPECTED = {
     SAMPLE: "30a2c06da6e5d9959dc4fb8884794ef88731c5c4b351748dc2453e0cc1562d20",
