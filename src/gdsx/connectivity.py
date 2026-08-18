@@ -10,12 +10,15 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 from itertools import chain
+from typing import Callable
 
 from . import geo
 from .geo import types as g
 from .loader import Design
 
 BUCKET = 5000  # grid size of the point-lookup index (5 um)
+
+Progress = Callable[[str, int, int], None]
 
 
 class UnionFind:
@@ -136,15 +139,26 @@ def _canonical(clusters: list[geo.Cluster], layer: str) -> list[geo.Cluster]:
     return ordered
 
 
-def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
-    """Trace connectivity. `extra` adds shapes per routing layer"""
+def trace(
+    design: Design,
+    extra: dict[str, list] | None = None,
+    *,
+    progress: Progress | None = None,
+) -> Connectivity:
+    """Trace connectivity. `extra` adds shapes per routing layer
+
+    `progress`, if given, is called as `(stage, done, total)`: once per
+    routing layer during clustering (stage "trace"), then once per via layer
+    during stitching (stage "vias").
+    """
     uf = UnionFind()
     conn = Connectivity(uf=uf)
     extra = extra or {}
 
     # 1. Per-layer merge: Drawing and pin purposes go in together so that a pin
     # drawn only on the pin layer still fuses with the wire that touches it
-    for rl in design.tech.routing:
+    routing = design.tech.routing
+    for i, rl in enumerate(routing):
         clusters = geo.merge_clusters(
             chain(
                 _shapes(design, rl.drawing),
@@ -155,6 +169,8 @@ def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
         clusters = _canonical(clusters, rl.name)
         ids = [uf.add() for _ in clusters]
         conn.index[rl.name] = PointIndex(clusters, ids)
+        if progress is not None:
+            progress("trace", i + 1, len(routing))
 
     conn.n_clusters = len(uf.parent)
 
@@ -162,7 +178,8 @@ def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
     # decides which cluster id ends up the root of each net, and the root is
     # the net's number. Ties need no resolving here -- two vias with the same
     # extent stitch the same pair of clusters, in either order.
-    for via in design.tech.vias:
+    vias = design.tech.vias
+    for i, via in enumerate(vias):
         for cluster in sorted(
             geo.merge_clusters(_shapes(design, via.layer)), key=_order
         ):
@@ -173,5 +190,7 @@ def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
                 conn.dangling_vias.append((via.name, pt))
                 continue
             uf.union(lo, hi)
+        if progress is not None:
+            progress("vias", i + 1, len(vias))
 
     return conn

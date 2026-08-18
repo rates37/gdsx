@@ -17,6 +17,7 @@ extraction stack in before it has been asked to do anything.
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import json
 from dataclasses import dataclass, field
@@ -302,16 +303,24 @@ def capabilities() -> dict:
 
 @_endpoint
 def extract(handle: str, *, progress: Progress | None = None) -> dict:
-    """Trace the routing and return the netlist"""
+    """Trace the routing and return the netlist
+
+    `progress`, if given, is invoked as `(stage, done, total)` throughout: a
+    single "open" report, then the real extraction stages ("trace" per
+    routing layer, "vias" per via layer, "bond_pins", "resolve" per chunk of
+    instances, "name") straight from `netlist.build_with_net_ids`, then
+    "serialise" and "done". This is the watchable tracer. Re-extraction is
+    a deliberate, explicit action.
+    """
     design = _get(handle)
-    _report(progress, "open", 0, 3)
+    _report(progress, "open", 0, 1)
     try:
         design.layout  # a netlist-backed design has none, and needs none
     except NoLayoutAvailable:
         pass
-    _report(progress, "extract", 1, 3)
-    nl = design.netlist
-    _report(progress, "serialise", 2, 3)
+    _report(progress, "open", 1, 1)
+    nl = design.extract(progress=progress)
+    _report(progress, "serialise", 0, 1)
     payload = {
         "netlist": nl.to_dict(),
         "summary": {
@@ -323,8 +332,23 @@ def extract(handle: str, *, progress: Progress | None = None) -> dict:
             "conflicts": len(nl.conflicts),
         },
     }
-    _report(progress, "done", 3, 3)
+    _report(progress, "serialise", 1, 1)
+    _report(progress, "done", 1, 1)
     return payload
+
+
+@_endpoint
+def cache_key(gds_bytes: bytes) -> dict:
+    """The IndexedDB key for a cached extraction of these GDS bytes
+
+    `sha256(gds_bytes) + schema_version`: the hash pins it to this exact
+    file, and `schema_version` pins it to this exact payload shape, so
+    bumping `SCHEMA_VERSION` invalidates every cached bundle without the JS
+    side having to know why. The JS side of the cache (reading/writing
+    IndexedDB) does not exist yet. This only defines the key.
+    """
+    digest = hashlib.sha256(gds_bytes).hexdigest()
+    return {"key": f"{digest}-{SCHEMA_VERSION}"}
 
 
 #! the netlist, as the browser and cone walker see it

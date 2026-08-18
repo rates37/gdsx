@@ -181,14 +181,31 @@ class Design:
     @property
     def netlist(self) -> Netlist:
         """The gate-level netlist, extracted on first use"""
-        return self._memo("netlist", self._build_netlist)
+        return self.extract()
 
-    def _build_netlist(self) -> Netlist:
+    def extract(
+        self, *, progress: Callable[[str, int, int], None] | None = None
+    ) -> Netlist:
+        """The gate-level netlist, reporting progress if this is the build
+        that does the work.
+
+        `progress` is only ever consulted on the call that actually extracts;
+        a cache hit returns instantly and calls it not at all, so a caller
+        cannot assume it will fire. See `netlist.build_with_net_ids` for the
+        stages it reports.
+        """
+        if "netlist" in self._cache:
+            return self._cache["netlist"]
+        return self._memo("netlist", lambda: self._build_netlist(progress))
+
+    def _build_netlist(
+        self, progress: Callable[[str, int, int], None] | None = None
+    ) -> Netlist:
         if self._is_netlist_source():
             return Netlist.from_dict(json.loads(self.source.read_text()))
         from .. import netlist  # deferred: imports the extraction stack
 
-        return netlist.build(self.layout, macros=self.macros())
+        return netlist.build(self.layout, macros=self.macros(), progress=progress)
 
     @property
     def graph(self) -> Graph:

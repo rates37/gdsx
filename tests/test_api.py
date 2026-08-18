@@ -113,12 +113,38 @@ def test_extract_round_trips_through_load_netlist(handle):
         api.close(other)
 
 
+def test_cache_key_is_stable_and_sensitive_to_schema_version():
+    key = unwrap(api.cache_key(SAMPLE.read_bytes()))["key"]
+    assert key == unwrap(api.cache_key(SAMPLE.read_bytes()))["key"]
+    assert key.endswith(f"-{api.SCHEMA_VERSION}")
+    assert key != unwrap(api.cache_key(PUZZLE.read_bytes()))["key"]
+
+
 def test_extract_reports_progress(handle):
+    """`progress` is called `(stage, done, total)` all the way through the
+    real extraction stages (the tracer walking the routing stack, not one
+    opaque jump) so watching re-extraction sees it move.
+    """
     seen: list[tuple[str, int, int]] = []
     unwrap(api.extract(handle, progress=lambda *args: seen.append(args)))
-    assert [stage for stage, _, _ in seen] == ["open", "extract", "serialise", "done"]
-    assert [done for _, done, _ in seen] == sorted(done for _, done, _ in seen)
-    assert {total for _, _, total in seen} == {len(seen) - 1}
+
+    # the outer shape: opens first, done last, real work in between
+    stages = [stage for stage, _, _ in seen]
+    assert stages[0] == "open"
+    assert stages[-1] == "done"
+    assert set(stages) >= {"open", "trace", "vias", "resolve", "serialise", "done"}
+
+    # every report is in bounds, and a stage's own reports climb to its own total
+    by_stage: dict[str, list[tuple[int, int]]] = {}
+    for stage, done, total in seen:
+        assert 0 <= done <= total
+        by_stage.setdefault(stage, []).append((done, total))
+    for stage, reports in by_stage.items():
+        totals = {total for _, total in reports}
+        assert len(totals) == 1, f"{stage} changed its own total mid-stream"
+        dones = [done for done, _ in reports]
+        assert dones == sorted(dones), f"{stage} went backwards"
+        assert dones[-1] == totals.pop(), f"{stage} never reached its own total"
 
 
 def test_a_netlist_handle_has_no_layout(netlist_handle):
