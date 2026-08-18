@@ -36,3 +36,13 @@ def test_fill_and_tap_are_not_logic():
     assert not tech.is_logic_cell("sky130_fd_sc_hd__decap_3")
     assert not tech.is_logic_cell("sky130_fd_sc_hd__tapvpwrvgnd_1")
     assert not tech.is_logic_cell("VIA_M1M2_PR")
+
+
+def test_default_load_prefers_the_baked_json():
+    assert config.DEFAULT_JSON_CONFIG.exists()
+    assert config.load() == config.load(config.DEFAULT_JSON_CONFIG)
+
+
+def test_dump_json_round_trips_the_yaml_source(tmp_path):
+    baked = config.dump_json(config.DEFAULT_CONFIG, tmp_path / "sky130.json")
+    assert config.load(baked) == config.load(config.DEFAULT_CONFIG)

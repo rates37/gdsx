@@ -1,0 +1,156 @@
+{
+  "pdk": "sky130A",
+  "library": "sky130_fd_sc_hd",
+  "routing": [
+    {
+      "name": "li1",
+      "drawing": [
+        67,
+        20
+      ],
+      "pin": [
+        67,
+        5
+      ],
+      "label": [
+        67,
+        16
+      ]
+    },
+    {
+      "name": "met1",
+      "drawing": [
+        68,
+        20
+      ],
+      "pin": [
+        68,
+        5
+      ],
+      "label": [
+        68,
+        16
+      ]
+    },
+    {
+      "name": "met2",
+      "drawing": [
+        69,
+        20
+      ],
+      "pin": [
+        69,
+        5
+      ],
+      "label": [
+        69,
+        16
+      ]
+    },
+    {
+      "name": "met3",
+      "drawing": [
+        70,
+        20
+      ],
+      "pin": [
+        70,
+        5
+      ],
+      "label": [
+        70,
+        16
+      ]
+    },
+    {
+      "name": "met4",
+      "drawing": [
+        71,
+        20
+      ],
+      "pin": [
+        71,
+        5
+      ],
+      "label": [
+        71,
+        16
+      ]
+    },
+    {
+      "name": "met5",
+      "drawing": [
+        72,
+        20
+      ],
+      "pin": [
+        72,
+        5
+      ],
+      "label": [
+        72,
+        16
+      ]
+    }
+  ],
+  "vias": [
+    {
+      "name": "mcon",
+      "layer": [
+        67,
+        44
+      ],
+      "below": "li1",
+      "above": "met1"
+    },
+    {
+      "name": "via",
+      "layer": [
+        68,
+        44
+      ],
+      "below": "met1",
+      "above": "met2"
+    },
+    {
+      "name": "via2",
+      "layer": [
+        69,
+        44
+      ],
+      "below": "met2",
+      "above": "met3"
+    },
+    {
+      "name": "via3",
+      "layer": [
+        70,
+        44
+      ],
+      "below": "met3",
+      "above": "met4"
+    },
+    {
+      "name": "via4",
+      "layer": [
+        71,
+        44
+      ],
+      "below": "met4",
+      "above": "met5"
+    }
+  ],
+  "power_pins": [
+    "VPWR",
+    "VGND",
+    "VPB",
+    "VNB"
+  ],
+  "nonlogic_prefixes": [
+    "sky130_fd_sc_hd__fill",
+    "sky130_fd_sc_hd__decap",
+    "sky130_fd_sc_hd__tap",
+    "sky130_fd_sc_hd__diode",
+    "sky130_fd_sc_hd__fakediode"
+  ]
+}

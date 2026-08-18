@@ -6,13 +6,15 @@ configuration, and provides a helper to load the configuration from a YAML file.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
-import yaml
-
-# Default configuration file (defaults to sky130 for the puzzle)
+# Default configuration files (defaults to sky130 for the puzzle). The YAML is
+# the source of truth; the JSON is baked from it at build time
+# and committed, so loading the default config does not require pyyaml.
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "sky130.yaml"
+DEFAULT_JSON_CONFIG = DEFAULT_CONFIG.with_suffix(".json")
 
 
 @dataclass(frozen=True)
@@ -75,12 +77,36 @@ class TechConfig:
         return not cell_name.startswith(self.nonlogic_prefixes)
 
 
-def load(path: Path | str | None = None) -> TechConfig:
-    # Loads a technology configuration from a YAML file
-    # Read and parse the configuration
-    raw = yaml.safe_load(Path(path or DEFAULT_CONFIG).read_text())
+def dump_json(
+    src: Path | str = DEFAULT_CONFIG, dst: Path | str = DEFAULT_JSON_CONFIG
+) -> Path:
+    # Bakes a YAML config to JSON so loading it does not require pyyaml.
+    import yaml
 
-    # Convert the parsed YAML into configuration objects
+    raw = yaml.safe_load(Path(src).read_text())
+    dst = Path(dst)
+    dst.write_text(json.dumps(raw, indent=2) + "\n")
+    return dst
+
+
+def _read_raw(path: Path) -> dict:
+    if path.suffix == ".json":
+        return json.loads(path.read_text())
+
+    import yaml
+
+    return yaml.safe_load(path.read_text())
+
+
+def load(path: Path | str | None = None) -> TechConfig:
+    # Loads a technology configuration, preferring the baked JSON and
+    # falling back to the YAML source (which requires pyyaml) if no JSON
+    # config is available.
+    if path is None:
+        path = DEFAULT_JSON_CONFIG if DEFAULT_JSON_CONFIG.exists() else DEFAULT_CONFIG
+    raw = _read_raw(Path(path))
+
+    # Convert the parsed config into configuration objects
     return TechConfig(
         pdk=raw["pdk"],
         library=raw["library"],
