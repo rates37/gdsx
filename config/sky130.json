@@ -140,6 +140,68 @@
       "above": "met5"
     }
   ],
+  "stack": [
+    {
+      "name": "li1",
+      "z": 0.936,
+      "thickness": 0.1
+    },
+    {
+      "name": "mcon",
+      "z": 1.036,
+      "thickness": 0.33,
+      "via": true
+    },
+    {
+      "name": "met1",
+      "z": 1.366,
+      "thickness": 0.36
+    },
+    {
+      "name": "via",
+      "z": 1.726,
+      "thickness": 0.27,
+      "via": true
+    },
+    {
+      "name": "met2",
+      "z": 1.996,
+      "thickness": 0.37
+    },
+    {
+      "name": "via2",
+      "z": 2.366,
+      "thickness": 0.42,
+      "via": true
+    },
+    {
+      "name": "met3",
+      "z": 2.786,
+      "thickness": 0.845
+    },
+    {
+      "name": "via3",
+      "z": 3.631,
+      "thickness": 0.39,
+      "via": true
+    },
+    {
+      "name": "met4",
+      "z": 4.021,
+      "thickness": 0.845
+    },
+    {
+      "name": "via4",
+      "z": 4.866,
+      "thickness": 0.505,
+      "via": true
+    },
+    {
+      "name": "met5",
+      "z": 5.371,
+      "thickness": 1.26
+    }
+  ],
   "power_pins": [
     "VPWR",
     "VGND",

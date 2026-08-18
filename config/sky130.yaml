@@ -28,6 +28,25 @@ vias:
   - {name: via3, layer: [70, 44], below: met3, above: met4}
   - {name: via4, layer: [71, 44], below: met4, above: met5}
 
+# The physical layer stack, bottom to top, in microns. `z` is the bottom of
+# the layer and `thickness` its height, so z(n+1) == z(n) + thickness(n) for a
+# contiguous stack. Values approximate the public sky130 interconnect stack
+# (li1 through met5); this is for an honest-looking 3D view, not a substitute
+# for the PDK's own tech file. `via: true` marks a via/contact layer rather
+# than a routing layer.
+stack:
+  - {name: li1,  z: 0.936, thickness: 0.100}
+  - {name: mcon, z: 1.036, thickness: 0.330, via: true}
+  - {name: met1, z: 1.366, thickness: 0.360}
+  - {name: via,  z: 1.726, thickness: 0.270, via: true}
+  - {name: met2, z: 1.996, thickness: 0.370}
+  - {name: via2, z: 2.366, thickness: 0.420, via: true}
+  - {name: met3, z: 2.786, thickness: 0.845}
+  - {name: via3, z: 3.631, thickness: 0.390, via: true}
+  - {name: met4, z: 4.021, thickness: 0.845}
+  - {name: via4, z: 4.866, thickness: 0.505, via: true}
+  - {name: met5, z: 5.371, thickness: 1.260}
+
 power_pins: [VPWR, VGND, VPB, VNB]
 
 # Cells that carry no signal function. They still have the common prefix,

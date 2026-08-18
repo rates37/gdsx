@@ -45,6 +45,21 @@ class ViaLayer:
 
 
 @dataclass(frozen=True)
+class StackLayer:
+    """One layer of the physical stack, for a 3D view."""
+
+    # Layer name (matches a `RoutingLayer.name` or `ViaLayer.name`)
+    name: str
+
+    # Microns. `z` is the bottom of the layer; z(n+1) == z(n) + thickness(n)
+    # for a contiguous stack
+    z: float
+    thickness: float
+    # True for a via/contact layer rather than a routing layer
+    via: bool = False
+
+
+@dataclass(frozen=True)
 class TechConfig:
     """Technology-specific routing and library configuration."""
 
@@ -59,6 +74,9 @@ class TechConfig:
     power_pins: set[str]
     # Cell-name prefixes that identify non-logic library cells
     nonlogic_prefixes: tuple[str, ...]
+    # The physical layer stack, bottom to top. Empty for a tech config with no
+    # 3D data (older configs, or one built by hand for a test)
+    stack: tuple[StackLayer, ...] = ()
 
     def layer(self, name: str) -> RoutingLayer:
         # Return the routing-layer configuration with the given name
@@ -128,6 +146,10 @@ def from_raw(raw: dict) -> TechConfig:
         ],
         power_pins=set(raw["power_pins"]),
         nonlogic_prefixes=tuple(raw["nonlogic_prefixes"]),
+        stack=tuple(
+            StackLayer(s["name"], s["z"], s["thickness"], s.get("via", False))
+            for s in raw.get("stack", ())
+        ),
     )
 
 

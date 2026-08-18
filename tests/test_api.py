@@ -320,11 +320,20 @@ def test_sim_compile_returns_a_runnable_tape(handle):
     assert set(data["inputs"]) <= set(data["names"].values())
 
 
-def test_the_unbuilt_endpoints_say_which_work_order_they_need(handle):
+def test_render_bundle_answers_in_bytes_not_an_envelope(handle):
+    from gdsx.render import RenderBundle
+
     raw = api.render_bundle(handle)
     assert isinstance(raw, bytes), "render payloads are bytes, not JSON strings"
+    bundle = RenderBundle.unpack(raw)
+    assert bundle.header["schema_version"] >= 1
+    assert bundle.header["layers"], "sample.gds should have routing layers"
+
+
+def test_render_bundle_needs_a_layout(netlist_handle):
+    raw = api.render_bundle(netlist_handle)
     error = failure(raw.decode("utf-8"))
-    assert error["code"] == "unimplemented" and "L12" in error["message"]
+    assert error["code"] == "no_layout"
 
 
 #! the real design

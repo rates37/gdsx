@@ -781,13 +781,26 @@ def sim_compile(handle: str) -> dict:
 
 
 def render_bundle(handle: str, lod: int = 0) -> bytes:
-    """The binary render bundle for the die view -- not built yet
+    """The binary render bundle for the die view
 
-    The only function that answers in `bytes`. Until this lands it answers with
-    a UTF-8 encoded error envelope, so the JS side has one thing to check.
+    The only function that answers in `bytes` rather than an envelope; a
+    failure is a UTF-8 encoded error envelope instead, so the JS side has one
+    thing to check either way.
+
+    `lod` is accepted but not yet used to trim the payload -- the bundle
+    always carries all three LOD levels (`render.LOD_LEVELS`), and the
+    renderer picks which one to draw per frame.
     """
     try:
-        _get(handle)
-        raise ApiError("unimplemented", "render_bundle needs the render extractor")
+        design = _get(handle)
+        layout = design.layout  # raises NoLayoutAvailable for a netlist-only design
+        from . import render as render_module
+        from .netlist import build_with_net_ids, trace_design
+
+        macros = design.macros()
+        conn = trace_design(layout, macros)
+        _, net_names = build_with_net_ids(layout, conn, macros)
+        bundle = render_module.build(layout, conn, net_names)
+        return bundle.pack()
     except Exception as exc:  # noqa: BLE001 -- nothing may cross the boundary
         return _error_of(exc).encode("utf-8")

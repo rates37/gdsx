@@ -11,7 +11,7 @@ from .core.netlist import Instance, Netlist  # noqa: F401  (re-exported)
 from .functions import generic_name, lookup
 from .geo import types as g
 from .loader import Design
-from .pins import PinOracle, direction_of
+from .pins import PinOracle, abstract_shapes, bond_pins, direction_of
 
 
 def _is_driven(nl: Netlist, net: str) -> bool:
@@ -24,17 +24,41 @@ def _is_driven(nl: Netlist, net: str) -> bool:
     return False
 
 
+def trace_design(
+    design: Design, macros: dict | None = None, oracle: PinOracle | None = None
+) -> Connectivity:
+    """Trace connectivity the same way `build` does, for callers that need the
+    raw `Connectivity` rather than a named `Netlist` -- `render.py` is one,
+    so its shapes land on the same net numbering the netlist does.
+    """
+    if oracle is None:
+        oracle = PinOracle(design, macros)
+    conn = trace(design, abstract_shapes(design, oracle))
+    bond_pins(design, conn, oracle)
+    return conn
+
+
 def build(
     design: Design, conn: Connectivity | None = None, macros: dict | None = None
 ) -> Netlist:
     """Resolve every instance pin to a net and name the result"""
+    nl, _ = build_with_net_ids(design, conn, macros)
+    return nl
+
+
+def build_with_net_ids(
+    design: Design, conn: Connectivity | None = None, macros: dict | None = None
+) -> tuple[Netlist, dict[int, str]]:
+    """`build`, also returning the net id -> name mapping it used internally
+
+    `render.py` needs this: it works from the same `Connectivity` (so its
+    shape-to-net lookups land on the same integer ids this function assigns),
+    and has to turn those ids back into the names the netlist browser shows.
+    """
     tech = design.tech
     oracle = PinOracle(design, macros)
     if conn is None:
-        from .pins import abstract_shapes, bond_pins
-
-        conn = trace(design, abstract_shapes(design, oracle))
-        bond_pins(design, conn, oracle)
+        conn = trace_design(design, macros, oracle)
 
     nl = Netlist(top=design.top)
 
@@ -91,7 +115,7 @@ def build(
             continue
         nl.ports[net] = "output" if _is_driven(nl, net) else "input"
 
-    return nl
+    return nl, names
 
 
 def _top_labels(design: Design, conn: Connectivity) -> dict[int, set[str]]:
