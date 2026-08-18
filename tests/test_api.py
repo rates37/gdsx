@@ -1,0 +1,336 @@
+"""The Python<->JS contract
+
+Every assertion here is about the shape of what crosses the boundary, not about
+the analysis behind it, that is covered by the tests for each module.
+"""
+
+from __future__ import annotations
+
+import json
+import pathlib
+
+import pytest
+from gdsx import api
+
+SAMPLES = pathlib.Path(__file__).resolve().parents[1] / "samples"
+SAMPLE = SAMPLES / "sample.gds"
+PUZZLE = SAMPLES / "puzzle.gds"
+
+
+def unwrap(payload: str):
+    """The `data` of a successful envelope, checking the envelope itself"""
+    found = json.loads(payload)
+    assert found["schema_version"] == api.SCHEMA_VERSION
+    assert found["ok"] is True, found.get("error")
+    return found["data"]
+
+
+def failure(payload: str) -> dict:
+    found = json.loads(payload)
+    assert found["schema_version"] == api.SCHEMA_VERSION
+    assert found["ok"] is False, found.get("data")
+    return found["error"]
+
+
+@pytest.fixture()
+def handle():
+    """A handle on sample.gds, closed afterwards so the registry stays clean"""
+    got = unwrap(api.open_design(SAMPLE.read_bytes()))["handle"]
+    yield got
+    api.close(got)
+
+
+@pytest.fixture()
+def netlist_handle(handle):
+    """A handle with no layout behind it, from the extracted netlist"""
+    got = unwrap(api.load_netlist(json.dumps(unwrap(api.extract(handle))["netlist"])))
+    yield got["handle"]
+    api.close(got["handle"])
+
+
+#! handles
+
+
+def test_open_design_reports_the_layout_without_extracting():
+    data = unwrap(api.open_design(SAMPLE.read_bytes()))
+    assert data["top"] == "adder_demo"
+    assert data["dbu"] == 0.001
+    assert data["instance_count"] > data["cell_count"] > 0
+    assert data["has_layout"] is True
+    api.close(data["handle"])
+
+
+def test_open_design_takes_a_tech_config_as_json():
+    from gdsx import config
+
+    raw = json.loads(config.DEFAULT_JSON_CONFIG.read_text())
+    data = unwrap(api.open_design(SAMPLE.read_bytes(), json.dumps(raw)))
+    assert data["top"] == "adder_demo"
+    api.close(data["handle"])
+
+
+def test_handles_are_opaque_and_closing_one_forgets_it(handle):
+    assert handle in unwrap(api.handles())["handles"]
+    unwrap(api.close(handle))
+    assert handle not in unwrap(api.handles())["handles"]
+    assert failure(api.inspect(handle))["code"] == "bad_handle"
+    # the fixture's own close must still answer, not raise
+    assert failure(api.close(handle))["code"] == "bad_handle"
+
+
+def test_every_endpoint_rejects_an_unknown_handle():
+    for call in (
+        api.extract,
+        api.instances,
+        api.nets,
+        api.inspect,
+        api.pins,
+        api.placement,
+        api.registers,
+        api.guards,
+        api.ports,
+        api.analyse,
+        api.fsm,
+        api.idioms,
+        api.normalise,
+        api.sim_compile,
+    ):
+        assert failure(call("design-nope"))["code"] == "bad_handle", call.__name__
+
+
+#! extraction and the round trip
+
+
+def test_extract_round_trips_through_load_netlist(handle):
+    data = unwrap(api.extract(handle))
+    assert data["summary"]["instance_count"] == len(data["netlist"]["instances"])
+
+    other = unwrap(api.load_netlist(json.dumps(data["netlist"])))["handle"]
+    try:
+        assert unwrap(api.instances(other)) == unwrap(api.instances(handle))
+        assert unwrap(api.nets(other)) == unwrap(api.nets(handle))
+    finally:
+        api.close(other)
+
+
+def test_extract_reports_progress(handle):
+    seen: list[tuple[str, int, int]] = []
+    unwrap(api.extract(handle, progress=lambda *args: seen.append(args)))
+    assert [stage for stage, _, _ in seen] == ["open", "extract", "serialise", "done"]
+    assert [done for _, done, _ in seen] == sorted(done for _, done, _ in seen)
+    assert {total for _, _, total in seen} == {len(seen) - 1}
+
+
+def test_a_netlist_handle_has_no_layout(netlist_handle):
+    for call in (api.inspect, api.pins, api.placement):
+        assert failure(call(netlist_handle))["code"] == "no_layout", call.__name__
+    # but everything downstream of extraction still works
+    assert unwrap(api.registers(netlist_handle))["registers"]
+
+
+def test_load_netlist_rejects_rubbish():
+    assert failure(api.load_netlist("{not json"))["code"] == "bad_json"
+    assert failure(api.load_netlist('{"nope": 1}'))["code"] == "bad_json"
+
+
+#! the 4b views, and the three traps
+
+
+def test_instance_view_holds_the_three_traps(handle):
+    views = {v["name"]: v for v in unwrap(api.instances(handle))}
+    flop = next(v for v in views.values() if v["is_sequential"])
+
+    # trap 1: the full cell name and the Liberty base name are different strings
+    assert flop["cell"].startswith("sky130_fd_sc_hd__")
+    assert flop["base_cell"] in flop["cell"]
+    assert flop["cell"] != flop["base_cell"]
+
+    # trap 2: connections may omit pins, and an absent pin is not a zero
+    library = {"D", "Q", "CLK", "RESET_B", "VPWR", "VGND", "VPB", "VNB"}
+    assert library - set(flop["connections"]), "no unconnected pin to test with"
+    assert all(isinstance(net, str) for net in flop["connections"].values())
+
+    assert flop["functions"] == {} or all(
+        isinstance(v, str) for v in flop["functions"].values()
+    )
+    assert flop["bbox"] is None
+
+
+def test_net_view_classifies_ports_drivers_and_leaves(handle):
+    views = {v["name"]: v for v in unwrap(api.nets(handle))}
+    port = next(v for v in views.values() if v["is_port"] == "input")
+    assert port["driver"] is None and port["leaf"] == "primary_in"
+
+    driven = next(v for v in views.values() if v["driver"] is not None)
+    assert driven["driver"]["direction"] == "output"
+    assert set(driven["driver"]) == {"instance", "pin", "cell", "direction"}
+    assert all(r["direction"] == "input" for r in driven["readers"])
+
+
+def test_views_can_be_asked_for_by_name(handle):
+    every = unwrap(api.nets(handle))
+    wanted = [every[0]["name"], every[-1]["name"]]
+    assert unwrap(api.nets(handle, json.dumps(wanted))) == [every[0], every[-1]]
+    assert failure(api.nets(handle, '["nope"]'))["code"] == "unknown_net"
+    assert failure(api.instances(handle, '["nope"]'))["code"] == "unknown_instance"
+
+
+#! cones
+
+
+def walk(node: dict):
+    yield node
+    for kid in node["children"]:
+        yield from walk(kid)
+
+
+def test_cone_marks_truncation_apart_from_leaves(handle):
+    output = next(
+        v["name"] for v in unwrap(api.nets(handle)) if v["is_port"] == "output"
+    )
+    shallow = unwrap(api.cone(handle, output, depth=1))
+    truncated = [n for n in walk(shallow) if n["truncated"]]
+    assert truncated, "a depth-1 cone on an output must stop somewhere"
+    for node in truncated:
+        assert node["leaf"] is None, "a truncated node is not a leaf"
+        assert node["gate"] is not None, "something drives it, we just stopped"
+
+    deep = unwrap(api.cone(handle, output, depth=99))
+    leaves = [n for n in walk(deep) if n["leaf"] is not None]
+    assert leaves and all(not n["truncated"] and not n["children"] for n in leaves)
+    assert {n["leaf"] for n in leaves} <= {
+        "primary_in",
+        "const0",
+        "const1",
+        "flop_q",
+        "undriven",
+    }
+    assert all(n["gate"] is None for n in leaves), "a leaf has nothing driving it"
+
+
+def test_cone_answers_in_both_directions_with_one_shape(handle):
+    nets = unwrap(api.nets(handle))
+    inp = next(v["name"] for v in nets if v["is_port"] == "input")
+    out = next(v["name"] for v in nets if v["is_port"] == "output")
+    shape = {"net", "gate", "pins", "leaf", "children", "truncated"}
+    for node in (
+        unwrap(api.cone(handle, out, depth=2)),
+        unwrap(api.cone(handle, inp, depth=2, direction="out")),
+    ):
+        assert all(set(found) == shape for found in walk(node))
+
+
+def test_cone_rejects_an_unknown_net_and_a_bad_direction(handle):
+    net = unwrap(api.nets(handle))[0]["name"]
+    assert failure(api.cone(handle, "nope"))["code"] == "unknown_net"
+    assert failure(api.cone(handle, net, direction="sideways"))["code"] == "bad_json"
+
+
+#! analyses
+
+
+def test_every_analysis_answers_with_json(handle):
+    assert unwrap(api.inspect(handle))["top"] == "adder_demo"
+    assert unwrap(api.pins(handle))["cells"]
+    assert unwrap(api.placement(handle))["units"] == "um"
+    assert unwrap(api.registers(handle))["registers"][0]["description"]
+    assert "ungated" in unwrap(api.guards(handle))
+    assert unwrap(api.ports(handle, cycles=8))["inputs"]
+    assert "registers" in unwrap(api.analyse(handle))
+    assert "machines" in unwrap(api.fsm(handle))
+    assert "by_idiom" in unwrap(api.idioms(handle))
+    assert unwrap(api.normalise(handle))["netlist"]["top"]
+
+
+def test_guard_groups_survive_json(handle):
+    # `Guards.groups()` is keyed by a tuple of conditions, which json cannot hold
+    for group in unwrap(api.guards(handle))["groups"]:
+        assert set(group) == {"condition", "flops"}
+        assert all(set(c) == {"net", "value"} for c in group["condition"])
+
+
+def test_fsm_transitions_survive_json(handle):
+    # `transitions` is keyed by a (state, inputs) tuple and `moore_outputs` by an
+    # int; both would be lost or mangled by json.dumps if left as dicts
+    for machine in unwrap(api.fsm(handle))["machines"]:
+        assert all(
+            set(t) == {"state", "input", "next"} for t in machine["transitions"]
+        )
+        assert all(set(m) == {"state", "outputs"} for m in machine["moore_outputs"])
+
+
+def test_fsm_rejects_an_unknown_register(handle):
+    assert failure(api.fsm(handle, "nope"))["code"] == "unknown_register"
+
+
+def test_truth_table_needs_no_handle():
+    data = unwrap(api.truth_table("sky130_fd_sc_hd__nand2_1"))
+    assert data["base_cell"] == "nand2" and data["generic"] == "NAND2"
+    assert len(data["rows"]) == 4
+    assert [r["outputs"]["Y"] for r in data["rows"]] == [1, 1, 1, 0]
+    assert [r["inputs"] for r in data["rows"]][-1] == {"A": 1, "B": 1}
+
+    assert failure(api.truth_table("nope"))["code"] == "unknown_cell"
+    assert failure(api.truth_table("sky130_fd_sc_hd__dfrtp_2"))["code"] == "unknown_cell"
+
+
+#! simulation
+
+
+def test_sim_run_traces_the_watched_nets(handle):
+    vectors = [{"clk": 0}, {"clk": 1}, {"clk": 0}]
+    data = unwrap(api.sim_run(handle, json.dumps(vectors)))
+    assert data["cycles"] == 3
+    # watch defaults to the ports: a design this size has too many nets to trace
+    assert set(data["nets"]) == {
+        v["name"] for v in unwrap(api.nets(handle)) if v["is_port"]
+    }
+    assert all(len(v) == 3 for v in data["nets"].values())
+    assert all(set(v) <= {0, 1} for v in data["flops"].values())
+
+    watched = sorted(data["nets"])[:1]
+    picked = unwrap(api.sim_run(handle, json.dumps(vectors), json.dumps(watched)))
+    assert set(picked["nets"]) == set(watched)
+
+
+def test_sim_run_resets_between_calls(handle):
+    vectors = [{"clk": c % 2} for c in range(8)]
+    first = unwrap(api.sim_run(handle, json.dumps(vectors)))
+    assert first == unwrap(api.sim_run(handle, json.dumps(vectors)))
+
+
+def test_sim_run_rejects_rubbish(handle):
+    assert failure(api.sim_run(handle, "{"))["code"] == "bad_json"
+    assert failure(api.sim_run(handle, '{"clk": 0}'))["code"] == "bad_json"
+    assert failure(api.sim_run(handle, "[]", '["nope"]'))["code"] == "unknown_net"
+
+
+def test_the_unbuilt_endpoints_say_which_work_order_they_need(handle):
+    error = failure(api.sim_compile(handle))
+    assert error["code"] == "unimplemented" and "L11" in error["message"]
+
+    raw = api.render_bundle(handle)
+    assert isinstance(raw, bytes), "render payloads are bytes, not JSON strings"
+    error = failure(raw.decode("utf-8"))
+    assert error["code"] == "unimplemented" and "L12" in error["message"]
+
+
+#! the real design
+
+
+@pytest.mark.slow
+def test_the_puzzle_extracts_and_analyses_through_the_facade():
+    handle = unwrap(api.open_design(PUZZLE.read_bytes()))["handle"]
+    try:
+        data = unwrap(api.extract(handle))
+        assert data["summary"]["instance_count"] == 728
+        assert unwrap(api.instances(handle))[0]["cell"].startswith("sky130")
+        # `success` is a port driven by a flop, not a net of combinational
+        # logic, so its fan-in root is a leaf and the D cone is a cycle back
+        success = unwrap(api.cone(handle, "success", depth=3))
+        assert success["leaf"] == "flop_q" and success["gate"] is None
+        view = unwrap(api.nets(handle, '["success"]'))[0]
+        assert view["driver"]["direction"] == "output"
+        assert view["driver"]["cell"].startswith("sky130_fd_sc_hd__dfrtp")
+    finally:
+        api.close(handle)
