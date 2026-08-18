@@ -1,0 +1,23 @@
+{
+  "id": "original-puzzle",
+  "title": "Original Puzzle",
+  "schema_version": 1,
+  "difficulty": "hard",
+  "blurb": "A 728-instance sky130 design with one data input, one clock, one reset and a success flag. Find the sequence that raises it.",
+  "author": "gdsx",
+  "tools_enabled": [
+    "cone",
+    "guards",
+    "registers",
+    "fsm",
+    "sensitivity"
+  ],
+  "par_times": {
+    "minutes": 120
+  },
+  "tags": [
+    "sequence",
+    "warm-up-hard",
+    "sky130"
+  ]
+}
