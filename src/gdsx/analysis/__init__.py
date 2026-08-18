@@ -2,6 +2,7 @@
 recovery, backward justification."""
 
 from .registers import Register, Block, Analysis, find_registers, describe
+from .grouping import mutual
 from .justify import (
     Choice,
     Requirements,
