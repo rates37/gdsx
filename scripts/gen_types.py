@@ -35,6 +35,7 @@ ROOTS = [
     api.ConeNode,
     api.TapeView,
     api.RequirementsView,
+    api.ClaimPlanView,
 ]
 
 
@@ -61,6 +62,31 @@ FIELD_DOCS: dict[tuple[str, str], str] = {
     ("FlopView", "rst"): (
         "always ACTIVE HIGH whatever the cell's polarity -- the compiler emits "
         "the inversion as a NOT op. -1 = the cell has no such pin"
+    ),
+    ("SliceView", "ops"): (
+        "flat, stride 6, the same encoding as `TapeView.ops` -- but renumbered "
+        "to this slice, so every id indexes a value array of `n_values`, NOT "
+        "the design's"
+    ),
+    ("SliceView", "free"): (
+        "the free variables, in assignment-bit order: `free[i]` is the net at "
+        "`free_ids[i]` and `i` is its bit position. Two slices of one claim "
+        "share this list exactly, which is what makes a counterexample decode "
+        "to the same nets on both sides"
+    ),
+    ("VerdictView", "kind"): (
+        'never "LIKELY" -- nothing on the Python side samples anything, and a '
+        "sampled result is not a proof"
+    ),
+    ("JobView", "check"): (
+        "what to compare once the slices are evaluated. The BUDGET is not here "
+        "on purpose: how many assignments to visit, and whether the answer may "
+        "be called proven, is one policy that lives with the evaluator"
+    ),
+    ("ClaimPlanView", "notes"): (
+        "assumptions the plan was built under -- what was held at a fixed "
+        "value, which cycle the claim turned out to be about. Show these: a "
+        "claim checked under assumptions is only honest if it says which"
     ),
     ("ConeNode", "truncated"): (
         "true = there is more below and the walk stopped. Never inferred from "

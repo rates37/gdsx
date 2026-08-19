@@ -30,9 +30,15 @@ export class SimStore {
    *  Run button, this is instant" answer to be something you can see. */
   lastRunMs = 0;
 
+  /** The one-time step before cycle 0, if the puzzle has a reset protocol.
+   *  Public because anything replaying a stimulus outside this store -- the
+   *  notebook's sequential checks, for one -- has to drive the design exactly
+   *  the way the waveform does, and re-deriving the protocol at each such site
+   *  is how two parts of the app come to disagree about cycle 0. */
+  readonly resetVector: Readonly<Record<string, number>>;
+
   private dirty = false;
   private readonly tracks = new Map<string, Uint8Array>();
-  private readonly resetVector: Readonly<Record<string, number>>;
   private valueHistory: Int32Array[] = [];
   private stateHistory: Int32Array[] = [];
   private readonly flopIndex = new Map<string, number>();

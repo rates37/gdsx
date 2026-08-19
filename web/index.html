@@ -49,6 +49,10 @@
       .gdsx-toolbar-spacer {
         flex: 1;
       }
+      .gdsx-toolbar-status {
+        color: #9aa2b5;
+        font-size: 11px;
+      }
       .gdsx-toolbar button {
         background: #1a1f2b;
         color: #cfd4de;
@@ -856,6 +860,195 @@
       .seq-cell.cursor {
         outline: 1px solid #f2cc4d;
         outline-offset: -1px;
+      }
+
+      /* ---- notebook ------------------------------------------------------- */
+      /* The verdict tones are the only place colour carries meaning in this
+         panel, and they are deliberately far apart: green and amber must never
+         be mistaken for each other at a glance, because that mistake IS reading
+         a LIKELY as a PROVEN. */
+      .nb-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        box-sizing: border-box;
+      }
+      .nb-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-bottom: 1px solid #1c2130;
+      }
+      .nb-coverage {
+        color: #9aa2b5;
+      }
+      .nb-spacer {
+        flex: 1;
+      }
+      .nb-loading,
+      .nb-empty {
+        padding: 16px;
+        color: #6d7486;
+      }
+      .nb-list {
+        flex: 1;
+        overflow: auto;
+        padding: 4px;
+      }
+
+      .nb-row {
+        border: 1px solid #1c2130;
+        border-radius: 4px;
+        padding: 6px 8px;
+        margin-bottom: 6px;
+        background: #10131a;
+      }
+      .nb-row-head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .nb-claim-text {
+        flex: 1;
+        word-break: break-word;
+      }
+      .nb-struck {
+        text-decoration: line-through;
+        color: #7d8598;
+      }
+      .nb-verdict {
+        flex: none;
+        border-radius: 3px;
+        padding: 1px 6px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .nb-tone-green {
+        background: #16311d;
+        border: 1px solid #2f7a45;
+        color: #7fd79a;
+      }
+      .nb-tone-amber {
+        background: #33280e;
+        border: 1px solid #97741f;
+        color: #f2cc4d;
+      }
+      .nb-tone-red {
+        background: #351719;
+        border: 1px solid #8c3238;
+        color: #f08a90;
+      }
+      .nb-tone-grey {
+        background: #171b26;
+        border: 1px solid #2e3444;
+        color: #9aa2b5;
+      }
+      .nb-row-meta {
+        display: flex;
+        gap: 8px;
+        margin-top: 3px;
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .nb-points {
+        color: #7d8598;
+      }
+      .nb-note {
+        margin-top: 4px;
+        padding-left: 8px;
+        border-left: 2px solid #2e3444;
+        color: #9aa2b5;
+        font-size: 11px;
+      }
+      .nb-detail {
+        margin-top: 6px;
+        padding: 6px;
+        background: #0d0f14;
+        border-radius: 3px;
+        font-size: 11px;
+        color: #9aa2b5;
+      }
+      .nb-witness {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .nb-witness-label {
+        color: #6d7486;
+      }
+      .nb-bit {
+        color: #f2cc4d;
+      }
+      .nb-load {
+        margin-top: 6px;
+      }
+      .nb-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .nb-history {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #6d7486;
+      }
+      .nb-history-row {
+        padding: 2px 0 2px 10px;
+      }
+
+      .nb-form {
+        border-bottom: 1px solid #1c2130;
+        padding: 8px;
+        background: #0d0f14;
+      }
+      .nb-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .nb-label {
+        flex: none;
+        width: 120px;
+        text-align: right;
+        color: #9aa2b5;
+      }
+      .nb-input {
+        flex: 1;
+        min-width: 80px;
+      }
+      .nb-wide {
+        min-width: 200px;
+      }
+      .nb-hint {
+        margin: 4px 0 8px 128px;
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .nb-form-footer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      .nb-cost {
+        flex: 1;
+        font-size: 11px;
+      }
+      .nb-cost-ok {
+        color: #7fd79a;
+      }
+      /* The warning that has to arrive before the verdict, not after it. */
+      .nb-cost-sampled {
+        color: #f2cc4d;
+      }
+      .nb-cost-bad {
+        color: #f08a90;
+      }
+      .nb-cost-idle {
+        color: #6d7486;
       }
     </style>
   </head>

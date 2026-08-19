@@ -94,6 +94,7 @@ def test_every_endpoint_rejects_an_unknown_handle():
         api.idioms,
         api.normalise,
         api.sim_compile,
+        api.claim_vocabulary,
     ):
         assert failure(call("design-nope"))["code"] == "bad_handle", call.__name__
 
@@ -542,3 +543,120 @@ def test_the_puzzle_extracts_and_analyses_through_the_facade():
         assert view["driver"]["cell"].startswith("sky130_fd_sc_hd__dfrtp")
     finally:
         api.close(handle)
+
+
+#! notebook claims
+
+
+def _plan(handle, claim: dict):
+    return unwrap(api.claim_plan(handle, json.dumps(claim)))
+
+
+def _a_flop(handle) -> str:
+    return unwrap(api.claim_vocabulary(handle))["flops"][0]
+
+
+def test_claim_vocabulary_is_what_the_forms_offer(handle):
+    unwrap(api.extract(handle))
+    found = unwrap(api.claim_vocabulary(handle))
+    assert "structural" in found["kinds"] and len(found["kinds"]) == 8
+    assert "counter" in found["roles"]
+    assert "latches-high" in found["events"]
+    assert "count" in found["measures"]
+    assert found["flops"] and found["inputs"]
+
+
+def test_a_structural_claim_comes_back_settled(handle):
+    unwrap(api.extract(handle))
+    net = next(
+        view["name"]
+        for view in unwrap(api.nets(handle))
+        if view["driver"] is not None
+    )
+    driver = unwrap(api.nets(handle, json.dumps([net])))[0]["driver"]
+
+    plan = _plan(handle, {"kind": "structural", "net": net, "cell": driver["cell"]})
+    assert plan["job"] is None
+    assert plan["verdict"]["kind"] == "PROVEN"
+    assert plan["verdict"]["method"] == "structural"
+    assert plan["call"].startswith("gdsx.")
+
+
+def test_a_functional_claim_comes_back_as_a_job_with_two_aligned_slices(handle):
+    unwrap(api.extract(handle))
+    flop = _a_flop(handle)
+    plan = _plan(handle, {"kind": "function", "flop": flop, "expression": "1"})
+    assert plan["verdict"] is None
+    job = plan["job"]
+    assert job["engine"] == "combinational" and job["check"] == "equal"
+    # The contract that makes a counterexample decodable on both sides.
+    assert job["design"]["free"] == job["claim"]["free"]
+    assert len(job["design"]["ops"]) % 6 == 0
+    assert job["design"]["n_values"] > 0
+
+
+def test_a_constraint_claim_carries_its_parsed_predicate(handle):
+    unwrap(api.extract(handle))
+    vocabulary = unwrap(api.claim_vocabulary(handle))
+    port = vocabulary["inputs"][0]
+    output = vocabulary["outputs"][0]
+
+    plan = _plan(
+        handle,
+        {"kind": "constraint", "output": output, "predicate": f"count({port}) == 4"},
+    )
+    predicate = plan["job"]["predicate"]
+    assert predicate["node"] == "term"
+    assert predicate["measure"] == "count" and predicate["port"] == port
+    assert predicate["value"] == 4 and predicate["of"] == []
+
+
+def test_claim_errors_are_form_errors_not_verdicts(handle):
+    unwrap(api.extract(handle))
+    flop = _a_flop(handle)
+
+    assert failure(api.claim_plan(handle, '{"kind": "vibes"}'))["code"] == "bad_claim"
+    assert (
+        failure(api.claim_plan(handle, json.dumps({"kind": "structural", "net": "n_nope", "cell": "nand2"})))["code"]
+        == "unknown_net"
+    )
+    assert (
+        failure(api.claim_plan(handle, json.dumps({"kind": "function", "flop": flop, "expression": "& &"})))["code"]
+        == "bad_expression"
+    )
+    assert (
+        failure(api.claim_plan(handle, json.dumps({"kind": "function", "flop": "nope", "expression": "1"})))["code"]
+        == "unknown_flop"
+    )
+    assert failure(api.claim_plan(handle, "not json"))["code"] == "bad_json"
+    assert failure(api.claim_plan(handle, "[1, 2]"))["code"] == "bad_json"
+
+
+def test_no_verdict_from_this_side_is_ever_likely(handle):
+    """The boundary's half of the rule the whole mechanic rests on
+
+    `LIKELY` is produced by sampling and sampling happens in the evaluator. If
+    one ever appeared in an envelope, something on this side would have started
+    guessing.
+    """
+    unwrap(api.extract(handle))
+    flop = _a_flop(handle)
+    vocabulary = unwrap(api.claim_vocabulary(handle))
+    output = vocabulary["outputs"][0]
+    port = vocabulary["inputs"][0]
+
+    for claim in (
+        {"kind": "structural", "net": output, "cell": "nand2"},
+        {"kind": "support", "flop": flop, "leaves": []},
+        {"kind": "support", "flop": flop, "leaves": [], "sense": "functional"},
+        {"kind": "function", "flop": flop, "expression": "1"},
+        {"kind": "role", "group": [flop], "role": "counter", "width": 1},
+        {"kind": "invariant", "net": output, "value": 1, "condition": port},
+        {"kind": "requirement", "output": output, "value": 1, "flop": flop, "flop_value": 1},
+        {"kind": "timing", "net": output, "event": "high", "cycles": [1]},
+        {"kind": "constraint", "output": output, "predicate": f"count({port}) == 1"},
+    ):
+        plan = _plan(handle, claim)
+        assert (plan["verdict"] is None) != (plan["job"] is None), claim["kind"]
+        if plan["verdict"] is not None:
+            assert plan["verdict"]["kind"] != "LIKELY", claim["kind"]

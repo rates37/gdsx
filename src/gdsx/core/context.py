@@ -23,6 +23,7 @@ if TYPE_CHECKING:  # types only, so none of these are imported at runtime
     from ..guards import Guards
     from ..interface import Interface
     from ..sim import Simulator
+    from ..sim.tape import GateTape
 
 
 class NoLayoutAvailable(RuntimeError):
@@ -35,7 +36,7 @@ class NoLayoutAvailable(RuntimeError):
 _DEPENDENTS: dict[str, tuple[str, ...]] = {
     "layout": ("macros", "netlist"),
     "macros": ("netlist",),
-    "netlist": ("graph", "registers", "interface", "guards", "simulator"),
+    "netlist": ("graph", "registers", "interface", "guards", "simulator", "tape"),
     "graph": ("registers", "interface", "guards", "simulator"),
 }
 
@@ -253,6 +254,19 @@ class Design:
         return self._memo(
             ("guards", fanout), lambda: guards.find(self.netlist, min_fanout=fanout)
         )
+
+    def tape(self) -> "GateTape":
+        """The compiled gate tape for this netlist, built once
+
+        Memoised because it is now asked for per question rather than once per
+        session: every claim the notebook verifies is cut from it, and
+        recompiling a few thousand ops for each of them would make the mechanic
+        feel exactly as slow as it is supposed to not feel. Unlike `simulator`
+        this carries no state, so successive callers cannot disturb each other.
+        """
+        from ..sim import compile as compile_tape
+
+        return self._memo("tape", lambda: compile_tape(self.netlist))
 
     def simulator(self) -> "Simulator":
         """A simulator over this netlist

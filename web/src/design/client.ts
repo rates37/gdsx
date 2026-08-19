@@ -12,7 +12,13 @@
 
 import type { Remote } from "comlink";
 import type { GdsxWorker, Envelope } from "../worker";
-import type { InstanceView, NetView, ConeNode, RequirementsView } from "../gdsx-types";
+import type {
+  InstanceView,
+  NetView,
+  ConeNode,
+  RequirementsView,
+  ClaimPlanView,
+} from "../gdsx-types";
 
 export interface Call<T> {
   data: T;
@@ -92,6 +98,34 @@ export class DesignClient {
     const call = `gdsx.api.flop_d_net(handle, ${pyStr(net)})`;
     return this.run("flop_d_net", [this.handle, net], call);
   }
+
+  /** What it would take to settle one notebook claim: a verdict, or the work.
+   *
+   * Structural claims come back settled -- their evidence is a fact about the
+   * netlist. Everything else comes back as a job of tape slices for the
+   * notebook's evaluator, because settling it means running a cone over up to
+   * 2**24 assignments and that does not belong in Pyodide. */
+  claimPlan(claim: unknown): Promise<Call<ClaimPlanView>> {
+    const json = JSON.stringify(claim);
+    const call = `gdsx.api.claim_plan(handle, ${pyStr(json)})`;
+    return this.run("claim_plan", [this.handle, json], call);
+  }
+
+  /** The lists the claim forms build their dropdowns from, so the UI does not
+   *  keep its own copy of what a role or an event may be. */
+  claimVocabulary(): Promise<Call<ClaimVocabulary>> {
+    return this.run("claim_vocabulary", [this.handle], "gdsx.api.claim_vocabulary(handle)");
+  }
+}
+
+export interface ClaimVocabulary {
+  kinds: string[];
+  roles: string[];
+  events: string[];
+  measures: Record<string, string>;
+  flops: string[];
+  inputs: string[];
+  outputs: string[];
 }
 
 /** Loads the baked netlist and opens a design handle against it. */

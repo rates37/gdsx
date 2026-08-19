@@ -5,11 +5,19 @@
 
 import type { Workspace } from "./workspace.ts";
 
-export function attachToolbar(host: HTMLElement, workspace: Workspace): void {
+/** Sets the toolbar's status readout. Returns a setter rather than exposing
+ *  the element: the notebook's coverage is the only thing that writes here so
+ *  far (game-plan.md §3 puts it in the title bar), and keeping it a function
+ *  means the toolbar owns its own markup. */
+export function attachToolbar(
+  host: HTMLElement,
+  workspace: Workspace,
+): (text: string) => void {
   const bar = document.createElement("div");
   bar.className = "gdsx-toolbar";
   bar.innerHTML = `
     <span class="gdsx-toolbar-title">DIESHARK</span>
+    <span class="gdsx-toolbar-status"></span>
     <div class="gdsx-toolbar-spacer"></div>
     <div class="gdsx-reopen-wrap">
       <button class="gdsx-reopen-btn" type="button">reopen tab ▾</button>
@@ -67,4 +75,9 @@ export function attachToolbar(host: HTMLElement, workspace: Workspace): void {
 
   workspace.onChange(refresh);
   refresh();
+
+  const statusEl = bar.querySelector(".gdsx-toolbar-status") as HTMLSpanElement;
+  return (text: string) => {
+    statusEl.textContent = text;
+  };
 }

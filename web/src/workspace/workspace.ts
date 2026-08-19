@@ -41,6 +41,7 @@ type GridNode = BranchNode | LeafNode;
 export class Workspace {
   readonly api: DockviewApi;
   private readonly defs = new Map<string, PanelDef>();
+  private readonly status: (text: string) => void;
 
   /**
    * @param rows Default layout, top row first: `rows[0][0]` is the anchor
@@ -83,7 +84,13 @@ export class Workspace {
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
 
-    attachToolbar(container, this);
+    this.status = attachToolbar(container, this);
+  }
+
+  /** The toolbar's status readout -- the coverage percentage, per §3's title
+   *  bar. A panel calls this; nothing reads it back. */
+  setStatus(text: string): void {
+    this.status(text);
   }
 
   /** Every registered panel that is not currently open, title included --

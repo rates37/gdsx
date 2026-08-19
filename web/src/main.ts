@@ -14,6 +14,7 @@ import { netlistBrowserPanel } from "./panels/netlist-panel";
 import { coneWalkerPanel } from "./panels/cone-walker-panel";
 import { waveformPanel } from "./panels/waveform-panel";
 import { sequenceEditorPanel } from "./panels/sequence-editor-panel";
+import { notebookPanel } from "./panels/notebook-panel";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
@@ -28,6 +29,10 @@ import { SimStore } from "./sim/store";
 const PUZZLE_RESET_VECTOR = { clk: 0, rst_n: 0, enable: 1, I: 0 };
 const PUZZLE_DEFAULT_LEVELS: Record<string, 0 | 1> = { enable: 1, rst_n: 1 };
 const PUZZLE_CYCLES = 140;
+//: What the notebook's coverage measures the explained fraction of, per
+//: game-plan.md §5, and the net every genre of this puzzle is ultimately about.
+const PUZZLE_SUCCESS_NET = "success";
+const PUZZLE_ID = "two-stars";
 
 async function main(): Promise<void> {
   const t0 = performance.now();
@@ -97,9 +102,16 @@ async function main(): Promise<void> {
       coneWalkerPanel(designReady),
       waveformPanel(storeReady),
       sequenceEditorPanel(storeReady),
+      notebookPanel({
+        designReady,
+        storeReady,
+        puzzleId: PUZZLE_ID,
+        successNet: PUZZLE_SUCCESS_NET,
+        onCoverage: (text) => workspace.setStatus(text),
+      }),
     ],
     [
-      ["die-view", "netlist", "cone-walker"],
+      ["die-view", "netlist", "cone-walker", "notebook"],
       ["waveform", "sequence-editor"],
     ],
   );

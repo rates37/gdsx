@@ -255,6 +255,98 @@ class RequirementsView:
     conflicts: list[str]
 
 
+@dataclass
+class SliceView:
+    """A self-contained mini-tape: the ops one question needs, and nothing else
+
+    Same opcode encoding as `TapeView.ops`, so the same executor runs it -- but
+    renumbered to itself, so every id here indexes a value array of `n_values`,
+    not the design's. `free[i]` is the name of the variable at `free_ids[i]`, and
+    `i` is its bit position in an assignment.
+    """
+
+    ops: list[int]
+    free: list[str]
+    free_ids: list[int]
+    targets: list[int]
+    target_names: list[str]
+    consts: list[list[int]]
+    n_values: int
+
+
+@dataclass
+class VerdictView:
+    """A verdict the library settled on its own, always from the netlist
+
+    Never `LIKELY`: nothing on this side of the boundary samples anything, and a
+    sampled result is not a proof. Never carries a counterexample vector either
+    -- a structural disproof is two names differing, which is what `observed` and
+    `expected` hold.
+    """
+
+    kind: str  # "PROVEN" | "DISPROVEN" | "UNKNOWN" -- never "LIKELY"
+    method: str  # "structural" when proven, "" otherwise
+    cases: int
+    reason: str
+    observed: list[str]
+    expected: list[str]
+
+
+@dataclass
+class PredicateView:
+    """A parsed constraint predicate: comparisons of a measurement to a number
+
+    A tree of `and`/`or`/`not` over `term` leaves. On a term, `measure`, `port`,
+    `window`, `op` and `value` are set and `of` is empty; on everything else only
+    `of` is.
+    """
+
+    node: str  # "and" | "or" | "not" | "term"
+    of: list["PredicateView"]
+    measure: str
+    port: str
+    window: list[int] | None
+    op: str
+    value: int
+
+
+@dataclass
+class JobView:
+    """Verification work the library scheduled rather than performed
+
+    `design` and `claim`, when both are present, share a free-variable list --
+    same names, same order -- so one assignment means the same thing to both and
+    a counterexample decodes to the same nets on either side.
+
+    What is deliberately NOT here is how many assignments to visit and whether
+    the answer may be called proven. That is one policy and it lives with the
+    evaluator, so there is one copy of it rather than two that can drift.
+    """
+
+    engine: str  # "combinational" | "transition" | "sequential"
+    check: str  # "equal" | "implies" | "essential" | "role" | "requirement" | "timing" | "constraint"
+    design: SliceView | None
+    claim: SliceView | None
+    predicate: PredicateView | None
+
+
+@dataclass
+class ClaimPlanView:
+    """What it would take to settle one claim: an answer, or the work to get one
+
+    Exactly one of `verdict` and `job` is set. `notes` are the assumptions the
+    plan was built under -- what got held at a fixed value, which cycle the claim
+    turned out to be about. They are shown, not swallowed: a claim checked under
+    assumptions is only honest if it says which.
+    """
+
+    kind: str
+    call: str
+    verdict: VerdictView | None
+    job: JobView | None
+    notes: list[str]
+
+
 #! handles
 
 
@@ -669,6 +761,120 @@ def requirements(handle: str, net: str, value: int = 1) -> dict:
     )
 
 
+def _slice_view(sliced) -> SliceView:
+    return SliceView(
+        ops=list(sliced.ops),
+        free=list(sliced.free),
+        free_ids=list(sliced.free_ids),
+        targets=list(sliced.targets),
+        target_names=list(sliced.target_names),
+        consts=[list(pair) for pair in sliced.consts],
+        n_values=sliced.n_values,
+    )
+
+
+def _predicate_view(node: dict) -> PredicateView:
+    return PredicateView(
+        node=node["node"],
+        of=[_predicate_view(child) for child in node.get("of", ())],
+        measure=node.get("measure", ""),
+        port=node.get("port", ""),
+        window=node.get("window"),
+        op=node.get("op", ""),
+        value=node.get("value", 0),
+    )
+
+
+@_endpoint
+def claim_plan(handle: str, claim_json: str) -> dict:
+    """What it would take to settle one notebook claim
+
+    Structural claims come back settled: their evidence is a fact about the
+    netlist and looking it up *is* the verification. Everything else comes back
+    as a job -- one or two slices of the gate tape and an instruction for what to
+    compare -- because settling it means evaluating a cone over up to 2**24
+    assignments, and that grind belongs where it can be done 32 assignments at a
+    time rather than one at a time in a Python interpreter compiled to wasm.
+
+    What this never returns is a guess. A claim that cannot be settled or
+    scheduled comes back `UNKNOWN` with a reason, and no verdict from this side
+    is ever `LIKELY`: sampling happens in the evaluator, and a sampled result is
+    not a proof.
+    """
+    from .analysis import claims
+
+    design = _get(handle)
+    claim = _parse(claim_json, "claim_json")
+    if not isinstance(claim, dict):
+        raise ApiError("bad_json", "claim_json must be an object")
+
+    try:
+        plan = claims.plan(design.graph, design.tape(), claim)
+    except claims.ClaimError as exc:
+        raise ApiError(exc.code, exc.message, exc.detail) from None
+
+    return serial.to_dict(
+        ClaimPlanView(
+            kind=plan.kind,
+            call=plan.call,
+            verdict=(
+                None
+                if plan.verdict is None
+                else VerdictView(
+                    kind=plan.verdict.kind,
+                    method=plan.verdict.method,
+                    cases=plan.verdict.cases,
+                    reason=plan.verdict.reason,
+                    observed=list(plan.verdict.observed),
+                    expected=list(plan.verdict.expected),
+                )
+            ),
+            job=(
+                None
+                if plan.job is None
+                else JobView(
+                    engine=plan.job.engine,
+                    check=plan.job.check,
+                    design=(
+                        None if plan.job.design is None else _slice_view(plan.job.design)
+                    ),
+                    claim=(
+                        None if plan.job.claim is None else _slice_view(plan.job.claim)
+                    ),
+                    predicate=(
+                        None
+                        if plan.job.predicate is None
+                        else _predicate_view(plan.job.predicate)
+                    ),
+                )
+            ),
+            notes=list(plan.notes),
+        )
+    )
+
+
+@_endpoint
+def claim_vocabulary(handle: str) -> dict:
+    """What the claim forms may offer: kinds, roles, events, measurements
+
+    The UI builds its dropdowns from this rather than from a copy of the same
+    lists, so adding a role or an event is one change here and none there.
+    """
+    from .analysis import claims
+
+    design = _get(handle)
+    nl = design.netlist
+    return {
+        "kinds": list(claims.KINDS),
+        "roles": list(claims.ROLES),
+        "events": list(claims.EVENTS),
+        "measures": dict(claims.MEASURES),
+        "flops": sorted(design.graph.seq),
+        "inputs": sorted(net for net, kind in nl.ports.items() if kind == "input"),
+        "outputs": sorted(net for net, kind in nl.ports.items() if kind == "output"),
+    }
+
+
 @_endpoint
 def flop_d_net(handle: str, net: str) -> dict:
     """Step through the flop driving `net`: the net on its D pin
@@ -953,12 +1159,11 @@ def sim_compile(handle: str) -> dict:
 
     Sending the tape once and scrubbing locally is the point.
     """
-    from .sim import compile as compile_tape
     from .sim.tape import UnconnectedPin, UnsupportedFunction
 
     design = _get(handle)
     try:
-        tape = compile_tape(design.netlist)
+        tape = design.tape()
     except UnsupportedFunction as exc:
         raise ApiError(
             "unsupported_cell",

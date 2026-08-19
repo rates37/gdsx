@@ -12,6 +12,15 @@ export interface ChoiceView {
   options: ChoiceOption[];
 }
 
+export interface ClaimPlanView {
+  kind: string;
+  call: string;
+  verdict: VerdictView | null;
+  job: JobView | null;
+  /** assumptions the plan was built under -- what was held at a fixed value, which cycle the claim turned out to be about. Show these: a claim checked under assumptions is only honest if it says which */
+  notes: string[];
+}
+
 export interface ConeNode {
   net: string;
   gate: GateView | null;
@@ -52,6 +61,15 @@ export interface InstanceView {
   bbox: number[] | null;
 }
 
+export interface JobView {
+  engine: string;
+  /** what to compare once the slices are evaluated. The BUDGET is not here on purpose: how many assignments to visit, and whether the answer may be called proven, is one policy that lives with the evaluator */
+  check: string;
+  design: SliceView | null;
+  claim: SliceView | null;
+  predicate: PredicateView | null;
+}
+
 export interface LeafValue {
   net: string;
   value: number;
@@ -63,6 +81,16 @@ export interface NetView {
   readers: RefView[];
   is_port: string | null;
   leaf: string | null;
+}
+
+export interface PredicateView {
+  node: string;
+  of: PredicateView[];
+  measure: string;
+  port: string;
+  window: number[] | null;
+  op: string;
+  value: number;
 }
 
 export interface RefView {
@@ -81,6 +109,18 @@ export interface RequirementsView {
   conflicts: string[];
 }
 
+export interface SliceView {
+  /** flat, stride 6, the same encoding as `TapeView.ops` -- but renumbered to this slice, so every id indexes a value array of `n_values`, NOT the design's */
+  ops: number[];
+  /** the free variables, in assignment-bit order: `free[i]` is the net at `free_ids[i]` and `i` is its bit position. Two slices of one claim share this list exactly, which is what makes a counterexample decode to the same nets on both sides */
+  free: string[];
+  free_ids: number[];
+  targets: number[];
+  target_names: string[];
+  consts: number[][];
+  n_values: number;
+}
+
 export interface TapeView {
   tape_version: number;
   n_nets: number;
@@ -94,4 +134,14 @@ export interface TapeView {
   consts: number[][];
   names: Record<string, number>;
   flop_names: string[];
+}
+
+export interface VerdictView {
+  /** never "LIKELY" -- nothing on the Python side samples anything, and a sampled result is not a proof */
+  kind: string;
+  method: string;
+  cases: number;
+  reason: string;
+  observed: string[];
+  expected: string[];
 }
