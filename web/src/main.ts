@@ -17,6 +17,13 @@ import { sequenceEditorPanel } from "./panels/sequence-editor-panel";
 import { notebookPanel } from "./panels/notebook-panel";
 import { experimentPanel } from "./panels/experiment-panel";
 import { modelPanel } from "./panels/model-panel";
+import { registerInspectorPanel } from "./panels/register-inspector-panel";
+import { requirementsPanel } from "./panels/requirements-panel";
+import { sensitivityPanel } from "./panels/sensitivity-panel";
+import { registerDecoderPanel } from "./panels/register-decoder-panel";
+import { stickyFlopsPanel } from "./panels/sticky-flops-panel";
+import { constraintsPanel } from "./panels/constraints-panel";
+import { replPanel } from "./panels/repl-panel";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
@@ -119,10 +126,19 @@ async function main(): Promise<void> {
       // cracks a puzzle open is available before the analysis engine boots.
       experimentPanel({ storeReady, puzzleId: PUZZLE_ID, tapeUrl: PUZZLE_TAPE_URL }),
       modelPanel({ storeReady, puzzleId: PUZZLE_ID }),
+      registerInspectorPanel({ designReady }),
+      requirementsPanel({ designReady, storeReady, puzzleId: PUZZLE_ID }),
+      sensitivityPanel({ storeReady, tapeUrl: PUZZLE_TAPE_URL }),
+      registerDecoderPanel({ designReady, puzzleId: PUZZLE_ID }),
+      stickyFlopsPanel({ designReady, puzzleId: PUZZLE_ID, successNet: PUZZLE_SUCCESS_NET }),
+      constraintsPanel({ designReady }),
+      replPanel({ api, designReady, puzzleId: PUZZLE_ID }),
     ],
     [
       ["die-view", "netlist", "cone-walker", "notebook"],
       ["waveform", "sequence-editor", "experiments", "model-builder"],
+      ["register-inspector", "requirements", "sensitivity", "register-decoder"],
+      ["sticky-flops", "constraints", "repl"],
     ],
   );
 

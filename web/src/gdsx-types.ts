@@ -31,6 +31,13 @@ export interface ConeNode {
   truncated: boolean;
 }
 
+export interface ConstraintView {
+  name: string;
+  elements: number[];
+  lb: number;
+  ub: number;
+}
+
 export interface FlopView {
   d: number;
   q: number;
@@ -83,6 +90,11 @@ export interface NetView {
   leaf: string | null;
 }
 
+export interface OrbitView {
+  states: number[][];
+  kind: string;
+}
+
 export interface PredicateView {
   node: string;
   of: PredicateView[];
@@ -121,6 +133,19 @@ export interface SliceView {
   n_values: number;
 }
 
+export interface StickyView {
+  flop: string;
+  polarity: number;
+  condition: string;
+}
+
+export interface SystemView {
+  variables: number[];
+  watched: string[];
+  constraints: ConstraintView[];
+  unconstrained: string[];
+}
+
 export interface TapeView {
   tape_version: number;
   n_nets: number;
@@ -144,4 +169,9 @@ export interface VerdictView {
   reason: string;
   observed: string[];
   expected: string[];
+}
+
+export interface WeightView {
+  value: number;
+  confidence: string;
 }

@@ -54,9 +54,75 @@ function getPyodide(): Promise<PyodideInterface> {
   return pyodideReady;
 }
 
+export interface ReplResult {
+  ok: boolean;
+  stdout: string;
+  /** `repr()` of the last expression's value, or "" for a statement / None. */
+  repr: string;
+  /** True when `repr` is a JSON literal worth pretty-printing rather than
+   *  showing as Python repr text -- set for the handful of return shapes the
+   *  REPL bootstrap recognises (see `REPL_BOOTSTRAP`'s `_gdsx_repl_render`). */
+  rendered: string | null;
+  error: string | null;
+}
+
+// Defines `_gdsx_repl_eval(handle, source)` once, in Pyodide's global
+// namespace, rather than re-building a multi-line exec/eval dance from JS on
+// every keystroke. `nl`, `sim`, `design` are bound to the open design, per
+// game-plan.md §4.14 -- the same three names the panel's own text promises.
+//
+// "Rich output" here is deliberately modest: a `Netlist`/trace-shaped object
+// gets pretty-printed as JSON via `gdsx.core.serial.to_dict` when it is one
+// of the dataclasses that module already knows how to flatten (the same
+// serialiser every `gdsx.api` endpoint uses -- not a second renderer);
+// everything else falls back to `repr()`, honestly, rather than pretending
+// to have a table view for an arbitrary Python object.
+const REPL_BOOTSTRAP = `
+def _gdsx_repl_eval(_handle, _source):
+    import io, contextlib, json
+    import gdsx.api as _api
+    from gdsx.core import serial as _serial
+
+    _design = _api._get(_handle)
+    _ns = {
+        "nl": _design.netlist,
+        "graph": _design.graph,
+        "sim": _design.simulator(),
+        "design": _design,
+        "api": _api,
+    }
+    _buf = io.StringIO()
+    _value = None
+    _error = None
+    try:
+        with contextlib.redirect_stdout(_buf):
+            try:
+                _value = eval(compile(_source, "<repl>", "eval"), _ns)
+            except SyntaxError:
+                exec(compile(_source, "<repl>", "exec"), _ns)
+    except Exception as exc:  # noqa: BLE001 -- shown to the player, not raised
+        _error = f"{type(exc).__name__}: {exc}"
+
+    _repr = "" if _value is None else repr(_value)
+    _rendered = None
+    import dataclasses as _dataclasses
+    if _value is not None and _dataclasses.is_dataclass(_value):
+        try:
+            _rendered = json.dumps(_serial.to_dict(_value), indent=2)
+        except TypeError:
+            _rendered = None
+    # A JSON string, not a Python tuple -- returning a tuple across the FFI
+    # boundary hands back a PyProxy, not a destructurable JS array. Every
+    # gdsx.api endpoint already sidesteps this the same way (see _envelope).
+    return json.dumps(
+        {"stdout": _buf.getvalue(), "repr": _repr, "rendered": _rendered, "error": _error}
+    )
+`;
+
 const worker = {
   async ready(): Promise<void> {
-    await getPyodide();
+    const pyodide = await getPyodide();
+    pyodide.runPython(REPL_BOOTSTRAP);
   },
 
   /** Call any `gdsx.api.<name>(...)` endpoint; every one returns a JSON envelope string. */
@@ -67,6 +133,32 @@ const worker = {
     if (fn === undefined) throw new Error(`gdsx.api has no endpoint '${name}'`);
     const result: string = fn(...args.map((a) => toPython(a, pyodide)));
     return JSON.parse(result) as Envelope;
+  },
+
+  /** Run one REPL entry against the open design at `handle`. Never throws --
+   *  a Python-side exception comes back as `{ ok: false, error }`, same
+   *  contract as `call`'s envelope, just for free-form source instead of a
+   *  named endpoint. */
+  async evalPython(handle: string, source: string): Promise<ReplResult> {
+    const pyodide = await getPyodide();
+    const fn = pyodide.globals.get("_gdsx_repl_eval") as (handle: string, source: string) => string;
+    try {
+      const parsed = JSON.parse(fn(handle, source)) as {
+        stdout: string;
+        repr: string;
+        rendered: string | null;
+        error: string | null;
+      };
+      return { ok: parsed.error === null, ...parsed };
+    } catch (err) {
+      return {
+        ok: false,
+        stdout: "",
+        repr: "",
+        rendered: null,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
   },
 };
 

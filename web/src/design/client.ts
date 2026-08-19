@@ -18,6 +18,11 @@ import type {
   ConeNode,
   RequirementsView,
   ClaimPlanView,
+  StickyView,
+  WeightView,
+  OrbitView,
+  SystemView,
+  SliceView,
 } from "../gdsx-types";
 
 export interface Call<T> {
@@ -64,9 +69,16 @@ export class DesignClient {
     return { data: env.data as T, call };
   }
 
-  /** Every instance in the design; the netlist browser filters client-side. */
-  instances(): Promise<Call<InstanceView[]>> {
-    return this.run("instances", [this.handle], "gdsx.api.instances(handle)");
+  /** Every instance in the design (the netlist browser filters client-side),
+   *  or just `names` when given -- a lookup for the odd panel that only
+   *  wants a handful, e.g. one flop's `Q` net before a `flopDNet` step. */
+  instances(names?: string[]): Promise<Call<InstanceView[]>> {
+    if (names === undefined) {
+      return this.run("instances", [this.handle], "gdsx.api.instances(handle)");
+    }
+    const json = JSON.stringify(names);
+    const call = `gdsx.api.instances(handle, ${pyStr(json)})`;
+    return this.run("instances", [this.handle, json], call);
   }
 
   /** Every net in the design, with its driver, readers and leaf classification. */
@@ -99,6 +111,16 @@ export class DesignClient {
     return this.run("flop_d_net", [this.handle, net], call);
   }
 
+  /** The self-contained mini-tape for `net`'s own cone -- free leaves plus
+   *  the ops to compute it from them. Reused by the notebook's `function`
+   *  claim and by any panel that wants to exhaustively (or, past the
+   *  ceiling, by sampling) enumerate a truth table without re-deriving the
+   *  cone-cutting itself. */
+  coneSlice(net: string): Promise<Call<SliceView>> {
+    const call = `gdsx.api.cone_slice(handle, ${pyStr(net)})`;
+    return this.run("cone_slice", [this.handle, net], call);
+  }
+
   /** What it would take to settle one notebook claim: a verdict, or the work.
    *
    * Structural claims come back settled -- their evidence is a fact about the
@@ -116,6 +138,152 @@ export class DesignClient {
   claimVocabulary(): Promise<Call<ClaimVocabulary>> {
     return this.run("claim_vocabulary", [this.handle], "gdsx.api.claim_vocabulary(handle)");
   }
+
+  /** What kind of thing each register is: role, width, reset value. */
+  registers(): Promise<Call<RegistersResult>> {
+    return this.run("registers", [this.handle], "gdsx.api.registers(handle)");
+  }
+
+  /** What has to be true for each register to change. */
+  guards(minFanout = 4): Promise<Call<GuardsResult>> {
+    const call = `gdsx.api.guards(handle, min_fanout=${minFanout})`;
+    return this.run("guards", [this.handle, minFanout], call);
+  }
+
+  /** Every flop whose D pin latches on its own Q (L37). Never says checkpoint
+   *  or trap -- stickiness alone does not determine which. */
+  sticky(): Promise<Call<{ sticky: StickyView[] }>> {
+    return this.run("sticky", [this.handle], "gdsx.api.sticky(handle)");
+  }
+
+  /** Split flops into groups by mutual D-cone reference (L34): assumption-free,
+   *  no eyeballing which flops pair up. */
+  grouping(flops: string[]): Promise<Call<{ groups: string[][] }>> {
+    const json = JSON.stringify(flops);
+    const call = `gdsx.api.grouping(handle, ${pyStr(json)})`;
+    return this.run("grouping", [this.handle, json], call);
+  }
+
+  /** Infer each flop in a group's binary weight by observation (L35).
+   *  `confidence` is load-bearing -- "observed" and "by_elimination" are not
+   *  the same claim about the world, and "unknown" means the value is a
+   *  sentinel, not a weight. */
+  weights(
+    group: string[],
+    stimulus: Record<string, number>,
+    cycles: number,
+  ): Promise<Call<{ weights: Record<string, WeightView> }>> {
+    const groupJson = JSON.stringify(group);
+    const stimulusJson = JSON.stringify(stimulus);
+    const call =
+      `gdsx.api.weights(handle, ${pyStr(groupJson)}, ${pyStr(stimulusJson)}, ` +
+      `cycles=${cycles})`;
+    return this.run("weights", [this.handle, groupJson, stimulusJson, cycles], call);
+  }
+
+  /** Which control-flop values make `group` react to `perturb` at all (L36):
+   *  an address decoder's selected address, found without naming the gate. */
+  decodeSelects(
+    group: string[],
+    control: string[],
+    baseline: Record<string, number>,
+    perturb: Record<string, number>,
+  ): Promise<Call<{ hits: Record<string, number>[] }>> {
+    const groupJson = JSON.stringify(group);
+    const controlJson = JSON.stringify(control);
+    const baselineJson = JSON.stringify(baseline);
+    const perturbJson = JSON.stringify(perturb);
+    const call =
+      `gdsx.api.decode_selects(handle, ${pyStr(groupJson)}, ${pyStr(controlJson)}, ` +
+      `${pyStr(baselineJson)}, ${pyStr(perturbJson)})`;
+    return this.run(
+      "decode_selects",
+      [this.handle, groupJson, controlJson, baselineJson, perturbJson],
+      call,
+    );
+  }
+
+  /** Apply a stimulus repeatedly from `start` and classify the resulting state
+   *  sequence (L36): counter, saturating, wrapping, shift, or fixed-point. */
+  decodeOrbit(
+    group: string[],
+    stimulus: Record<string, number>,
+    start: Record<string, number> | null = null,
+  ): Promise<Call<OrbitView>> {
+    const groupJson = JSON.stringify(group);
+    const stimulusJson = JSON.stringify(stimulus);
+    const startJson = start === null ? null : JSON.stringify(start);
+    const call =
+      `gdsx.api.decode_orbit(handle, ${pyStr(groupJson)}, ${pyStr(stimulusJson)}, ` +
+      `${startJson === null ? "None" : pyStr(startJson)})`;
+    return this.run(
+      "decode_orbit",
+      [this.handle, groupJson, stimulusJson, startJson],
+      call,
+    );
+  }
+
+  /** Build a constraint `System` from measured hits, one `exact` row per
+   *  target (L38). This does not need a design handle -- it is pure
+   *  combinatorics over cycle numbers the caller already measured. */
+  constraintsBuild(
+    hits: Record<string, number[]>,
+    watched: string[],
+    targets: Record<string, number>,
+  ): Promise<Call<SystemView>> {
+    const hitsJson = JSON.stringify(hits);
+    const watchedJson = JSON.stringify(watched);
+    const targetsJson = JSON.stringify(targets);
+    const call =
+      `gdsx.api.constraints_build(${pyStr(hitsJson)}, ${pyStr(watchedJson)}, ` +
+      `${pyStr(targetsJson)})`;
+    return this.run("constraints_build", [hitsJson, watchedJson, targetsJson], call);
+  }
+
+  /** Add one row to a `System` (L38). */
+  constraintsAdd(
+    system: SystemView,
+    constraint: { name: string; elements: number[]; lb: number; ub: number },
+  ): Promise<Call<SystemView>> {
+    const systemJson = JSON.stringify(system);
+    const constraintJson = JSON.stringify(constraint);
+    const call = `gdsx.api.constraints_add(${pyStr(systemJson)}, ${pyStr(constraintJson)})`;
+    return this.run("constraints_add", [systemJson, constraintJson], call);
+  }
+
+  /** Solutions to a `System`, up to `limit` (L38): "a solution", or "how many
+   *  exist" when `capped` comes back true and the true count is unknown. */
+  constraintsSolve(
+    system: SystemView,
+    method: "dfs" | "ilp" = "dfs",
+    limit = 50,
+  ): Promise<Call<{ solutions: number[][]; capped: boolean }>> {
+    const systemJson = JSON.stringify(system);
+    const call =
+      `gdsx.api.constraints_solve(${pyStr(systemJson)}, method=${pyStr(method)}, ` +
+      `limit=${limit})`;
+    return this.run("constraints_solve", [systemJson, method, limit], call);
+  }
+}
+
+export interface RegistersResult {
+  registers: Array<{
+    name: string;
+    flops: string[];
+    width: number;
+    description: string;
+    [key: string]: unknown;
+  }>;
+  roles: unknown;
+  pipelines: unknown;
+}
+
+export interface GuardsResult {
+  guards: Array<{ condition: string; [key: string]: unknown }>;
+  candidates: string[];
+  flops: string[];
+  ungated: string[];
+  groups: Array<{ condition: Array<{ net: string; value: number }>; flops: string[] }>;
 }
 
 export interface ClaimVocabulary {

@@ -36,6 +36,10 @@ ROOTS = [
     api.TapeView,
     api.RequirementsView,
     api.ClaimPlanView,
+    api.StickyView,
+    api.WeightView,
+    api.OrbitView,
+    api.SystemView,
 ]
 
 

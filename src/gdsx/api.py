@@ -331,6 +331,61 @@ class JobView:
 
 
 @dataclass
+class StickyView:
+    """One flop whose D pin latches on its own Q (`sequential.sticky`).
+
+    Stickiness alone never says checkpoint or trap -- that is not computed
+    here, and no field on this view claims it. The player states it.
+    """
+
+    flop: str
+    polarity: int  # 1 = latches high, 0 = latches low
+    condition: str
+
+
+@dataclass
+class WeightView:
+    """One flop's inferred binary weight (`analysis.weights.infer`).
+
+    `value` is meaningless when `confidence` is `"unknown"`. The UI must
+    never render it with the same authority as an `"observed"` weight, and
+    `"by_elimination"` sits between the two -- correct, but never sighted
+    directly.
+    """
+
+    value: int
+    confidence: str  # "observed" | "by_elimination" | "unknown"
+
+
+@dataclass
+class OrbitView:
+    """The state sequence `analysis.decode.orbit` walked, and its classification."""
+
+    states: list[list[int]]
+    kind: str  # "fixed-point" | "saturating" | "wrapping" | "shift" | "counter" | "unknown"
+
+
+@dataclass
+class ConstraintView:
+    """One row of a `System`: `lb <= sum(x[e] for e in elements) <= ub`."""
+
+    name: str
+    elements: list[int]
+    lb: int
+    ub: int
+
+
+@dataclass
+class SystemView:
+    """A constraint set over a shared pool of candidate cycles (`analysis.constraints.System`)."""
+
+    variables: list[int]
+    watched: list[str]
+    constraints: list[ConstraintView]
+    unconstrained: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ClaimPlanView:
     """What it would take to settle one claim: an answer, or the work to get one
 
@@ -892,6 +947,207 @@ def flop_d_net(handle: str, net: str) -> dict:
     if ref is None or ref.instance not in graph.seq:
         raise ApiError("not_a_flop", f"{net!r} is not a flop's Q net")
     return {"instance": ref.instance, "net": graph.d_pin(ref.instance)}
+
+
+@_endpoint
+def cone_slice(handle: str, net: str) -> dict:
+    """The self-contained mini-tape for `net`: reuses `sim.slice.of` directly
+
+    This is the same primitive the notebook's `function` claim evaluates
+    against a player's expression -- exposed on its own so a panel can
+    exhaustively (or, past the ceiling, by sampling) enumerate every
+    assignment of `net`'s own cone leaves, e.g. a flop's D-pin truth table,
+    without inventing a second cone-cutting implementation to do it.
+    """
+    from .sim import slice as tape_slice
+
+    design = _get(handle)
+    if net not in design.netlist.nets:
+        raise ApiError("unknown_net", f"no such net: {net!r}")
+    try:
+        sliced = tape_slice.of(design.tape(), [net])
+    except tape_slice.UnknownNet as exc:
+        raise ApiError("unknown_net", str(exc)) from None
+    return serial.to_dict(_slice_view(sliced))
+
+
+#! recovered analysis: L34-L38, harvested from the honest-attempt investigation
+
+
+@_endpoint
+def sticky(handle: str) -> dict:
+    """Every flop whose D pin latches on its own Q (`sequential.sticky`, L37)
+
+    Never says checkpoint or trap: stickiness alone does not determine which.
+    """
+    from . import sequential
+
+    design = _get(handle)
+    found = sequential.sticky(design.graph)
+    return {"sticky": [serial.to_dict(s) for s in found]}
+
+
+@_endpoint
+def grouping(handle: str, flops_json: str) -> dict:
+    """Split flops into groups linked by mutual D-cone reference (`analysis.grouping.mutual`, L34)"""
+    from .analysis import grouping as grouping_
+
+    design = _get(handle)
+    flops = _parse(flops_json, "flops_json")
+    if not isinstance(flops, list):
+        raise ApiError("bad_json", "flops_json must be a list of flop names")
+    unknown = sorted(set(flops) - design.graph.seq)
+    if unknown:
+        raise ApiError("not_a_flop", f"not a flop: {', '.join(unknown)}")
+    groups = grouping_.mutual(design.graph, flops)
+    return {"groups": [list(g) for g in groups]}
+
+
+@_endpoint
+def weights(handle: str, group_json: str, stimulus_json: str, cycles: int) -> dict:
+    """Infer each flop in a group's binary weight by observation (`analysis.weights.infer`, L35)"""
+    from .analysis import weights as weights_
+
+    design = _get(handle)
+    group = _parse(group_json, "group_json")
+    stimulus = _parse(stimulus_json, "stimulus_json")
+    if not isinstance(group, list):
+        raise ApiError("bad_json", "group_json must be a list of flop names")
+    unknown = sorted(set(group) - design.graph.seq)
+    if unknown:
+        raise ApiError("not_a_flop", f"not a flop: {', '.join(unknown)}")
+    found = weights_.infer(design.netlist, group, stimulus=stimulus, cycles=cycles)
+    return {"weights": {f: serial.to_dict(w) for f, w in found.items()}}
+
+
+def _resolvable(graph, group: list[str]) -> list[str]:
+    return sorted(f for f in group if graph.d_pin(f) is None)
+
+
+@_endpoint
+def decode_selects(
+    handle: str,
+    group_json: str,
+    control_json: str,
+    baseline_json: str,
+    perturb_json: str,
+) -> dict:
+    """Which control-flop values make `group` react to `perturb` at all (`analysis.decode.selects`, L36)"""
+    from .analysis import decode
+
+    design = _get(handle)
+    group = _parse(group_json, "group_json")
+    control = _parse(control_json, "control_json")
+    baseline = _parse(baseline_json, "baseline_json")
+    perturb = _parse(perturb_json, "perturb_json")
+    bad = _resolvable(design.graph, group)
+    if bad:
+        raise ApiError("not_a_flop", f"not a single-D-pin flop: {', '.join(bad)}")
+    hits = decode.selects(design.graph, group, control, baseline, perturb)
+    return {"hits": hits}
+
+
+@_endpoint
+def decode_orbit(
+    handle: str, group_json: str, stimulus_json: str, start_json: str | None = None
+) -> dict:
+    """Apply a stimulus repeatedly and classify the resulting state sequence (`analysis.decode.orbit`, L36)"""
+    from .analysis import decode
+
+    design = _get(handle)
+    group = _parse(group_json, "group_json")
+    stimulus = _parse(stimulus_json, "stimulus_json")
+    start = _parse(start_json, "start_json")
+    bad = _resolvable(design.graph, group)
+    if bad:
+        raise ApiError("not_a_flop", f"not a single-D-pin flop: {', '.join(bad)}")
+    found = decode.orbit(design.graph, group, stimulus, start)
+    return serial.to_dict(
+        OrbitView(states=[list(s) for s in found.states], kind=found.kind)
+    )
+
+
+def _constraint_of(d: dict) -> "constraints_.Constraint":
+    from .analysis import constraints as constraints_
+
+    return constraints_.Constraint(d["name"], tuple(d["elements"]), d["lb"], d["ub"])
+
+
+def _system_of(d: dict) -> "constraints_.System":
+    from .analysis import constraints as constraints_
+
+    return constraints_.System(
+        variables=tuple(d["variables"]),
+        watched=tuple(d["watched"]),
+        constraints=tuple(_constraint_of(c) for c in d["constraints"]),
+    )
+
+
+def _system_view(system) -> dict:
+    return serial.to_dict(
+        SystemView(
+            variables=list(system.variables),
+            watched=list(system.watched),
+            constraints=[
+                ConstraintView(c.name, list(c.elements), c.lb, c.ub)
+                for c in system.constraints
+            ],
+            unconstrained=list(system.unconstrained_elements()),
+        )
+    )
+
+
+@_endpoint
+def constraints_build(hits_json: str, watched_json: str, targets_json: str) -> dict:
+    """Build a `System` directly from measured hits, one `exact` row per target (L38)
+
+    Mirrors `analysis.constraints.from_sensitivity`'s one line, but takes the
+    raw `{name: [cycles]}` map the browser already computed (the Sensitivity
+    panel runs on the TS gate-tape port of `sim.sensitivity` for interactive
+    speed, not on a live Python `SensitivityMap`) rather than requiring one.
+    """
+    from .analysis import constraints as constraints_
+
+    hits = _parse(hits_json, "hits_json")
+    watched = _parse(watched_json, "watched_json")
+    targets = _parse(targets_json, "targets_json")
+    rows = tuple(
+        constraints_.Constraint.exact(name, hits.get(name, []), k)
+        for name, k in targets.items()
+    )
+    variables = tuple(sorted({e for c in rows for e in c.elements}))
+    system = constraints_.System(
+        variables=variables, watched=tuple(watched), constraints=rows
+    )
+    return _system_view(system)
+
+
+@_endpoint
+def constraints_add(system_json: str, constraint_json: str) -> dict:
+    """`System.with_constraint`, from JSON in to JSON out (L38)"""
+    system = _system_of(_parse(system_json, "system_json"))
+    row = _constraint_of(_parse(constraint_json, "constraint_json"))
+    return _system_view(system.with_constraint(row))
+
+
+@_endpoint
+def constraints_solve(system_json: str, method: str = "dfs", limit: int = 50) -> dict:
+    """Solutions to a `System`, up to `limit` -- "a solution" or "how many exist" (L38)
+
+    `method="ilp"` needs `scipy` (the `solve` extra); missing it comes back as
+    a clean `ApiError`, not a crash, so the UI can fall back to `"dfs"`.
+    """
+    system = _system_of(_parse(system_json, "system_json"))
+    if method not in ("dfs", "ilp"):
+        raise ApiError("bad_json", f"method must be 'dfs' or 'ilp', not {method!r}")
+    try:
+        solutions = system.solve(method=method, limit=limit)
+    except ImportError as exc:
+        raise ApiError("missing_dependency", str(exc)) from None
+    return {
+        "solutions": [list(s) for s in solutions],
+        "capped": len(solutions) >= limit,
+    }
 
 
 #! the layout
