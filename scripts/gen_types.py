@@ -34,6 +34,7 @@ ROOTS = [
     api.GateView,
     api.ConeNode,
     api.TapeView,
+    api.RequirementsView,
 ]
 
 

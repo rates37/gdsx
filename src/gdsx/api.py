@@ -213,6 +213,48 @@ class ConeNode:
     truncated: bool = False
 
 
+@dataclass
+class LeafValue:
+    """One forced literal: `net` (as `Graph.label` names it) must be `value`."""
+
+    net: str
+    value: int
+
+
+@dataclass
+class ChoiceOption:
+    """One satisfying cube of an unresolved disjunction: all of `literals` at once."""
+
+    literals: list[LeafValue]
+
+
+@dataclass
+class ChoiceView:
+    """A gate whose inputs were not all forced: any one option suffices."""
+
+    net: str
+    value: int
+    options: list[ChoiceOption]
+
+
+@dataclass
+class RequirementsView:
+    """What `net == value` demands upstream -- the flattened AND/OR cone.
+
+    `leaves` are forced in every way of reaching `value`: this is the
+    polarity-annotated list a pure AND (or NAND-of-NANDs) tree reduces to.
+    `choices` are the OR branches that stopped that reduction; each is a
+    dead end for "forced", not for the walk, so they are kept, not dropped.
+    """
+
+    net: str
+    value: int
+    consistent: bool
+    leaves: list[LeafValue]
+    choices: list[ChoiceView]
+    conflicts: list[str]
+
+
 #! handles
 
 
@@ -570,6 +612,80 @@ def _fanout_cone(graph, node, through_flops: bool) -> ConeNode:
         out.children = [ConeNode(kid.net) for kid in source.children]
         stack.extend(zip(source.children, out.children))
     return root
+
+
+@_endpoint
+def requirements(handle: str, net: str, value: int = 1) -> dict:
+    """Flatten `net`'s fan-in into what must hold for it to equal `value`
+
+    This is `analysis.justify.requirements`: every gate's Liberty truth table,
+    enumerated and pushed backward. A pure AND (or NAND-of-NANDs) tree comes
+    back entirely as `leaves` -- the polarity-annotated list a player would
+    otherwise have to read off a tree dump by hand, one sign error away from
+    wrong. An OR anywhere in the tree leaves a `choices` entry instead of
+    forcing anything: collapsing that into a leaf would turn "might" into
+    "must", so it never does.
+    """
+    design = _get(handle)
+    graph = design.graph
+    if net not in design.netlist.nets:
+        raise ApiError("unknown_net", f"no such net: {net!r}")
+    if value not in (0, 1):
+        raise ApiError("bad_json", f"value must be 0 or 1, not {value!r}")
+
+    from .analysis import justify
+
+    try:
+        found = justify.requirements(graph, net, value)
+    except justify.Unenumerable as exc:
+        raise ApiError("unenumerable", str(exc)) from None
+
+    leaves = [
+        LeafValue(label, found.forced[net_])
+        for net_, label in sorted(found.labels.items(), key=lambda kv: kv[1])
+    ]
+    choices = [
+        ChoiceView(
+            c.net,
+            c.value,
+            [
+                ChoiceOption(
+                    [LeafValue(w, v) for w, v in sorted(cube)],
+                )
+                for cube in c.options
+            ],
+        )
+        for c in found.choices
+    ]
+    return serial.to_dict(
+        RequirementsView(
+            net=net,
+            value=value,
+            consistent=found.consistent,
+            leaves=leaves,
+            choices=choices,
+            conflicts=list(found.conflicts),
+        )
+    )
+
+
+@_endpoint
+def flop_d_net(handle: str, net: str) -> dict:
+    """Step through the flop driving `net`: the net on its D pin
+
+    `net` must be a flop's Q net -- the same net a `cone` walk's `flop_q`
+    leaf names. This is one clock cycle earlier, which is why the cone walk
+    never crosses a flop on its own; the UI takes this as an explicit step so
+    a player is never unsure which cycle they are looking at.
+    """
+    design = _get(handle)
+    graph = design.graph
+    if net not in design.netlist.nets:
+        raise ApiError("unknown_net", f"no such net: {net!r}")
+    ref = graph.driver_of(net)
+    if ref is None or ref.instance not in graph.seq:
+        raise ApiError("not_a_flop", f"{net!r} is not a flop's Q net")
+    return {"instance": ref.instance, "net": graph.d_pin(ref.instance)}
 
 
 #! the layout

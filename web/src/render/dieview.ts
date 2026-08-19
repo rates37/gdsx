@@ -1,6 +1,5 @@
-// Minimal WebGL2 die view: pan, zoom, layer toggles. No selection, no
-// highlighting, no panels -- this is the M0 spike half that proves the
-// render bundle can be drawn at interactive rates.
+// WebGL2 die view: pan, zoom, layer toggles, LOD switching, and net
+// highlighting -- the game-plan.md §4.1 2D Die View.
 //
 // Every layer is one instanced draw of a unit quad, with the per-instance
 // rectangle read straight out of the bundle's Int32Array as integer database
@@ -11,15 +10,24 @@
 // carries a prefix-offset array, so a frame draws only the tile rows the
 // viewport actually covers -- at most `rows` draw calls per layer instead of
 // one over the whole die.
+//
+// Net highlight: every routing rect carries its dense net id as a second
+// instanced attribute (`a_net`, derived once at load from the bundle's
+// `net_of_shape` index -- see `netIdsFor`). Selecting a net is then a single
+// uniform write; no buffer touched, no CPU walk, so it costs nothing per
+// frame. `pickNet` is the one place that *does* walk CPU-side data, and only
+// on a pointer move, to answer "what net is under the cursor".
 
 import type { RenderBundle } from "./bundle";
 
 const VERT = `#version 300 es
 in vec2 a_corner;          // unit quad, 0..1
 in ivec4 a_rect;           // x0,y0,x1,y1 in database units
+in int a_net;              // dense net id, or -1 (cells, unrouted shapes)
 uniform vec2 u_center;     // view centre, database units
 uniform vec2 u_scale;      // clip units per database unit
 uniform vec2 u_minSize;    // database units per pixel
+flat out int v_net;
 void main() {
   vec2 lo = vec2(a_rect.xy);
   vec2 hi = vec2(a_rect.zw);
@@ -30,13 +38,30 @@ void main() {
   hi = max(hi, lo + u_minSize);
   vec2 world = mix(lo, hi, a_corner);
   gl_Position = vec4((world - u_center) * u_scale, 0.0, 1.0);
+  v_net = a_net;
 }`;
 
 const FRAG = `#version 300 es
 precision highp float;
 uniform vec4 u_colour;
+uniform int u_selectedNet;   // -1 = no selection, draw normally
+flat in int v_net;
 out vec4 fragColour;
-void main() { fragColour = u_colour; }`;
+void main() {
+  vec4 c = u_colour;
+  if (u_selectedNet >= 0) {
+    if (v_net == u_selectedNet) {
+      // Glow: push toward a saturated highlight colour at full opacity,
+      // regardless of the layer's own colour, so the selected net reads the
+      // same on every metal layer.
+      c = vec4(1.0, 0.85, 0.15, 1.0);
+    } else {
+      c.rgb *= 0.35;
+      c.a *= 0.12;
+    }
+  }
+  fragColour = c;
+}`;
 
 /** sky130-ish layer colours, in the KLayout spirit: li1 up through met5. */
 const COLOURS: Record<string, [number, number, number, number]> = {
@@ -70,6 +95,17 @@ interface Batch {
   buffer: WebGLBuffer;
   strideBytes: number;
   offsetBytes: number;
+  /** CPU-side mirror of the rect buffer, for picking. Same layout as uploaded. */
+  cpuRects: Int32Array;
+  /** Dense net id per instance, same order as `cpuRects`. -1 = no net (cells). */
+  cpuNetIds: Int32Array;
+  /** Separate 1-int-per-instance buffer backing `a_net`; re-pointed alongside `a_rect` on a tiled draw. */
+  netBuffer: WebGLBuffer;
+}
+
+export interface NetHit {
+  id: number;
+  name: string;
 }
 
 export interface ViewState {
@@ -85,6 +121,7 @@ export class DieView {
   private readonly uScale: WebGLUniformLocation;
   private readonly uColour: WebGLUniformLocation;
   private readonly uMinSize: WebGLUniformLocation;
+  private readonly uSelectedNet: WebGLUniformLocation;
   /** batches[lod][layerName], plus a shared instance batch for LOD2. */
   private readonly batches: Map<string, Batch>[] = [];
   private instanceBatch!: Batch;
@@ -92,6 +129,13 @@ export class DieView {
   private readonly cols: number;
   private readonly rows: number;
   private readonly bbox: [number, number, number, number];
+  /** Layer names bottom (li1) to top (met5) -- draw order, and reverse pick order. */
+  private readonly layerOrder: string[];
+  private readonly netOfShape: Int32Array;
+  private readonly netNameById = new Map<number, string>();
+  private readonly netIdByName = new Map<string, number>();
+  /** -1 = nothing selected. */
+  private highlightedNet = -1;
 
   view: ViewState;
   /** 0, 1, 2, or "auto" -- pick by zoom. */
@@ -122,11 +166,19 @@ export class DieView {
     this.uScale = gl.getUniformLocation(this.program, "u_scale")!;
     this.uColour = gl.getUniformLocation(this.program, "u_colour")!;
     this.uMinSize = gl.getUniformLocation(this.program, "u_minSize")!;
+    this.uSelectedNet = gl.getUniformLocation(this.program, "u_selectedNet")!;
 
     const h = bundle.header;
     this.bbox = h.bbox;
     this.cols = h.tile_grid.cols;
     this.rows = h.tile_grid.rows;
+    this.layerOrder = h.layers;
+    this.netOfShape = bundle.view(h.net_of_shape);
+    for (const [id, name] of Object.entries(h.net_names)) {
+      const n = Number(id);
+      this.netNameById.set(n, name);
+      this.netIdByName.set(name, n);
+    }
 
     const quad = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -142,6 +194,9 @@ export class DieView {
       for (const name of h.layers) {
         const slice = layers[name];
         if (!slice || slice.rects.count === 0) continue;
+        const shapeIds = bundle.view(slice.shape_ids);
+        const netIds = new Int32Array(shapeIds.length);
+        for (let i = 0; i < shapeIds.length; i++) netIds[i] = this.netOfShape[shapeIds[i]];
         perLayer.set(
           name,
           this.makeBatch(
@@ -153,13 +208,15 @@ export class DieView {
             COLOURS[name] ?? [1, 1, 1, 0.5],
             bundle.view(slice.tiles),
             slice.rects.count,
+            netIds,
           ),
         );
       }
       this.batches.push(perLayer);
     }
 
-    // Instances are LOD-independent: [x0,y0,x1,y1,orient,cell_id] * n.
+    // Instances are LOD-independent: [x0,y0,x1,y1,orient,cell_id] * n. Cells
+    // are not routing shapes, so they carry no net id -- they only ever dim.
     this.instanceBatch = this.makeBatch(
       "instances",
       quad,
@@ -169,6 +226,7 @@ export class DieView {
       INSTANCE_COLOUR,
       null,
       h.instances.count,
+      new Int32Array(h.instances.count).fill(-1),
     );
 
     for (const name of h.layers) this.enabled.add(name);
@@ -193,6 +251,7 @@ export class DieView {
     colour: [number, number, number, number],
     tiles: Int32Array | null,
     count: number,
+    netIds: Int32Array,
   ): Batch {
     const gl = this.gl;
     const vao = gl.createVertexArray()!;
@@ -211,13 +270,38 @@ export class DieView {
     gl.vertexAttribIPointer(rect, 4, gl.INT, strideBytes, offsetBytes);
     gl.vertexAttribDivisor(rect, 1);
 
+    const netBuf = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, netBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, netIds, gl.STATIC_DRAW);
+    const net = gl.getAttribLocation(this.program, "a_net");
+    gl.enableVertexAttribArray(net);
+    gl.vertexAttribIPointer(net, 1, gl.INT, 4, 0);
+    gl.vertexAttribDivisor(net, 1);
+
     gl.bindVertexArray(null);
-    return { name, vao, colour, tiles, count, buffer: buf, strideBytes, offsetBytes };
+    return {
+      name,
+      vao,
+      colour,
+      tiles,
+      count,
+      buffer: buf,
+      strideBytes,
+      offsetBytes,
+      cpuRects: data,
+      cpuNetIds: netIds,
+      netBuffer: netBuf,
+    };
   }
 
   /** Attribute location of `a_rect`, needed to re-point a tiled draw. */
   private rectAttrib(): number {
     return this.gl.getAttribLocation(this.program, "a_rect");
+  }
+
+  /** Attribute location of `a_net`, re-pointed in lockstep with `a_rect`. */
+  private netAttrib(): number {
+    return this.gl.getAttribLocation(this.program, "a_net");
   }
 
   // ---- camera -------------------------------------------------------------
@@ -304,6 +388,88 @@ export class DieView {
     return this.enabled.has(name);
   }
 
+  // ---- net highlight --------------------------------------------------------
+
+  /** All net names, for a panel that lists them (e.g. the Nets panel). */
+  listNets(): { id: number; name: string }[] {
+    return [...this.netNameById.entries()].map(([id, name]) => ({ id, name }));
+  }
+
+  netIdOf(name: string): number | null {
+    return this.netIdByName.get(name) ?? null;
+  }
+
+  /** Glow this net's metal and dim everything else. Pass null to clear. */
+  setHighlightNet(id: number | null): void {
+    this.highlightedNet = id ?? -1;
+  }
+
+  get highlightedNetId(): number | null {
+    return this.highlightedNet < 0 ? null : this.highlightedNet;
+  }
+
+  /**
+   * Which net (if any) sits under this pointer position, in CSS pixels
+   * relative to the viewport (i.e. straight from a PointerEvent). Walks only
+   * the single tile the point falls in, topmost visible layer first -- cheap
+   * enough to call on every `pointermove`.
+   */
+  pickNet(clientX: number, clientY: number): NetHit | null {
+    const rect = this.canvas.getBoundingClientRect();
+    const px = clientX - rect.left - rect.width / 2;
+    const py = rect.height / 2 - (clientY - rect.top);
+    const k = this.view.unitsPerPixel;
+    const wx = this.view.centre[0] + px * k;
+    const wy = this.view.centre[1] + py * k;
+
+    const [bx0, by0, bx1, by1] = this.bbox;
+    const w = Math.max(bx1 - bx0, 1);
+    const h = Math.max(by1 - by0, 1);
+    const c = Math.floor(((wx - bx0) * this.cols) / w);
+    const r = Math.floor(((wy - by0) * this.rows) / h);
+    if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return null;
+
+    const eps = k; // ~1px, matches the vertex shader's minimum-visible-size widen
+    const lod = this.activeLod();
+    const layers = this.batches[lod];
+    for (let i = this.layerOrder.length - 1; i >= 0; i--) {
+      const name = this.layerOrder[i];
+      if (!this.enabled.has(name)) continue;
+      const batch = layers.get(name);
+      if (!batch?.tiles) continue;
+      const strideInts = batch.strideBytes / 4;
+      const start = batch.tiles[r * this.cols + c];
+      const end = batch.tiles[r * this.cols + c + 1];
+      for (let idx = end - 1; idx >= start; idx--) {
+        const o = idx * strideInts;
+        const x0 = batch.cpuRects[o];
+        const y0 = batch.cpuRects[o + 1];
+        const x1 = Math.max(batch.cpuRects[o + 2], x0 + eps);
+        const y1 = Math.max(batch.cpuRects[o + 3], y0 + eps);
+        if (wx < x0 - eps || wx > x1 + eps || wy < y0 - eps || wy > y1 + eps) continue;
+        const netId = batch.cpuNetIds[idx];
+        if (netId < 0) continue;
+        return { id: netId, name: this.netNameById.get(netId) ?? `n${netId}` };
+      }
+    }
+    return null;
+  }
+
+  // ---- minimap --------------------------------------------------------------
+
+  /** The whole die's bounding box, database units. */
+  dieBBox(): [number, number, number, number] {
+    return this.bbox;
+  }
+
+  /** Current viewport bounds in database units: [x0, y0, x1, y1]. */
+  visibleWorldRect(): [number, number, number, number] {
+    const halfW = (this.canvas.clientWidth / 2) * this.view.unitsPerPixel;
+    const halfH = (this.canvas.clientHeight / 2) * this.view.unitsPerPixel;
+    const [cx, cy] = this.view.centre;
+    return [cx - halfW, cy - halfH, cx + halfW, cy + halfH];
+  }
+
   // ---- drawing ------------------------------------------------------------
 
   /** Visible tile columns/rows, clamped to the grid. */
@@ -342,14 +508,17 @@ export class DieView {
     const { c0, c1, r0, r1 } = this.visibleTiles();
     if (c1 < c0 || r1 < r0) return;
     const loc = this.rectAttrib();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b.buffer);
+    const netLoc = this.netAttrib();
     for (let r = r0; r <= r1; r++) {
       const start = b.tiles[r * this.cols + c0];
       const end = b.tiles[r * this.cols + c1 + 1];
       const n = end - start;
       if (n <= 0) continue;
-      // WebGL2 has no baseInstance, so shift the attribute pointer at the
+      // WebGL2 has no baseInstance, so shift both attribute pointers at the
       // run's first instance rather than uploading a sub-range per frame.
+      // a_net must move in lockstep with a_rect -- they index the same
+      // instance -- or a tile draws the right rects with the wrong nets.
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.buffer);
       gl.vertexAttribIPointer(
         loc,
         4,
@@ -357,11 +526,16 @@ export class DieView {
         b.strideBytes,
         b.offsetBytes + start * b.strideBytes,
       );
+      gl.bindBuffer(gl.ARRAY_BUFFER, b.netBuffer);
+      gl.vertexAttribIPointer(netLoc, 1, gl.INT, 4, start * 4);
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, n);
       this.lastFrame.drawCalls++;
       this.lastFrame.instances += n;
     }
+    gl.bindBuffer(gl.ARRAY_BUFFER, b.buffer);
     gl.vertexAttribIPointer(loc, 4, gl.INT, b.strideBytes, b.offsetBytes);
+    gl.bindBuffer(gl.ARRAY_BUFFER, b.netBuffer);
+    gl.vertexAttribIPointer(netLoc, 1, gl.INT, 4, 0);
   }
 
   render(): void {
@@ -385,6 +559,7 @@ export class DieView {
       2 / (this.canvas.clientHeight * k),
     );
     gl.uniform2f(this.uMinSize, k, k);
+    gl.uniform1i(this.uSelectedNet, this.highlightedNet);
 
     this.lastFrame = { drawCalls: 0, instances: 0, lod: this.activeLod() };
 

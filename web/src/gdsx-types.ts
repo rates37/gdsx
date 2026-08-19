@@ -2,6 +2,16 @@
 // Run `uv run python scripts/gen_types.py` to regenerate.
 // Source: src/gdsx/api.py (contract: docs/game/game-plan.md §4b)
 
+export interface ChoiceOption {
+  literals: LeafValue[];
+}
+
+export interface ChoiceView {
+  net: string;
+  value: number;
+  options: ChoiceOption[];
+}
+
 export interface ConeNode {
   net: string;
   gate: GateView | null;
@@ -42,6 +52,11 @@ export interface InstanceView {
   bbox: number[] | null;
 }
 
+export interface LeafValue {
+  net: string;
+  value: number;
+}
+
 export interface NetView {
   name: string;
   driver: RefView | null;
@@ -55,6 +70,15 @@ export interface RefView {
   pin: string;
   cell: string;
   direction: string;
+}
+
+export interface RequirementsView {
+  net: string;
+  value: number;
+  consistent: boolean;
+  leaves: LeafValue[];
+  choices: ChoiceView[];
+  conflicts: string[];
 }
 
 export interface TapeView {

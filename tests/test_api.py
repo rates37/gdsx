@@ -252,6 +252,74 @@ def test_cone_rejects_an_unknown_net_and_a_bad_direction(handle):
     assert failure(api.cone(handle, net, direction="sideways"))["code"] == "bad_json"
 
 
+#! requirements: the cone walker's flatten button
+
+
+def test_requirements_flattens_a_pure_and_tree_into_forced_leaves(handle):
+    """An AND of two flop outputs: both leaves come back forced, no choices."""
+    inst = next(
+        v for v in unwrap(api.instances(handle)) if v["base_cell"] == "and2"
+    )
+    out_pin = next(iter(inst["functions"]))
+    net = inst["connections"][out_pin]
+    found = unwrap(api.requirements(handle, net, value=1))
+    assert found["net"] == net and found["value"] == 1
+    assert found["consistent"] is True
+    assert found["conflicts"] == []
+    assert not found["choices"], "a pure AND has nothing left unresolved"
+    assert {leaf["value"] for leaf in found["leaves"]} == {1}
+    assert len(found["leaves"]) >= 2
+
+
+def test_requirements_reports_an_or_as_a_choice_not_a_forced_leaf(handle):
+    inst = next(
+        (v for v in unwrap(api.instances(handle)) if v["base_cell"] == "or2"), None
+    )
+    if inst is None:
+        pytest.skip("sample.gds has no or2 to check")
+    out_pin = next(iter(inst["functions"]))
+    net = inst["connections"][out_pin]
+    found = unwrap(api.requirements(handle, net, value=1))
+    assert found["choices"], "an OR asked for 1 forces neither input"
+    forced_nets = {leaf["net"] for leaf in found["leaves"]}
+    for choice in found["choices"]:
+        for option in choice["options"]:
+            for literal in option["literals"]:
+                assert literal["net"] not in forced_nets, (
+                    "a literal that is part of a choice is not also forced"
+                )
+
+
+def test_requirements_rejects_an_unknown_net_and_a_bad_value(handle):
+    net = unwrap(api.nets(handle))[0]["name"]
+    assert failure(api.requirements(handle, "nope"))["code"] == "unknown_net"
+    assert failure(api.requirements(handle, net, value=2))["code"] == "bad_json"
+
+
+#! flop_d_net: the cone walker's step-through-flop button
+
+
+def test_flop_d_net_is_one_cycle_earlier_than_the_q_net(handle):
+    from gdsx.core.context import Design
+
+    design = Design.open(SAMPLE.read_bytes())
+    graph = design.graph
+    flop = sorted(graph.seq)[0]
+    q_net = graph.by_name[flop].connections["Q"]
+
+    found = unwrap(api.flop_d_net(handle, q_net))
+    assert found["instance"] == flop
+    assert found["net"] == graph.d_pin(flop)
+
+
+def test_flop_d_net_rejects_a_net_no_flop_drives(handle):
+    net = next(
+        v["name"] for v in unwrap(api.nets(handle)) if v["leaf"] != "flop_q"
+    )
+    assert failure(api.flop_d_net(handle, net))["code"] == "not_a_flop"
+    assert failure(api.flop_d_net(handle, "nope"))["code"] == "unknown_net"
+
+
 #! sub_netlist
 
 

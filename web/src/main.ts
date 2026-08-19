@@ -1,152 +1,69 @@
-// M0 spike entry point.
-//
-// The die view comes up from the precomputed render bundle without waiting
-// for Python. 
-// Pyodide boots afterwards in a worker, purely so the spike can time `api.analyse()`
-// against the same page.
-//
-// `globalThis.spike` exposes the measurements the M0 gate asks for so they can
-// be read from the console or driven by scripts/measure-m0.mjs.
+// Entry point: the panel workspace shell paints immediately; the die view
+// comes up as soon as `render.bin` arrives, without waiting for Python.
+// Pyodide boots afterwards in a worker, so the M0 timing spike (extract +
+// analyse against the same page) still runs -- `globalThis.spike` exposes
+// the measurements it reads, unchanged from the M0 shape so
+// `scripts/measure-m0.mjs` keeps working.
 
 import { wrap, type Remote } from "comlink";
 import type { GdsxWorker, Envelope } from "./worker";
 import { RenderBundle } from "./render/bundle";
-import { DieView } from "./render/dieview";
-
-const canvas = document.getElementById("die") as HTMLCanvasElement;
-const stats = document.getElementById("stats") as HTMLPreElement;
-const layerList = document.getElementById("layer-list") as HTMLDivElement;
-const lodSelect = document.getElementById("lod") as HTMLSelectElement;
-
-const COLOUR_CSS: Record<string, string> = {
-  instances: "#8c94a8",
-  li1: "#6bbf6b",
-  met1: "#598cf2",
-  met2: "#f2735a",
-  met3: "#f2cc4d",
-  met4: "#bf66e6",
-  met5: "#66e6e6",
-};
-
-interface FrameStats {
-  fps: number;
-  frameMs: number;
-  drawCalls: number;
-  instances: number;
-  lod: number;
-}
-
-/** Rolling frame timing over the last second of animation frames. */
-class FpsMeter {
-  private times: number[] = [];
-  tick(now: number): void {
-    this.times.push(now);
-    while (this.times.length > 2 && now - this.times[0] > 1000) this.times.shift();
-  }
-  get fps(): number {
-    if (this.times.length < 2) return 0;
-    const span = this.times[this.times.length - 1] - this.times[0];
-    return span > 0 ? ((this.times.length - 1) * 1000) / span : 0;
-  }
-  get frameMs(): number {
-    const f = this.fps;
-    return f > 0 ? 1000 / f : 0;
-  }
-  reset(): void {
-    this.times = [];
-  }
-}
+import { Workspace } from "./workspace/workspace";
+import { dieViewPanel, type DieViewApi, type FrameStats } from "./panels/die-panel";
+import { netlistBrowserPanel } from "./panels/netlist-panel";
+import { coneWalkerPanel } from "./panels/cone-walker-panel";
+import { createDesignClient, type DesignClient } from "./design/client";
 
 async function main(): Promise<void> {
   const t0 = performance.now();
+  let tBundle = t0;
 
-  const buf = await fetch("/samples/puzzle.render.bin").then((r) => r.arrayBuffer());
-  const bundle = RenderBundle.parse(buf);
-  const tBundle = performance.now();
+  const bundleReady: Promise<RenderBundle> = fetch("/samples/puzzle.render.bin")
+    .then((r) => r.arrayBuffer())
+    .then((buf) => {
+      tBundle = performance.now();
+      Object.assign(globalThis, { __bundleBytes: buf.byteLength });
+      return RenderBundle.parse(buf);
+    });
 
-  const view = new DieView(canvas, bundle);
-  const meter = new FpsMeter();
-
-  // Layer toggles, cells first then the routing stack bottom-up.
-  for (const name of ["instances", ...bundle.header.layers]) {
-    const label = document.createElement("label");
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.checked = view.isLayerOn(name);
-    box.addEventListener("change", () => view.setLayer(name, box.checked));
-    const swatch = document.createElement("span");
-    swatch.className = "swatch";
-    swatch.style.background = COLOUR_CSS[name] ?? "#fff";
-    const text = document.createElement("span");
-    const counts = bundle.header.lods["0"]?.[name]?.rects.count;
-    text.textContent =
-      name === "instances"
-        ? `cells (${bundle.header.instances.count})`
-        : `${name} (${counts ?? 0})`;
-    label.append(box, swatch, text);
-    layerList.append(label);
-  }
-
-  lodSelect.addEventListener("change", () => {
-    view.lodMode = lodSelect.value === "auto" ? "auto" : Number(lodSelect.value);
-    meter.reset();
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "f" || e.key === "F") view.fit();
-  });
-  window.addEventListener("resize", () => meter.reset());
-
-  let repeat = 1;
   let pyLine = "python: booting…";
-  let last: FrameStats = { fps: 0, frameMs: 0, drawCalls: 0, instances: 0, lod: 0 };
+  let dieApi: DieViewApi | null = null;
 
-  function frame(now: number): void {
-    // `repeat` > 1 draws the scene several times in one animation frame. rAF
-    // is vsync-capped, so a scene with 10x headroom and one with none both
-    // report 60/120 fps; multiplying the load until fps drops is the honest
-    // way to find out which one this is. `gl.finish()` is not -- ANGLE on
-    // Metal returns from it long before the GPU is done, and it reports an
-    // absurd 46,000 fps.
-    for (let i = 0; i < repeat; i++) view.render();
-    meter.tick(now);
-    last = {
-      fps: meter.fps,
-      frameMs: meter.frameMs,
-      drawCalls: view.lastFrame.drawCalls,
-      instances: view.lastFrame.instances,
-      lod: view.lastFrame.lod,
-    };
-    stats.textContent = [
-      `${bundle.header.top}  ${(buf.byteLength / 1e6).toFixed(2)} MB bundle`,
-      `render.bin fetched+parsed in ${(tBundle - t0).toFixed(0)} ms`,
-      `gl: ${rendererInfo}`,
-      "",
-      `lod ${last.lod}   ${last.drawCalls} draws   ${last.instances} rects`,
-      `${last.fps.toFixed(1)} fps   ${last.frameMs.toFixed(2)} ms/frame`,
-      "",
-      pyLine,
-    ].join("\n");
-    requestAnimationFrame(frame);
-  }
-  const rendererInfo = view.rendererInfo();
-  requestAnimationFrame(frame);
-
-  // ---- Python side, strictly after the die view is live --------------------
+  // ---- Python side. Analysis panels (netlist browser, cone walker) show
+  // their own "analysis engine starting" state until this resolves, per the
+  // fallback game-plan.md §9 explicitly allows -- they need a live design
+  // handle and there is no TS-side netlist model to fall back to. -------
 
   const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
   const api = wrap<GdsxWorker>(worker);
 
-  const timings: Record<string, number> = {
-    fetch_render_bin_ms: Math.round(tBundle - t0),
-  };
+  const timings: Record<string, number> = {};
 
   const pyReady = (async () => {
+    await bundleReady;
+    timings.fetch_render_bin_ms = Math.round(tBundle - t0);
     const tPy0 = performance.now();
     await api.ready();
     timings.pyodide_boot_ms = Math.round(performance.now() - tPy0);
     pyLine = `python: ready in ${timings.pyodide_boot_ms} ms`;
   })();
+
+  const designReady: Promise<DesignClient> = pyReady.then(() =>
+    createDesignClient(api, "/samples/puzzle.netlist.json"),
+  );
+
+  const workspaceEl = document.getElementById("workspace") as HTMLDivElement;
+  const workspace = new Workspace(workspaceEl, [
+    dieViewPanel({
+      bundleReady,
+      statusLine: () => pyLine,
+      onReady: (api) => {
+        dieApi = api;
+      },
+    }),
+    netlistBrowserPanel(designReady),
+    coneWalkerPanel(designReady),
+  ]);
 
   /** Time api.analyse() on the baked netlist -- what the game does at load. */
   async function analyseBaked(): Promise<Envelope> {
@@ -185,28 +102,31 @@ async function main(): Promise<void> {
     return result;
   }
 
+  const idleFrame: FrameStats = { fps: 0, frameMs: 0, drawCalls: 0, instances: 0, lod: 0 };
+
+  // The die panel's own `bundleReady.then(...)` was registered before this
+  // one (it runs synchronously inside `new Workspace(...)` above), so by the
+  // time this continuation runs `dieApi` is already populated -- `spike`
+  // therefore appears in `globalThis` with real data from the start, same
+  // as the M0 spike this replaces.
+  await bundleReady;
+
   Object.assign(globalThis, {
     api,
-    view,
+    workspace,
     spike: {
       timings,
-      bundleBytes: buf.byteLength,
-      rendererInfo,
-      frame: () => last,
-      fit: () => {
-        view.fit();
-        meter.reset();
+      get bundleBytes() {
+        return (globalThis as { __bundleBytes?: number }).__bundleBytes ?? 0;
       },
-      setLod: (l: number | "auto") => {
-        view.lodMode = l;
-        lodSelect.value = String(l);
-        meter.reset();
+      get rendererInfo() {
+        return dieApi?.rendererInfo ?? "";
       },
-      resetMeter: () => meter.reset(),
-      setRepeat: (n: number) => {
-        repeat = Math.max(1, n);
-        meter.reset();
-      },
+      frame: () => dieApi?.frame() ?? idleFrame,
+      fit: () => dieApi?.fit(),
+      setLod: (l: number | "auto") => dieApi?.setLod(l),
+      resetMeter: () => dieApi?.resetMeter(),
+      setRepeat: (n: number) => dieApi?.setRepeat(n),
       analyseBaked,
       analyseFromGds,
       ready: pyReady,
@@ -215,7 +135,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  stats.textContent = `ERROR: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`;
+  const workspaceEl = document.getElementById("workspace");
+  if (workspaceEl) {
+    workspaceEl.textContent = `ERROR: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`;
+  }
   console.error(err);
 });
 
