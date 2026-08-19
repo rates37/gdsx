@@ -22,7 +22,15 @@ export class SimStore {
   /** Every primary input except `clk` -- the tape ignores its value, so it is never a track. */
   readonly inputPorts: string[];
   cycles: number;
+  /** When true (the default), every edit reruns immediately. When false,
+   *  edits only mark the run `dirty` -- call `recompute()` (the Sequence
+   *  Editor's Run button) to apply them. */
+  autoRun = true;
+  /** Wall-clock cost of the last actual run, for the "why would I need a
+   *  Run button, this is instant" answer to be something you can see. */
+  lastRunMs = 0;
 
+  private dirty = false;
   private readonly tracks = new Map<string, Uint8Array>();
   private readonly resetVector: Readonly<Record<string, number>>;
   private valueHistory: Int32Array[] = [];
@@ -55,7 +63,7 @@ export class SimStore {
     this.run();
   }
 
-  /** Grow or shrink every track, preserving whatever fits, then rerun. */
+  /** Grow or shrink every track, preserving whatever fits, then rerun (subject to `autoRun`). */
   setCycles(cycles: number): void {
     for (const [name, bits] of this.tracks) {
       const grown = new Uint8Array(cycles);
@@ -63,7 +71,7 @@ export class SimStore {
       this.tracks.set(name, grown);
     }
     this.cycles = cycles;
-    this.run();
+    this.requestRun();
   }
 
   bitsOf(port: string): Uint8Array {
@@ -74,7 +82,7 @@ export class SimStore {
     const bits = this.tracks.get(port);
     if (!bits || cycle < 0 || cycle >= bits.length || bits[cycle] === value) return;
     bits[cycle] = value;
-    this.run();
+    this.requestRun();
   }
 
   setRange(port: string, from: number, to: number, value: 0 | 1): void {
@@ -89,7 +97,7 @@ export class SimStore {
         changed = true;
       }
     }
-    if (changed) this.run();
+    if (changed) this.requestRun();
   }
 
   /** Replace a whole track from a bit string ("0101...") or array of 0/1, for import. */
@@ -101,10 +109,36 @@ export class SimStore {
       const v = i < src.length ? Number(src[i]) : 0;
       arr[i] = v ? 1 : 0;
     }
+    this.requestRun();
+  }
+
+  /** Turn automatic rerunning on or off. Turning it back on while dirty
+   *  catches up immediately, so nothing is silently left stale. */
+  setAutoRun(auto: boolean): void {
+    this.autoRun = auto;
+    if (auto && this.dirty) this.run();
+    else this.notify();
+  }
+
+  /** True when a track has changed since the last actual run -- only
+   *  possible while `autoRun` is off. What the Run button answers. */
+  isDirty(): boolean {
+    return this.dirty;
+  }
+
+  /** Run now regardless of `autoRun` -- the Sequence Editor's Run button. */
+  recompute(): void {
     this.run();
   }
 
+  private requestRun(): void {
+    this.dirty = true;
+    if (this.autoRun) this.run();
+    else this.notify();
+  }
+
   private run(): void {
+    const t0 = performance.now();
     this.executor.reset();
     if (Object.keys(this.resetVector).length > 0) this.executor.step(this.resetVector);
 
@@ -118,6 +152,12 @@ export class SimStore {
       this.valueHistory[c] = this.executor.values.slice();
       this.stateHistory[c] = this.executor.state.slice();
     }
+    this.dirty = false;
+    this.lastRunMs = performance.now() - t0;
+    this.notify();
+  }
+
+  private notify(): void {
     for (const l of this.listeners) l();
   }
 

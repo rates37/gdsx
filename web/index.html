@@ -24,6 +24,79 @@
         inset: 0;
       }
 
+      /* ---- app toolbar: reset layout, reopen closed tabs --------------- */
+      .gdsx-toolbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 28px;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 8px;
+        background: #10131a;
+        border-bottom: 1px solid #262b36;
+        box-sizing: border-box;
+      }
+      .gdsx-toolbar-title {
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #7d8598;
+        font-size: 11px;
+      }
+      .gdsx-toolbar-spacer {
+        flex: 1;
+      }
+      .gdsx-toolbar button {
+        background: #1a1f2b;
+        color: #cfd4de;
+        border: 1px solid #2e3444;
+        border-radius: 3px;
+        padding: 3px 8px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .gdsx-toolbar button:hover:not(:disabled) {
+        border-color: #4a536b;
+      }
+      .gdsx-toolbar button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .gdsx-reopen-wrap {
+        position: relative;
+      }
+      .gdsx-reopen-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 4px;
+        min-width: 160px;
+        background: #10131a;
+        border: 1px solid #2e3444;
+        border-radius: 4px;
+        overflow: hidden;
+        z-index: 31;
+      }
+      .gdsx-reopen-item {
+        padding: 5px 10px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .gdsx-reopen-item:hover {
+        background: #1c2130;
+        color: #f2cc4d;
+      }
+      .gdsx-dock-mount {
+        position: absolute;
+        top: 28px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+
       /* ---- dockview panel chrome ------------------------------------- */
       .gdsx-panel {
         position: relative;
@@ -668,10 +741,57 @@
         flex: none;
         cursor: crosshair;
       }
+      .wave-row-radix {
+        flex: none;
+        background: #10131a;
+        color: #8ecdf7;
+        border: 1px solid #262b36;
+        border-radius: 3px;
+        font: inherit;
+        font-size: 10px;
+        padding: 0 2px;
+      }
+      .wave-zoom {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
+      }
+      .wave-zoom button {
+        width: 22px;
+        padding: 2px 0;
+        text-align: center;
+      }
 
       /* ---- sequence editor -------------------------------------------------- */
       .seq-cycles {
         width: 60px;
+      }
+      .seq-toolbar-sep {
+        width: 1px;
+        align-self: stretch;
+        background: #1c2130;
+      }
+      .seq-autorun {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #9aa2b5;
+        white-space: nowrap;
+      }
+      .seq-run-btn {
+        white-space: nowrap;
+      }
+      .seq-run-status {
+        color: #6d7486;
+        white-space: nowrap;
+        font-size: 11px;
+      }
+      .seq-run-status.dirty {
+        color: #f2cc4d;
+      }
+      .seq-result.stale {
+        color: #f2a65a !important;
       }
       .seq-result {
         margin-left: auto;

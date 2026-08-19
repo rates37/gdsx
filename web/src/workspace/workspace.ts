@@ -15,6 +15,7 @@ import {
   type SerializedDockview,
 } from "dockview-core";
 import "./dockview.css";
+import { attachToolbar } from "./toolbar.ts";
 
 const STORAGE_KEY = "gdsx.workspace.layout.v1";
 
@@ -55,7 +56,11 @@ export class Workspace {
   ) {
     for (const p of panels) this.defs.set(p.id, p);
 
-    this.api = createDockview(container, {
+    const dockMount = document.createElement("div");
+    dockMount.className = "gdsx-dock-mount";
+    container.append(dockMount);
+
+    this.api = createDockview(dockMount, {
       theme: themeAbyss,
       createComponent: (options: CreateComponentOptions): IContentRenderer => {
         const def = this.defs.get(options.name);
@@ -77,6 +82,35 @@ export class Workspace {
 
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
+
+    attachToolbar(container, this);
+  }
+
+  /** Every registered panel that is not currently open, title included --
+   *  what "reopen tab" offers. */
+  closedPanels(): { id: string; title: string }[] {
+    const open = new Set(this.api.panels.map((p) => p.id));
+    return [...this.defs.values()].filter((d) => !open.has(d.id)).map((d) => ({ id: d.id, title: d.title }));
+  }
+
+  /** Reopens a closed panel as a tab next to whichever panel is active, so
+   *  it comes back where you're looking rather than in a fresh sliver. */
+  reopen(id: string): void {
+    const def = this.defs.get(id);
+    if (!def || this.api.panels.some((p) => p.id === id)) return;
+    const active = this.api.activePanel;
+    this.api.addPanel({
+      id: def.id,
+      component: def.id,
+      title: def.title,
+      position: active ? { referencePanel: active.id, direction: "within" } : undefined,
+    });
+  }
+
+  /** Fires whenever the set of open panels (or their arrangement) changes -- what the toolbar redraws on. */
+  onChange(fn: () => void): () => void {
+    const disposable = this.api.onDidLayoutChange(fn);
+    return () => disposable.dispose();
   }
 
   /**

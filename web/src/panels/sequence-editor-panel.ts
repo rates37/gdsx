@@ -44,6 +44,12 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
           <span class="seq-cycles-label">cycles</span>
           <input class="seq-cycles" type="number" min="1" />
           <button class="seq-extend" type="button">+20</button>
+          <span class="seq-toolbar-sep"></span>
+          <label class="seq-autorun" title="rerun the simulation automatically on every edit">
+            <input type="checkbox" class="seq-autorun-cb" checked /> auto-run
+          </label>
+          <button class="seq-run-btn" type="button" title="recompute the trace now">▶ Run</button>
+          <span class="seq-run-status"></span>
           <span class="seq-result"></span>
         </div>
         <div class="seq-loading">waiting on the gate tape…</div>
@@ -53,6 +59,9 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
 
       const cyclesInput = container.querySelector(".seq-cycles") as HTMLInputElement;
       const extendBtn = container.querySelector(".seq-extend") as HTMLButtonElement;
+      const autorunCb = container.querySelector(".seq-autorun-cb") as HTMLInputElement;
+      const runBtn = container.querySelector(".seq-run-btn") as HTMLButtonElement;
+      const runStatusEl = container.querySelector(".seq-run-status") as HTMLSpanElement;
       const resultEl = container.querySelector(".seq-result") as HTMLSpanElement;
       const loadingEl = container.querySelector(".seq-loading") as HTMLDivElement;
       const bodyEl = container.querySelector(".seq-body") as HTMLDivElement;
@@ -158,11 +167,12 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
 
       function renderResult(): void {
         if (!store) return;
+        const stale = store.isDirty();
         const latch = store.firstLatchedHigh("success");
         const bus = findBus(store, "O", 8);
         if (latch === null) {
-          resultEl.textContent = "success: not latched";
-          resultEl.className = "seq-result";
+          resultEl.textContent = stale ? "(stale) success: not latched" : "success: not latched";
+          resultEl.className = stale ? "seq-result stale" : "seq-result";
           return;
         }
         let message = "";
@@ -173,8 +183,21 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
             message += String.fromCharCode(byte);
           }
         }
-        resultEl.textContent = `success latches at cycle ${latch}${message ? `  →  ${JSON.stringify(message)}` : ""}`;
-        resultEl.className = "seq-result latched";
+        resultEl.textContent =
+          `${stale ? "(stale) " : ""}success latches at cycle ${latch}` +
+          (message ? `  →  ${JSON.stringify(message)}` : "");
+        resultEl.className = stale ? "seq-result latched stale" : "seq-result latched";
+      }
+
+      function renderRunStatus(): void {
+        if (!store) return;
+        if (store.isDirty()) {
+          runStatusEl.textContent = "● changes pending";
+          runStatusEl.className = "seq-run-status dirty";
+        } else {
+          runStatusEl.textContent = `✓ ran ${store.cycles} cycles in ${store.lastRunMs.toFixed(1)} ms`;
+          runStatusEl.className = "seq-run-status";
+        }
       }
 
       cyclesInput.addEventListener("change", () => {
@@ -184,20 +207,25 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
       extendBtn.addEventListener("click", () => {
         if (store) store.setCycles(store.cycles + 20);
       });
+      autorunCb.addEventListener("change", () => store?.setAutoRun(autorunCb.checked));
+      runBtn.addEventListener("click", () => store?.recompute());
 
       storeReady
         .then((s) => {
           if (disposed) return;
           store = s;
           cyclesInput.value = String(s.cycles);
+          autorunCb.checked = s.autoRun;
           loadingEl.hidden = true;
           bodyEl.hidden = false;
           renderTracks();
           renderResult();
+          renderRunStatus();
           unsubStore = s.subscribe(() => {
             cyclesInput.value = String(s.cycles);
             renderCells();
             renderResult();
+            renderRunStatus();
           });
           unsubCursor = cursorBus.subscribe(() => renderCells());
         })
