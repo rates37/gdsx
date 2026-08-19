@@ -12,7 +12,22 @@ import { Workspace } from "./workspace/workspace";
 import { dieViewPanel, type DieViewApi, type FrameStats } from "./panels/die-panel";
 import { netlistBrowserPanel } from "./panels/netlist-panel";
 import { coneWalkerPanel } from "./panels/cone-walker-panel";
+import { waveformPanel } from "./panels/waveform-panel";
+import { sequenceEditorPanel } from "./panels/sequence-editor-panel";
 import { createDesignClient, type DesignClient } from "./design/client";
+import { parseTapeBundle, type GateTape } from "./sim/tape";
+import { SimStore } from "./sim/store";
+
+// Two Stars' own driver protocol (puzzle-solved-no-sat.md §9): `clk` is
+// never read by the executor so it is not a track at all; `enable` is held
+// high throughout including the one-cycle reset pulse; `rst_n` deasserts
+// (asserted low, so 0) for that same one cycle and is high for the rest.
+// This is glue for *this* puzzle -- SimStore itself knows nothing about
+// which port is a clock or a reset, only "primary inputs" and "an optional
+// step before cycle 0".
+const PUZZLE_RESET_VECTOR = { clk: 0, rst_n: 0, enable: 1, I: 0 };
+const PUZZLE_DEFAULT_LEVELS: Record<string, 0 | 1> = { enable: 1, rst_n: 1 };
+const PUZZLE_CYCLES = 140;
 
 async function main(): Promise<void> {
   const t0 = performance.now();
@@ -25,6 +40,21 @@ async function main(): Promise<void> {
       Object.assign(globalThis, { __bundleBytes: buf.byteLength });
       return RenderBundle.parse(buf);
     });
+
+  // The gate tape, same loading tier as the render bundle -- neither waits
+  // on Pyodide (game-plan.md §9: "300 ms fetch tape.bin + netlist.json ->
+  // sim, waveform, netlist browser live").
+  const tapeReady: Promise<GateTape> = fetch("/samples/puzzle.tape.bin")
+    .then((r) => r.arrayBuffer())
+    .then(parseTapeBundle);
+
+  const storeReady: Promise<SimStore> = tapeReady.then(
+    (tape) =>
+      new SimStore(tape, PUZZLE_CYCLES, {
+        resetVector: PUZZLE_RESET_VECTOR,
+        initialLevels: PUZZLE_DEFAULT_LEVELS,
+      }),
+  );
 
   let pyLine = "python: booting…";
   let dieApi: DieViewApi | null = null;
@@ -53,17 +83,26 @@ async function main(): Promise<void> {
   );
 
   const workspaceEl = document.getElementById("workspace") as HTMLDivElement;
-  const workspace = new Workspace(workspaceEl, [
-    dieViewPanel({
-      bundleReady,
-      statusLine: () => pyLine,
-      onReady: (api) => {
-        dieApi = api;
-      },
-    }),
-    netlistBrowserPanel(designReady),
-    coneWalkerPanel(designReady),
-  ]);
+  const workspace = new Workspace(
+    workspaceEl,
+    [
+      dieViewPanel({
+        bundleReady,
+        statusLine: () => pyLine,
+        onReady: (api) => {
+          dieApi = api;
+        },
+      }),
+      netlistBrowserPanel(designReady),
+      coneWalkerPanel(designReady),
+      waveformPanel(storeReady),
+      sequenceEditorPanel(storeReady),
+    ],
+    [
+      ["die-view", "netlist", "cone-walker"],
+      ["waveform", "sequence-editor"],
+    ],
+  );
 
   /** Time api.analyse() on the baked netlist -- what the game does at load. */
   async function analyseBaked(): Promise<Envelope> {
@@ -114,6 +153,7 @@ async function main(): Promise<void> {
   Object.assign(globalThis, {
     api,
     workspace,
+    storeReady,
     spike: {
       timings,
       get bundleBytes() {

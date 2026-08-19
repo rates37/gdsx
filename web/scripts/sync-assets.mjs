@@ -63,10 +63,17 @@ for (const wheel of wheels) {
   copy(path.join(distDir, wheel), path.join(wheelOut, wheel));
 }
 
-// 3. Puzzle assets -> public/samples/: the baked netlist, the baked
-// render bundle the die view draws (L12, `uv run python scripts/bake_render.py`),
-// and the GDS itself so re-extraction in the browser can be timed.
-for (const name of ["puzzle.netlist.json", "puzzle.render.bin", "puzzle.gds"]) {
+// 3. Puzzle assets -> public/samples/: the baked netlist, the baked render
+// bundle the die view draws (`uv run python scripts/bake_render.py`), the
+// baked gate tape the waveform and sequence editor run (`uv run python
+// scripts/bake_tape.py`), and the GDS itself so re-extraction in the
+// browser can be timed.
+for (const name of [
+  "puzzle.netlist.json",
+  "puzzle.render.bin",
+  "puzzle.tape.bin",
+  "puzzle.gds",
+]) {
   const src = path.join(repoDir, "samples", name);
   if (existsSync(src)) {
     copy(src, path.join(publicDir, "samples", name));

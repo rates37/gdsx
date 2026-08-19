@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "sync-assets": "node scripts/sync-assets.mjs",
     "measure": "node scripts/measure-m0.mjs",
-    "extract-dockview-css": "node scripts/extract-dockview-css.mjs"
+    "extract-dockview-css": "node scripts/extract-dockview-css.mjs",
+    "test:sim": "node --experimental-strip-types scripts/test-sim-golden.mjs"
   },
   "dependencies": {
     "comlink": "^4.4.2",
