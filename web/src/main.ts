@@ -15,6 +15,8 @@ import { coneWalkerPanel } from "./panels/cone-walker-panel";
 import { waveformPanel } from "./panels/waveform-panel";
 import { sequenceEditorPanel } from "./panels/sequence-editor-panel";
 import { notebookPanel } from "./panels/notebook-panel";
+import { experimentPanel } from "./panels/experiment-panel";
+import { modelPanel } from "./panels/model-panel";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
@@ -33,6 +35,9 @@ const PUZZLE_CYCLES = 140;
 //: game-plan.md §5, and the net every genre of this puzzle is ultimately about.
 const PUZZLE_SUCCESS_NET = "success";
 const PUZZLE_ID = "two-stars";
+//: One URL, because the sweep worker fetches its own copy of the tape (a cache
+//: hit) rather than having one posted to it per sweep.
+const PUZZLE_TAPE_URL = "/samples/puzzle.tape.bin";
 
 async function main(): Promise<void> {
   const t0 = performance.now();
@@ -49,7 +54,7 @@ async function main(): Promise<void> {
   // The gate tape, same loading tier as the render bundle -- neither waits
   // on Pyodide (game-plan.md §9: "300 ms fetch tape.bin + netlist.json ->
   // sim, waveform, netlist browser live").
-  const tapeReady: Promise<GateTape> = fetch("/samples/puzzle.tape.bin")
+  const tapeReady: Promise<GateTape> = fetch(PUZZLE_TAPE_URL)
     .then((r) => r.arrayBuffer())
     .then(parseTapeBundle);
 
@@ -109,10 +114,15 @@ async function main(): Promise<void> {
         successNet: PUZZLE_SUCCESS_NET,
         onCoverage: (text) => workspace.setStatus(text),
       }),
+      // Both of M3's measurement panels run on the gate tape, so they are live
+      // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
+      // cracks a puzzle open is available before the analysis engine boots.
+      experimentPanel({ storeReady, puzzleId: PUZZLE_ID, tapeUrl: PUZZLE_TAPE_URL }),
+      modelPanel({ storeReady, puzzleId: PUZZLE_ID }),
     ],
     [
       ["die-view", "netlist", "cone-walker", "notebook"],
-      ["waveform", "sequence-editor"],
+      ["waveform", "sequence-editor", "experiments", "model-builder"],
     ],
   );
 

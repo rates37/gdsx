@@ -14,7 +14,9 @@
     "extract-dockview-css": "node scripts/extract-dockview-css.mjs",
     "test:sim": "node --experimental-strip-types scripts/test-sim-golden.mjs",
     "test:notebook": "node --experimental-strip-types scripts/test-notebook-verify.mjs",
-    "test": "npm run test:sim && npm run test:notebook"
+    "test:experiments": "node --experimental-strip-types scripts/test-experiments.mjs",
+    "test:model": "node --experimental-strip-types scripts/test-model-diff.mjs",
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model"
   },
   "dependencies": {
     "comlink": "^4.4.2",

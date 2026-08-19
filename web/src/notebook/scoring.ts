@@ -30,6 +30,15 @@ export const POINTS = {
   likely: 3,
   /** Nothing was learned. */
   unknown: 0,
+  /** §8's ordering, and the design's whole opinion: explaining the design
+   *  outscores unlocking it. A model that agrees with the gate tape over every
+   *  generated vector is the most valuable thing a player produces, and solving
+   *  is required but cheap. Awarded by the Model Builder, not by a claim --
+   *  see web/src/model/store.ts for what "validated" is allowed to mean. */
+  modelValidated: 40,
+  /** Required, and low. You can brute-force your way to the flag; you cannot
+   *  brute-force a good score. */
+  solved: 10,
 } as const;
 
 export function pointsFor(record: ClaimRecord): number {

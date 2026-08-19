@@ -1050,6 +1050,243 @@
       .nb-cost-idle {
         color: #6d7486;
       }
+      .nb-section {
+        padding: 8px 6px 4px;
+        color: #6d7486;
+        border-top: 1px solid #1c2130;
+      }
+      .nb-evidence {
+        padding: 0 4px 8px;
+      }
+      /* Evidence is a measurement, not an assertion: no verdict tone, and a
+         left edge that reads as "recorded" rather than "settled". */
+      .nb-evidence-row {
+        border-left: 2px solid #3a4256;
+      }
+      .nb-warning {
+        color: #f2cc4d;
+        border-left-color: #97741f;
+      }
+
+      /* ---- experiment runner ----------------------------------------------- */
+      .xp-panel,
+      .mb-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        box-sizing: border-box;
+      }
+      .xp-toolbar,
+      .mb-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 6px 8px;
+        border-bottom: 1px solid #1c2130;
+      }
+      .xp-params {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 6px 8px 0;
+      }
+      .xp-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #9aa2b5;
+      }
+      .xp-num {
+        width: 64px;
+        background: #10131a;
+        border: 1px solid #262b36;
+        border-radius: 3px;
+        color: #cfd4de;
+        padding: 3px 4px;
+      }
+      .xp-watch-list {
+        flex: 1;
+        min-width: 200px;
+      }
+      .xp-blurb {
+        padding: 4px 8px 6px;
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .xp-loading,
+      .mb-loading {
+        padding: 16px;
+        color: #6d7486;
+      }
+      .xp-body {
+        flex: 1;
+        overflow: auto;
+        padding: 0 8px 8px;
+      }
+      .xp-status,
+      .mb-status {
+        color: #9aa2b5;
+        font-size: 11px;
+      }
+      .xp-status.bad,
+      .mb-status.bad {
+        color: #f08a90;
+      }
+      /* The two self-checks from the sensitivity map. Amber, above the matrix,
+         and never collapsed into a console log: a matrix with either problem
+         looks exactly as convincing as one without. */
+      .xp-warning {
+        margin: 6px 0;
+        padding: 4px 8px;
+        border-left: 2px solid #97741f;
+        background: #1c1710;
+        color: #f2cc4d;
+        font-size: 11px;
+      }
+      .xp-baseline-note {
+        margin: 6px 0;
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .xp-readout {
+        padding: 4px 0;
+        color: #cfd4de;
+        font-size: 11px;
+      }
+      .xp-canvas-wrap {
+        overflow: auto;
+        max-height: 45%;
+        border: 1px solid #1c2130;
+        background: #0d0f14;
+      }
+      .xp-canvas {
+        display: block;
+        cursor: crosshair;
+      }
+      .xp-summary {
+        margin-top: 8px;
+      }
+      .xp-summary-note {
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .xp-table-row {
+        display: flex;
+        gap: 8px;
+        padding: 1px 0;
+        font-size: 11px;
+      }
+      .xp-table-row .net-chip {
+        flex: none;
+        width: 120px;
+      }
+      .xp-hits {
+        color: #9aa2b5;
+        word-break: break-word;
+      }
+      .xp-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .xp-evidence-note {
+        color: #6d7486;
+        font-size: 11px;
+      }
+
+      /* ---- model builder ----------------------------------------------------- */
+      .mb-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+        padding: 8px;
+        gap: 8px;
+      }
+      .mb-source {
+        min-height: 180px;
+        flex: 1 1 auto;
+        resize: vertical;
+        background: #0d0f14;
+        color: #cfd4de;
+        border: 1px solid #262b36;
+        border-radius: 3px;
+        padding: 8px;
+        font: inherit;
+        tab-size: 2;
+      }
+      .mb-badge-line {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .mb-points {
+        color: #7d8598;
+        font-size: 11px;
+      }
+      .mb-badge-detail {
+        margin-top: 3px;
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .mb-summary {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+      }
+      .mb-agreement {
+        color: #cfd4de;
+      }
+      .mb-watch,
+      .mb-pulses {
+        color: #6d7486;
+        font-size: 11px;
+      }
+      /* The panel's whole point: not "wrong", but wrong HERE, on this vector,
+         about this signal, one click from the waveform. */
+      .mb-divergence {
+        margin-top: 6px;
+        padding: 8px;
+        border: 1px solid #8c3238;
+        border-radius: 3px;
+        background: #180f11;
+        color: #f0b6ba;
+        font-size: 11px;
+      }
+      .mb-divergence-head {
+        color: #f08a90;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .mb-agreed {
+        margin-top: 6px;
+        color: #f2cc4d;
+        font-size: 11px;
+      }
+      /* "Nothing was tested" has to read as a warning, not as a pass. */
+      .mb-vacuous {
+        margin-top: 6px;
+        padding: 4px 8px;
+        border-left: 2px solid #97741f;
+        background: #1c1710;
+        color: #f2cc4d;
+        font-size: 11px;
+      }
+      .mb-mismatches {
+        margin-top: 6px;
+        color: #9aa2b5;
+        font-size: 11px;
+      }
+      .mb-error {
+        padding: 8px;
+        border-left: 2px solid #8c3238;
+        color: #f08a90;
+        white-space: pre-wrap;
+        font-size: 11px;
+      }
     </style>
   </head>
   <body>

@@ -38,6 +38,7 @@ import {
   verdictStyle,
 } from "../notebook/model";
 import { Notebook } from "../notebook/store";
+import { evidenceLog, type EvidenceRecord } from "../notebook/evidence";
 import { VerifyEngine, estimate } from "../notebook/engine";
 import { asPercent, coverage, pointsFor } from "../notebook/scoring";
 
@@ -149,16 +150,23 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
         </div>
         <div class="nb-form" hidden></div>
         <div class="nb-loading">waiting on the analysis engine…</div>
-        <div class="nb-list" hidden></div>`;
+        <div class="nb-list" hidden></div>
+        <div class="nb-evidence"></div>`;
 
       const coverageEl = container.querySelector(".nb-coverage") as HTMLSpanElement;
       const newBtn = container.querySelector(".nb-new") as HTMLButtonElement;
       const formEl = container.querySelector(".nb-form") as HTMLDivElement;
       const loadingEl = container.querySelector(".nb-loading") as HTMLDivElement;
       const listEl = container.querySelector(".nb-list") as HTMLDivElement;
+      const evidenceEl = container.querySelector(".nb-evidence") as HTMLDivElement;
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
 
       const notebook = new Notebook(options.puzzleId);
+      // The same log the Experiment Runner writes to: two panels looking at one
+      // notebook, not two notebooks. Evidence sits below the claims and scores
+      // nothing -- a measurement is not an assertion, and the points are in
+      // what you conclude from it.
+      const evidence = evidenceLog(options.puzzleId);
       let lastCall: string | null = null;
       let engine: VerifyEngine | null = null;
       let vocabulary: ClaimVocabulary | null = null;
@@ -294,6 +302,50 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
         }
         row.append(actions);
         return row;
+      }
+
+      function renderEvidence(record: EvidenceRecord): HTMLElement {
+        const row = el("div", "nb-row nb-evidence-row");
+        const head = el("div", "nb-row-head");
+        head.append(
+          el("div", "nb-claim-text", record.recipe),
+          el("span", "nb-verdict nb-tone-grey", "evidence"),
+        );
+        row.append(head);
+        row.append(el("div", "nb-row-meta", `${when(record.at)} · ${record.summary}`));
+        // The conditions, never dropped: a sweep's numbers are about the
+        // baseline it was measured against.
+        row.append(el("div", "nb-note", `measured against ${record.baseline}`));
+        for (const warning of record.warnings) {
+          row.append(el("div", "nb-note nb-warning", `⚠ ${warning}`));
+        }
+        const detail = el("details", "nb-history");
+        detail.append(el("summary", undefined, `${record.lines.length} lines`));
+        for (const line of record.lines) detail.append(el("div", "nb-history-row", line));
+        row.append(detail);
+
+        const actions = el("div", "nb-actions");
+        const show = el("button", "nb-verify", "show the call") as HTMLButtonElement;
+        show.addEventListener("click", () => {
+          lastCall = record.call;
+          callSlot.querySelector("button")?.click();
+        });
+        const removeBtn = el("button", "nb-remove", "remove") as HTMLButtonElement;
+        removeBtn.addEventListener("click", () => evidence.remove(record.id));
+        actions.append(show, removeBtn);
+        row.append(actions);
+        return row;
+      }
+
+      function refreshEvidence(): void {
+        if (disposed) return;
+        evidenceEl.replaceChildren();
+        const records = evidence.all();
+        if (records.length === 0) return;
+        evidenceEl.append(
+          el("div", "nb-section", `evidence · ${records.length} experiment(s), unscored`),
+        );
+        for (const record of [...records].reverse()) evidenceEl.append(renderEvidence(record));
       }
 
       function refresh(): void {
@@ -433,7 +485,9 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
       });
 
       const unsub = notebook.subscribe(refresh);
+      const unsubEvidence = evidence.subscribe(refreshEvidence);
       refresh();
+      refreshEvidence();
 
       void (async () => {
         try {
@@ -492,6 +546,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
         dispose() {
           disposed = true;
           unsub();
+          unsubEvidence();
           engine?.dispose();
         },
       };
