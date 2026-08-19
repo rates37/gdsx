@@ -202,6 +202,68 @@
         color: #6d7486;
       }
 
+      /* ---- die view 3D panel (§4.2) ------------------------------------- */
+      .die3d-wrap {
+        position: absolute;
+        inset: 0;
+      }
+      .die3d-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        cursor: grab;
+      }
+      .die3d-canvas:active {
+        cursor: grabbing;
+      }
+      .die3d-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 20px;
+        text-align: center;
+        color: #6d7486;
+      }
+      .die3d-layers {
+        top: 10px;
+        left: 10px;
+        min-width: 150px;
+      }
+      .die3d-layers label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 1px 0;
+        cursor: pointer;
+      }
+      .die3d-layers input[type="range"] {
+        width: 100%;
+      }
+      .die3d-section-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        cursor: pointer;
+      }
+      .die3d-trace,
+      .die3d-fit {
+        width: 100%;
+        margin-top: 6px;
+      }
+      .die3d-stats {
+        top: 10px;
+        right: 10px;
+        white-space: pre;
+        line-height: 1.5;
+        margin: 0;
+      }
+
       /* ---- shared bits: toolbar controls, net chips, { } button -------- */
       input[type="text"],
       select,
@@ -1066,6 +1128,38 @@
       .nb-warning {
         color: #f2cc4d;
         border-left-color: #97741f;
+      }
+      /* The write-up (game-plan.md §8): editable, so a textarea, not a
+         preview -- the player owns this copy the moment it is generated. */
+      .nb-writeup {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        border-top: 1px solid #1c2130;
+      }
+      .nb-writeup-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-bottom: 1px solid #1c2130;
+      }
+      .nb-writeup-hint {
+        flex: 1;
+        color: #6d7486;
+        font-size: 11px;
+      }
+      .nb-writeup-text {
+        flex: 1;
+        min-height: 0;
+        resize: none;
+        border: none;
+        background: #10131a;
+        color: #d7dbe6;
+        font: 12px/1.5 ui-monospace, "SF Mono", monospace;
+        padding: 10px;
+        box-sizing: border-box;
       }
 
       /* ---- experiment runner ----------------------------------------------- */

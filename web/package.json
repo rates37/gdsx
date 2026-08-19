@@ -16,12 +16,15 @@
     "test:notebook": "node --experimental-strip-types scripts/test-notebook-verify.mjs",
     "test:experiments": "node --experimental-strip-types scripts/test-experiments.mjs",
     "test:model": "node --experimental-strip-types scripts/test-model-diff.mjs",
-    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model"
+    "test:writeup": "node --experimental-strip-types scripts/test-writeup.mjs",
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup"
   },
   "dependencies": {
+    "@types/three": "^0.185.4",
     "comlink": "^4.4.2",
     "dockview-core": "^8.1.0",
-    "pyodide": "^0.27.2"
+    "pyodide": "^0.27.2",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

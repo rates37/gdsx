@@ -41,6 +41,8 @@ import { Notebook } from "../notebook/store";
 import { evidenceLog, type EvidenceRecord } from "../notebook/evidence";
 import { VerifyEngine, estimate } from "../notebook/engine";
 import { asPercent, coverage, pointsFor } from "../notebook/scoring";
+import { generateWriteup } from "../notebook/writeup";
+import { ModelStore } from "../model/store";
 
 const KIND_LABELS: Record<ClaimKind, string> = {
   structural: "Structural — a net's driver",
@@ -131,6 +133,8 @@ export interface NotebookPanelOptions {
   puzzleId: string;
   /** The net whose fan-in cone coverage is measured against, per §5. */
   successNet: string;
+  /** The sequence-editor port the write-up prints as the final key (§8). */
+  keyPort: string;
   /** Called whenever coverage changes, so the toolbar can show it. */
   onCoverage?: (text: string) => void;
 }
@@ -146,16 +150,30 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
           <span class="nb-coverage">coverage —</span>
           <span class="nb-spacer"></span>
           <button class="nb-new" type="button" disabled>+ new claim</button>
+          <button class="nb-export" type="button">export write-up</button>
           <span class="py-call-slot"></span>
         </div>
         <div class="nb-form" hidden></div>
+        <div class="nb-writeup" hidden>
+          <div class="nb-writeup-toolbar">
+            <span class="nb-writeup-hint">generated from the notebook, evidence, model and current key -- edit freely, this is your copy</span>
+            <button class="nb-writeup-download" type="button">download .md</button>
+            <button class="nb-writeup-close" type="button">close</button>
+          </div>
+          <textarea class="nb-writeup-text" spellcheck="false"></textarea>
+        </div>
         <div class="nb-loading">waiting on the analysis engine…</div>
         <div class="nb-list" hidden></div>
         <div class="nb-evidence"></div>`;
 
       const coverageEl = container.querySelector(".nb-coverage") as HTMLSpanElement;
       const newBtn = container.querySelector(".nb-new") as HTMLButtonElement;
+      const exportBtn = container.querySelector(".nb-export") as HTMLButtonElement;
       const formEl = container.querySelector(".nb-form") as HTMLDivElement;
+      const writeupEl = container.querySelector(".nb-writeup") as HTMLDivElement;
+      const writeupText = container.querySelector(".nb-writeup-text") as HTMLTextAreaElement;
+      const writeupDownload = container.querySelector(".nb-writeup-download") as HTMLButtonElement;
+      const writeupClose = container.querySelector(".nb-writeup-close") as HTMLButtonElement;
       const loadingEl = container.querySelector(".nb-loading") as HTMLDivElement;
       const listEl = container.querySelector(".nb-list") as HTMLDivElement;
       const evidenceEl = container.querySelector(".nb-evidence") as HTMLDivElement;
@@ -482,6 +500,44 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
       newBtn.addEventListener("click", () => {
         if (formEl.hidden) buildForm();
         else formEl.hidden = true;
+      });
+
+      // ---- the write-up (game-plan.md §8) -------------------------------
+      //
+      // Generated fresh from the current state of every store each time the
+      // button is pressed -- nothing about it is persisted separately, because
+      // the notebook, evidence log and model store already are the
+      // persistence layer. `generateWriteup` is pure; this closure only wires
+      // it to the DOM (editable textarea, one-click download).
+
+      exportBtn.addEventListener("click", () => {
+        if (!store) return;
+        // A fresh instance reads whatever is currently saved under this
+        // puzzle's key -- the same localStorage record the Model Builder
+        // panel writes, not a second copy of it.
+        const modelStore = new ModelStore(options.puzzleId, "");
+        const markdown = generateWriteup(notebook, evidence, modelStore, store, {
+          successNet: options.successNet,
+          keyPort: options.keyPort,
+          puzzleId: options.puzzleId,
+        });
+        writeupText.value = markdown;
+        writeupEl.hidden = false;
+        formEl.hidden = true;
+      });
+
+      writeupClose.addEventListener("click", () => {
+        writeupEl.hidden = true;
+      });
+
+      writeupDownload.addEventListener("click", () => {
+        const blob = new Blob([writeupText.value], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${options.puzzleId}-writeup.md`;
+        a.click();
+        URL.revokeObjectURL(url);
       });
 
       const unsub = notebook.subscribe(refresh);

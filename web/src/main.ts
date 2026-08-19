@@ -10,6 +10,7 @@ import type { GdsxWorker, Envelope } from "./worker";
 import { RenderBundle } from "./render/bundle";
 import { Workspace } from "./workspace/workspace";
 import { dieViewPanel, type DieViewApi, type FrameStats } from "./panels/die-panel";
+import { die3dViewPanel } from "./panels/die-3d-panel";
 import { netlistBrowserPanel } from "./panels/netlist-panel";
 import { coneWalkerPanel } from "./panels/cone-walker-panel";
 import { waveformPanel } from "./panels/waveform-panel";
@@ -41,6 +42,9 @@ const PUZZLE_CYCLES = 140;
 //: What the notebook's coverage measures the explained fraction of, per
 //: game-plan.md §5, and the net every genre of this puzzle is ultimately about.
 const PUZZLE_SUCCESS_NET = "success";
+//: The sequence-editor port the write-up (game-plan.md §8) prints as the
+//: final key -- this puzzle's one real primary input besides the clock/reset.
+const PUZZLE_KEY_PORT = "I";
 const PUZZLE_ID = "two-stars";
 //: One URL, because the sweep worker fetches its own copy of the tape (a cache
 //: hit) rather than having one posted to it per sweep.
@@ -110,6 +114,7 @@ async function main(): Promise<void> {
           dieApi = api;
         },
       }),
+      die3dViewPanel({ bundleReady }),
       netlistBrowserPanel(designReady),
       coneWalkerPanel(designReady),
       waveformPanel(storeReady),
@@ -119,6 +124,7 @@ async function main(): Promise<void> {
         storeReady,
         puzzleId: PUZZLE_ID,
         successNet: PUZZLE_SUCCESS_NET,
+        keyPort: PUZZLE_KEY_PORT,
         onCoverage: (text) => workspace.setStatus(text),
       }),
       // Both of M3's measurement panels run on the gate tape, so they are live
@@ -135,7 +141,7 @@ async function main(): Promise<void> {
       replPanel({ api, designReady, puzzleId: PUZZLE_ID }),
     ],
     [
-      ["die-view", "netlist", "cone-walker", "notebook"],
+      ["die-view", "die-view-3d", "netlist", "cone-walker", "notebook"],
       ["waveform", "sequence-editor", "experiments", "model-builder"],
       ["register-inspector", "requirements", "sensitivity", "register-decoder"],
       ["sticky-flops", "constraints", "repl"],

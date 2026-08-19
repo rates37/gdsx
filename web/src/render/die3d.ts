@@ -1,0 +1,516 @@
+// three.js Die View 3D: the same render bundle as `dieview.ts`, extruded
+// through the real sky130 z-stack (`header.stack`) -- the game-plan.md §4.2
+// sibling of the 2D die view.
+//
+// One `THREE.InstancedMesh` per routing layer, LOD1 only (the perf budget's
+// hard cap -- §9 "3D view: 30 fps min, LOD1 cap, instanced boxes"). Each
+// layer's rects are flattened out of their tile buckets into one flat
+// instance buffer; three.js instancing does not need the 2D view's
+// per-tile-draw-call trick, since a whole layer is one `drawArraysInstanced`
+// either way.
+//
+// Net highlighting reuses the same net-id-per-shape scheme `dieview.ts`
+// builds (`header.net_of_shape` cross-referenced with each layer's LOD1
+// `shape_ids`): a dense net id is computed once per instance at load and
+// kept alongside the mesh, the same data `netIdsFor`/`cpuNetIds` compute
+// there. Net tracing walks that same per-layer array rather than
+// re-deriving `header.net_shapes.offsets/ids` at trace time -- it is the
+// same cross-reference, already materialised, so there is no reason to
+// redo it per trace.
+//
+// Explode and cross-section are both "free": explode only ever moves a
+// layer's `InstancedMesh.position.z` (one float, not a buffer), and the
+// section plane is one shared `THREE.Plane` whose `constant` is rewritten on
+// slider input. Only layer visibility and net-highlight colour touch the
+// instance buffers themselves, and only on change -- never per frame.
+
+import * as THREE from "three";
+import type { RenderBundle } from "./bundle";
+
+/** sky130-ish layer colours -- kept in step with `dieview.ts`'s `COLOURS`
+ * (duplicated rather than imported: the 2D view's table is an internal
+ * shader constant, not a shared export, and the two views are allowed to
+ * drift slightly, e.g. per-layer opacity reads differently as a WebGL
+ * blend vs. a three.js material). */
+const LAYER_COLOUR: Record<string, { hex: number; opacity: number }> = {
+  li1: { hex: 0x6bbf6b, opacity: 0.85 },
+  met1: { hex: 0x598cf2, opacity: 0.8 },
+  met2: { hex: 0xf2735a, opacity: 0.78 },
+  met3: { hex: 0xf2cc4d, opacity: 0.75 },
+  met4: { hex: 0xbf66e6, opacity: 0.72 },
+  met5: { hex: 0x66e6e6, opacity: 0.7 },
+};
+const HIGHLIGHT_COLOUR = 0xffd926; // matches dieview.ts's (1, 0.85, 0.15)
+const DIM_FACTOR = 0.35; // matches dieview.ts's non-selected rgb *= 0.35
+const PULSE_COLOUR = 0xffffff;
+
+/** Rects below this, in microns, would render as a sliver or vanish. */
+const MIN_SIZE_UM = 0.03;
+/** How far apart the exploded view pulls adjacent stack layers, at factor 1. */
+const EXPLODE_SEPARATION_UM = 3.0;
+/** How long the trace sweep dwells on each layer. */
+const TRACE_STEP_MS = 450;
+
+interface LayerMesh {
+  name: string;
+  mesh: THREE.InstancedMesh;
+  material: THREE.MeshBasicMaterial;
+  /** Dense net id per instance, same order as the instance buffer. -1 = none. */
+  netIds: Int32Array;
+  baseColour: THREE.Color;
+  dimColour: THREE.Color;
+  /** This layer's position among `header.layers`, bottom (li1) to top -- the
+   *  explode multiplier and the trace sweep's visit order both key off it. */
+  index: number;
+}
+
+export interface NetHit3D {
+  id: number;
+  name: string;
+}
+
+function webgl2Available(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return !!canvas.getContext("webgl2");
+  } catch {
+    return false;
+  }
+}
+
+export class Die3D {
+  private readonly renderer: THREE.WebGLRenderer;
+  private readonly scene = new THREE.Scene();
+  private readonly camera: THREE.PerspectiveCamera;
+  private readonly layers = new Map<string, LayerMesh>();
+  private geometry: THREE.BoxGeometry | null = null;
+  private readonly layerOrder: string[];
+  private readonly enabled = new Set<string>();
+  private readonly netNameById = new Map<number, string>();
+  private readonly netIdByName = new Map<string, number>();
+  private readonly plane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+  private readonly dieWidthUm: number;
+  private readonly dieHeightUm: number;
+  private readonly stackHeightUm: number;
+  private readonly raycaster = new THREE.Raycaster();
+
+  private highlightedNet = -1;
+  private explodeFactor = 0;
+  private sectionEnabled = false;
+  private sectionT = 0.5;
+  private traceState: { netId: number; order: string[]; startTime: number } | null = null;
+  private traceActiveLayer: string | null = null;
+  private traceLabel: string | null = null;
+
+  // Orbit camera: spherical around a fixed target at the stack's midpoint.
+  private azimuth = Math.PI / 4;
+  private elevation = 0.6;
+  private radius: number;
+  private readonly target: THREE.Vector3;
+
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    bundle: RenderBundle,
+  ) {
+    if (!webgl2Available()) throw new Error("WebGL2 is not available in this browser");
+
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    this.renderer.localClippingEnabled = true;
+    this.renderer.setClearColor(0x0d0f14, 1);
+
+    const h = bundle.header;
+    this.layerOrder = h.layers;
+    for (const [id, name] of Object.entries(h.net_names)) {
+      const n = Number(id);
+      this.netNameById.set(n, name);
+      this.netIdByName.set(name, n);
+    }
+
+    const [bx0, by0, bx1, by1] = h.bbox;
+    this.dieWidthUm = (bx1 - bx0) * h.dbu;
+    this.dieHeightUm = (by1 - by0) * h.dbu;
+    const dieCx = ((bx0 + bx1) / 2) * h.dbu;
+    const dieCy = ((by0 + by1) / 2) * h.dbu;
+
+    const stackByName = new Map(h.stack.map((s) => [s.name, s]));
+    const stackTop = h.stack.reduce((m, s) => Math.max(m, s.z + s.thickness), 0);
+    this.stackHeightUm = stackTop;
+
+    const netOfShape = bundle.view(h.net_of_shape);
+    const lod1 = h.lods["1"] ?? {};
+
+    // One box geometry, shared by every layer's InstancedMesh -- only the
+    // per-instance matrix (position/scale) and colour differ.
+    const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+    // `vertexColors: true` (below) makes every layer's shader multiply by a
+    // per-vertex `color` attribute before applying the per-instance colour --
+    // that is how three.js's USE_COLOR chunk is written, regardless of
+    // whether the multiply is wanted. `BoxGeometry` has no such attribute, so
+    // without this the shader reads an unset attribute location (0,0,0) and
+    // every instance renders black no matter what colour it was given. A flat
+    // white per-vertex colour makes that multiply a no-op and leaves the
+    // per-instance colour as the only thing that actually paints the box.
+    boxGeometry.setAttribute(
+      "color",
+      new THREE.BufferAttribute(new Float32Array(boxGeometry.attributes.position.count * 3).fill(1), 3),
+    );
+    this.geometry = boxGeometry;
+
+    for (let index = 0; index < this.layerOrder.length; index++) {
+      const name = this.layerOrder[index];
+      const slice = lod1[name];
+      const stackEntry = stackByName.get(name);
+      if (!slice || slice.rects.count === 0 || !stackEntry) continue;
+
+      const rects = bundle.view(slice.rects);
+      const shapeIds = bundle.view(slice.shape_ids);
+      const count = slice.rects.count;
+      const netIds = new Int32Array(count);
+
+      const colourDef = LAYER_COLOUR[name] ?? { hex: 0xffffff, opacity: 0.6 };
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        vertexColors: true,
+        transparent: true,
+        opacity: colourDef.opacity,
+        side: THREE.FrontSide,
+      });
+      const mesh = new THREE.InstancedMesh(boxGeometry, material, count);
+
+      const m = new THREE.Matrix4();
+      const pos = new THREE.Vector3();
+      const scale = new THREE.Vector3();
+      const quat = new THREE.Quaternion();
+      const cz = stackEntry.z + stackEntry.thickness / 2;
+      const thickness = Math.max(stackEntry.thickness, MIN_SIZE_UM);
+
+      for (let i = 0; i < count; i++) {
+        const o = i * 4;
+        const x0 = rects[o] * h.dbu;
+        const y0 = rects[o + 1] * h.dbu;
+        const x1 = rects[o + 2] * h.dbu;
+        const y1 = rects[o + 3] * h.dbu;
+        const w = Math.max(x1 - x0, MIN_SIZE_UM);
+        const d = Math.max(y1 - y0, MIN_SIZE_UM);
+        pos.set((x0 + x1) / 2 - dieCx, (y0 + y1) / 2 - dieCy, cz);
+        scale.set(w, d, thickness);
+        m.compose(pos, quat, scale);
+        mesh.setMatrixAt(i, m);
+
+        const netId = netOfShape[shapeIds[i]] ?? -1;
+        netIds[i] = netId;
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+
+      const baseColour = new THREE.Color(colourDef.hex);
+      const dimColour = baseColour.clone().multiplyScalar(DIM_FACTOR);
+      for (let i = 0; i < count; i++) mesh.setColorAt(i, baseColour);
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+      this.scene.add(mesh);
+      const lm: LayerMesh = { name, mesh, material, netIds, baseColour, dimColour, index };
+      this.layers.set(name, lm);
+      this.enabled.add(name);
+    }
+
+    this.target = new THREE.Vector3(0, 0, this.stackHeightUm / 2);
+    this.radius = Math.max(this.dieWidthUm, this.dieHeightUm, this.stackHeightUm) * 1.6 || 10;
+    this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, this.radius * 20);
+    this.camera.up.set(0, 0, 1);
+    this.updateCamera();
+
+    this.attachInput();
+  }
+
+  // ---- camera ---------------------------------------------------------
+
+  private updateCamera(): void {
+    const x = this.target.x + this.radius * Math.cos(this.elevation) * Math.cos(this.azimuth);
+    const y = this.target.y + this.radius * Math.cos(this.elevation) * Math.sin(this.azimuth);
+    const z = this.target.z + this.radius * Math.sin(this.elevation);
+    this.camera.position.set(x, y, z);
+    this.camera.lookAt(this.target);
+  }
+
+  /** Reset to the default 3/4 view of the whole stack. */
+  fit(): void {
+    this.azimuth = Math.PI / 4;
+    this.elevation = 0.6;
+    this.radius = Math.max(this.dieWidthUm, this.dieHeightUm, this.stackHeightUm) * 1.6 || 10;
+    this.updateCamera();
+  }
+
+  private attachInput(): void {
+    const c = this.canvas;
+    let dragging = false;
+    let dragged = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    c.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      dragged = false;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      c.setPointerCapture(e.pointerId);
+    });
+    c.addEventListener("pointerup", (e) => {
+      dragging = false;
+      c.releasePointerCapture(e.pointerId);
+      if (!dragged) this.handleClick(e.clientX, e.clientY);
+    });
+    c.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragged = true;
+      this.azimuth -= dx * 0.006;
+      this.elevation = Math.min(1.5, Math.max(0.05, this.elevation + dy * 0.006));
+      lastX = e.clientX;
+      lastY = e.clientY;
+      this.updateCamera();
+    });
+    c.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        this.radius = Math.min(
+          Math.max(this.radius * Math.exp(e.deltaY * 0.001), 0.5),
+          (this.stackHeightUm + this.dieWidthUm + this.dieHeightUm) * 20 + 100,
+        );
+        this.updateCamera();
+      },
+      { passive: false },
+    );
+  }
+
+  /** Click-to-select: raycast the visible layer meshes, resolve the hit
+   *  instance's net id, and publish it the same way a 2D hover does. */
+  private handleClick(clientX: number, clientY: number): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const targets = [...this.layers.values()]
+      .filter((lm) => this.enabled.has(lm.name))
+      .map((lm) => lm.mesh);
+    const hits = this.raycaster.intersectObjects(targets, false);
+    if (hits.length === 0) {
+      this.onNetPick?.(null);
+      return;
+    }
+    const hit = hits[0];
+    const lm = [...this.layers.values()].find((l) => l.mesh === hit.object);
+    const instanceId = hit.instanceId;
+    if (!lm || instanceId === undefined) return;
+    const netId = lm.netIds[instanceId];
+    if (netId < 0) {
+      this.onNetPick?.(null);
+      return;
+    }
+    this.onNetPick?.({ id: netId, name: this.netNameById.get(netId) ?? `n${netId}` });
+  }
+
+  /** Set by the panel to hear clicks; kept as a plain field rather than an
+   *  event emitter since there is exactly one subscriber. */
+  onNetPick: ((hit: NetHit3D | null) => void) | null = null;
+
+  // ---- layers -----------------------------------------------------------
+
+  setLayer(name: string, on: boolean): void {
+    if (on) this.enabled.add(name);
+    else this.enabled.delete(name);
+    const lm = this.layers.get(name);
+    if (lm) lm.mesh.visible = this.enabled.has(name);
+  }
+
+  isLayerOn(name: string): boolean {
+    return this.enabled.has(name);
+  }
+
+  layerNames(): string[] {
+    return [...this.layers.keys()];
+  }
+
+  instanceCount(): number {
+    let n = 0;
+    for (const lm of this.layers.values()) n += lm.mesh.count;
+    return n;
+  }
+
+  // ---- net highlight ------------------------------------------------------
+
+  netIdOf(name: string): number | null {
+    return this.netIdByName.get(name) ?? null;
+  }
+
+  setHighlightNet(id: number | null): void {
+    this.highlightedNet = id ?? -1;
+    this.traceState = null;
+    this.traceActiveLayer = null;
+    this.traceLabel = null;
+    this.refreshHighlightColours();
+  }
+
+  get highlightedNetId(): number | null {
+    return this.highlightedNet < 0 ? null : this.highlightedNet;
+  }
+
+  private refreshHighlightColours(): void {
+    for (const lm of this.layers.values()) {
+      const mesh = lm.mesh;
+      if (this.highlightedNet < 0) {
+        for (let i = 0; i < lm.netIds.length; i++) mesh.setColorAt(i, lm.baseColour);
+      } else {
+        const warm = new THREE.Color(HIGHLIGHT_COLOUR);
+        for (let i = 0; i < lm.netIds.length; i++) {
+          mesh.setColorAt(i, lm.netIds[i] === this.highlightedNet ? warm : lm.dimColour);
+        }
+      }
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+  }
+
+  // ---- exploded view ------------------------------------------------------
+
+  /** 0 = real stack, 1 = fully pulled apart. Only ever moves each layer's
+   *  `position.z` -- no instance buffer touched. */
+  setExplode(factor: number): void {
+    this.explodeFactor = Math.min(1, Math.max(0, factor));
+    for (const lm of this.layers.values()) {
+      lm.mesh.position.z = this.explodeFactor * lm.index * EXPLODE_SEPARATION_UM;
+    }
+  }
+
+  get explode(): number {
+    return this.explodeFactor;
+  }
+
+  // ---- cross-section plane ------------------------------------------------
+
+  setSectionEnabled(on: boolean): void {
+    this.sectionEnabled = on;
+    this.applyClipping();
+  }
+
+  get sectionOn(): boolean {
+    return this.sectionEnabled;
+  }
+
+  /** 0..1 across the die's width; the plane keeps the low-x side visible and
+   *  clips the rest, so dragging it sweeps a cross-section through the stack. */
+  setSectionPosition(t: number): void {
+    this.sectionT = Math.min(1, Math.max(0, t));
+    this.applyClipping();
+  }
+
+  get sectionPosition(): number {
+    return this.sectionT;
+  }
+
+  private applyClipping(): void {
+    const planes = this.sectionEnabled ? [this.plane] : [];
+    if (this.sectionEnabled) {
+      const halfW = this.dieWidthUm / 2;
+      const x = -halfW + this.sectionT * this.dieWidthUm;
+      // Plane keeps points where dot(normal, p) + constant >= 0. normal =
+      // (-1,0,0), so points with p.x <= x survive and the rest is clipped.
+      this.plane.constant = x;
+    }
+    for (const lm of this.layers.values()) lm.material.clippingPlanes = planes;
+  }
+
+  // ---- net tracing (delight, not core mechanics) ---------------------------
+
+  /** Sequential highlight sweep from the lowest layer this net touches to
+   *  the highest, ~450ms per layer. Not a camera flythrough -- a simpler,
+   *  cheaper sweep that still reads as "the signal climbing the stack". */
+  traceNet(netId: number): void {
+    this.setHighlightNet(netId);
+    const order = this.layerOrder.filter((name) => {
+      const lm = this.layers.get(name);
+      return lm ? lm.netIds.includes(netId) : false;
+    });
+    if (order.length === 0) return;
+    this.traceState = { netId, order, startTime: performance.now() };
+    this.traceActiveLayer = null;
+  }
+
+  get tracing(): boolean {
+    return this.traceState !== null;
+  }
+
+  /** Human-readable sweep status for the panel's stats readout. */
+  traceStatus(): string | null {
+    return this.traceLabel;
+  }
+
+  private updateTrace(now: number): void {
+    if (!this.traceState) return;
+    const { netId, order, startTime } = this.traceState;
+    const idx = Math.floor((now - startTime) / TRACE_STEP_MS);
+    if (idx >= order.length) {
+      this.traceState = null;
+      this.traceActiveLayer = null;
+      this.traceLabel = null;
+      this.refreshHighlightColours();
+      return;
+    }
+    const activeLayer = order[idx];
+    if (activeLayer === this.traceActiveLayer) return;
+    this.traceActiveLayer = activeLayer;
+    this.traceLabel = `tracing net ${this.netNameById.get(netId) ?? netId}: ${activeLayer} (${idx + 1}/${order.length})`;
+    this.refreshHighlightColours();
+    const lm = this.layers.get(activeLayer);
+    if (!lm) return;
+    const pulse = new THREE.Color(PULSE_COLOUR);
+    for (let i = 0; i < lm.netIds.length; i++) {
+      if (lm.netIds[i] === netId) lm.mesh.setColorAt(i, pulse);
+    }
+    if (lm.mesh.instanceColor) lm.mesh.instanceColor.needsUpdate = true;
+  }
+
+  // ---- drawing -------------------------------------------------------------
+
+  render(): void {
+    const now = performance.now();
+    this.updateTrace(now);
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(this.canvas.clientWidth));
+    const h = Math.max(1, Math.round(this.canvas.clientHeight));
+    const targetW = Math.round(w * dpr);
+    const targetH = Math.round(h * dpr);
+    if (this.canvas.width !== targetW || this.canvas.height !== targetH) {
+      this.renderer.setPixelRatio(dpr);
+      this.renderer.setSize(w, h, false);
+    }
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  rendererInfo(): string {
+    const gl = this.renderer.getContext();
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    if (!ext) return gl.getParameter(gl.RENDERER) as string;
+    return `${gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)} / ${gl.getParameter(
+      ext.UNMASKED_RENDERER_WEBGL,
+    )}`;
+  }
+
+  dispose(): void {
+    for (const lm of this.layers.values()) {
+      lm.material.dispose();
+      this.scene.remove(lm.mesh);
+    }
+    this.layers.clear();
+    this.geometry?.dispose();
+    this.geometry = null;
+    this.renderer.dispose();
+  }
+}
+
+export { webgl2Available };
