@@ -133,8 +133,9 @@ export interface NotebookPanelOptions {
   puzzleId: string;
   /** The net whose fan-in cone coverage is measured against, per §5. */
   successNet: string;
-  /** The sequence-editor port the write-up prints as the final key (§8). */
-  keyPort: string;
+  /** The sequence-editor port the write-up prints as the final key (§8).
+   *  Null for a puzzle with no data input, where there is no key to print. */
+  keyPort: string | null;
   /** Called whenever coverage changes, so the toolbar can show it. */
   onCoverage?: (text: string) => void;
 }

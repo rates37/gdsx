@@ -28,33 +28,47 @@ import { replPanel } from "./panels/repl-panel";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
+import {
+  choosePuzzle,
+  lastPlayedId,
+  loadCatalog,
+  openPuzzle,
+  rememberPuzzle,
+  requestedId,
+} from "./puzzles/catalog";
 
-// Two Stars' own driver protocol (puzzle-solved-no-sat.md §9): `clk` is
-// never read by the executor so it is not a track at all; `enable` is held
-// high throughout including the one-cycle reset pulse; `rst_n` deasserts
-// (asserted low, so 0) for that same one cycle and is high for the rest.
-// This is glue for *this* puzzle -- SimStore itself knows nothing about
-// which port is a clock or a reset, only "primary inputs" and "an optional
-// step before cycle 0".
-const PUZZLE_RESET_VECTOR = { clk: 0, rst_n: 0, enable: 1, I: 0 };
-const PUZZLE_DEFAULT_LEVELS: Record<string, 0 | 1> = { enable: 1, rst_n: 1 };
-const PUZZLE_CYCLES = 140;
-//: What the notebook's coverage measures the explained fraction of, per
-//: game-plan.md §5, and the net every genre of this puzzle is ultimately about.
-const PUZZLE_SUCCESS_NET = "success";
-//: The sequence-editor port the write-up (game-plan.md §8) prints as the
-//: final key -- this puzzle's one real primary input besides the clock/reset.
-const PUZZLE_KEY_PORT = "I";
-const PUZZLE_ID = "two-stars";
-//: One URL, because the sweep worker fetches its own copy of the tape (a cache
-//: hit) rather than having one posted to it per sweep.
-const PUZZLE_TAPE_URL = "/samples/puzzle.tape.bin";
-
+// Which puzzle is loaded, and its driver protocol, come from the catalog
+// (`/puzzles/index.json`, written by scripts/sync-assets.mjs from each baked
+// puzzle). What used to be a block of Two Stars constants here is now that
+// puzzle's entry in the catalog, derived from its solution.json -- so a new
+// level is a bake plus a sync, with nothing to edit in this file.
+//
+// SimStore still knows nothing about which port is a clock or a reset, only
+// "primary inputs" and "an optional step before cycle 0"; the descriptor is
+// what supplies the puzzle-specific half.
 async function main(): Promise<void> {
   const t0 = performance.now();
   let tBundle = t0;
 
-  const bundleReady: Promise<RenderBundle> = fetch("/samples/puzzle.render.bin")
+  const catalog = await loadCatalog();
+  const puzzle = choosePuzzle(catalog, {
+    requested: requestedId(),
+    lastPlayed: lastPlayedId(),
+  });
+  rememberPuzzle(puzzle.id);
+  document.title = `DIESHARK — ${puzzle.title}`;
+
+  const driver = puzzle.driver;
+  //: One URL, because the sweep worker fetches its own copy of the tape (a
+  //: cache hit) rather than having one posted to it per sweep.
+  const tapeUrl = puzzle.assets.tape;
+  //: What the notebook's coverage measures the explained fraction of, per
+  //: game-plan.md §5. A puzzle with no lock at all (`parameter`) would need
+  //: the panels that read this gated by `tools_enabled` before it could be
+  //: offered; no baked puzzle has that shape yet.
+  const successNet = driver.successNet ?? "success";
+
+  const bundleReady: Promise<RenderBundle> = fetch(puzzle.assets.render)
     .then((r) => r.arrayBuffer())
     .then((buf) => {
       tBundle = performance.now();
@@ -65,15 +79,15 @@ async function main(): Promise<void> {
   // The gate tape, same loading tier as the render bundle -- neither waits
   // on Pyodide (game-plan.md §9: "300 ms fetch tape.bin + netlist.json ->
   // sim, waveform, netlist browser live").
-  const tapeReady: Promise<GateTape> = fetch(PUZZLE_TAPE_URL)
+  const tapeReady: Promise<GateTape> = fetch(tapeUrl)
     .then((r) => r.arrayBuffer())
     .then(parseTapeBundle);
 
   const storeReady: Promise<SimStore> = tapeReady.then(
     (tape) =>
-      new SimStore(tape, PUZZLE_CYCLES, {
-        resetVector: PUZZLE_RESET_VECTOR,
-        initialLevels: PUZZLE_DEFAULT_LEVELS,
+      new SimStore(tape, driver.cycles, {
+        resetVector: driver.resetVector,
+        initialLevels: driver.initialLevels,
       }),
   );
 
@@ -100,7 +114,7 @@ async function main(): Promise<void> {
   })();
 
   const designReady: Promise<DesignClient> = pyReady.then(() =>
-    createDesignClient(api, "/samples/puzzle.netlist.json"),
+    createDesignClient(api, puzzle.assets.netlist),
   );
 
   const workspaceEl = document.getElementById("workspace") as HTMLDivElement;
@@ -122,23 +136,23 @@ async function main(): Promise<void> {
       notebookPanel({
         designReady,
         storeReady,
-        puzzleId: PUZZLE_ID,
-        successNet: PUZZLE_SUCCESS_NET,
-        keyPort: PUZZLE_KEY_PORT,
+        puzzleId: puzzle.id,
+        successNet,
+        keyPort: driver.keyPort,
         onCoverage: (text) => workspace.setStatus(text),
       }),
       // Both of M3's measurement panels run on the gate tape, so they are live
       // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
       // cracks a puzzle open is available before the analysis engine boots.
-      experimentPanel({ storeReady, puzzleId: PUZZLE_ID, tapeUrl: PUZZLE_TAPE_URL }),
-      modelPanel({ storeReady, puzzleId: PUZZLE_ID }),
+      experimentPanel({ storeReady, puzzleId: puzzle.id, tapeUrl }),
+      modelPanel({ storeReady, puzzleId: puzzle.id }),
       registerInspectorPanel({ designReady }),
-      requirementsPanel({ designReady, storeReady, puzzleId: PUZZLE_ID }),
-      sensitivityPanel({ storeReady, tapeUrl: PUZZLE_TAPE_URL }),
-      registerDecoderPanel({ designReady, puzzleId: PUZZLE_ID }),
-      stickyFlopsPanel({ designReady, puzzleId: PUZZLE_ID, successNet: PUZZLE_SUCCESS_NET }),
+      requirementsPanel({ designReady, storeReady, puzzleId: puzzle.id }),
+      sensitivityPanel({ storeReady, tapeUrl }),
+      registerDecoderPanel({ designReady, puzzleId: puzzle.id }),
+      stickyFlopsPanel({ designReady, puzzleId: puzzle.id, successNet }),
       constraintsPanel({ designReady }),
-      replPanel({ api, designReady, puzzleId: PUZZLE_ID }),
+      replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
     [
       ["die-view", "die-view-3d", "netlist", "cone-walker", "notebook"],
@@ -146,12 +160,23 @@ async function main(): Promise<void> {
       ["register-inspector", "requirements", "sensitivity", "register-decoder"],
       ["sticky-flops", "constraints", "repl"],
     ],
+    {
+      puzzles: catalog.map((p) => ({
+        id: p.id,
+        title: p.title,
+        blurb: p.blurb,
+        parMinutes: p.parMinutes,
+      })),
+      currentId: puzzle.id,
+      onSelect: openPuzzle,
+    },
   );
 
-  /** Time api.analyse() on the baked netlist -- what the game does at load. */
+  /** Time api.analyse() on the loaded puzzle's baked netlist -- what the
+   *  game does at load. */
   async function analyseBaked(): Promise<Envelope> {
     await pyReady;
-    const netlistJson = await fetch("/samples/puzzle.netlist.json").then((r) => r.text());
+    const netlistJson = await fetch(puzzle.assets.netlist).then((r) => r.text());
     const opened = (await api.call("load_netlist", netlistJson)) as Envelope<{
       handle: string;
     }>;
@@ -163,7 +188,10 @@ async function main(): Promise<void> {
     return result;
   }
 
-  /** Time the whole path from GDS bytes: extract, then analyse. */
+  /** Time the whole path from GDS bytes: extract, then analyse. Pinned to
+   *  the sample GDS whichever puzzle is loaded -- it is the M0 reference
+   *  measurement, and comparing it across runs only means anything if the
+   *  design being extracted is the same one every time. */
   async function analyseFromGds(): Promise<Envelope> {
     await pyReady;
     const gds = await fetch("/samples/puzzle.gds").then((r) => r.arrayBuffer());

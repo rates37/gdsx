@@ -15,7 +15,7 @@ import {
   type SerializedDockview,
 } from "dockview-core";
 import "./dockview.css";
-import { attachToolbar } from "./toolbar.ts";
+import { attachToolbar, type LevelPicker } from "./toolbar.ts";
 
 const STORAGE_KEY = "gdsx.workspace.layout.v1";
 
@@ -49,11 +49,15 @@ export class Workspace {
    *   to its right, and any further rows stack below, each spanning the
    *   full width. Panels not named here are still registered (so they can
    *   be added later) but are left out of the default arrangement.
+   * @param levels The level picker's contents, if there is more than one
+   *   puzzle to offer. The shell hands it straight to the toolbar; it does
+   *   not itself know which puzzle is loaded.
    */
   constructor(
     private readonly container: HTMLElement,
     panels: PanelDef[],
     private readonly rows: string[][],
+    levels?: LevelPicker,
   ) {
     for (const p of panels) this.defs.set(p.id, p);
 
@@ -84,7 +88,7 @@ export class Workspace {
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
 
-    this.status = attachToolbar(container, this);
+    this.status = attachToolbar(container, this, levels);
   }
 
   /** The toolbar's status readout -- the coverage percentage, per §3's title

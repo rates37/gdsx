@@ -1,10 +1,12 @@
 // Copies build outputs that must be served same-origin: the Pyodide runtime,
-// the gdsx wheel, and the baked puzzle netlist. Run before `dev`/`build` so
+// the gdsx wheel, and the baked puzzles. Run before `dev`/`build` so
 // nothing here depends on a CDN.
-import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs";
-import { existsSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { REQUIRED, describe } from "./puzzle-index.mjs";
 
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoDir = path.dirname(webDir);
@@ -82,4 +84,47 @@ for (const name of [
   }
 }
 
-console.log("Synced pyodide runtime, gdsx wheel(s), and puzzle assets into public/");
+// 4. Every baked puzzle -> public/puzzles/<dir>/, plus the index the level
+// picker reads. This is the multi-puzzle path; the /samples/ copies above
+// stay because `scripts/measure-m0.mjs` reads dist/samples/puzzle.render.bin
+// by that exact path and the node test scripts run against the repo's
+// samples/ directory. The overlap costs a few MB of dev output and keeps the
+// M0 numbers comparable to every earlier run.
+//
+// solution.json is NOT copied. Only the driver protocol derived from it goes
+// into index.json -- see puzzle-index.mjs for why.
+const puzzlesDir = path.join(repoDir, "puzzles");
+const puzzlesOut = path.join(publicDir, "puzzles");
+rmSync(puzzlesOut, { recursive: true, force: true });
+mkdirSync(puzzlesOut, { recursive: true });
+
+const entries = existsSync(puzzlesDir)
+  ? readdirSync(puzzlesDir)
+      .filter((name) => statSync(path.join(puzzlesDir, name)).isDirectory())
+      .sort()
+  : [];
+
+const index = [];
+for (const dir of entries) {
+  const src = path.join(puzzlesDir, dir);
+  const missing = REQUIRED.filter((f) => !existsSync(path.join(src, f)));
+  if (missing.length > 0) {
+    console.warn(`warning: puzzles/${dir} is missing ${missing.join(", ")}, not offering it`);
+    continue;
+  }
+  const read = (f) => JSON.parse(readFileSync(path.join(src, f), "utf8"));
+  for (const name of ["netlist.json", "render.bin", "tape.bin"]) {
+    copy(path.join(src, name), path.join(puzzlesOut, dir, name));
+  }
+  index.push(describe(dir, read("manifest.json"), read("solution.json")));
+}
+
+writeFileSync(
+  path.join(puzzlesOut, "index.json"),
+  JSON.stringify({ schema_version: 1, puzzles: index }, null, 2) + "\n",
+);
+
+console.log(
+  `Synced pyodide runtime, gdsx wheel(s), and puzzle assets into public/ ` +
+    `(${index.length} puzzle(s): ${index.map((p) => p.id).join(", ")})`,
+);

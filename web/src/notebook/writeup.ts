@@ -29,8 +29,11 @@ export interface WriteupOptions {
    *  state decides "solved" -- the same constant every other panel that
    *  needs it takes as a parameter (see `stickyFlopsPanel` in main.ts). */
   successNet: string;
-  /** The sequence-editor port whose contents are printed as the final key. */
-  keyPort: string;
+  /** The sequence-editor port whose contents are printed as the final key.
+   *  Null for a puzzle with no data input at all -- an autonomous design's
+   *  answer is a value it computes, not a stimulus, and the write-up then
+   *  has no key section to print rather than an empty one. */
+  keyPort: string | null;
   puzzleId: string;
 }
 
@@ -113,24 +116,32 @@ export function generateWriteup(
 
   const latchedAt = simStore.firstLatchedHigh(opts.successNet);
   const solved = latchedAt !== null;
-  const keyBits = bitString(simStore.bitsOf(opts.keyPort));
+  const keyBits = opts.keyPort === null ? null : bitString(simStore.bitsOf(opts.keyPort));
 
   const out: string[] = [];
 
   // ---- 1. result banner --------------------------------------------------
   out.push(`# ${opts.puzzleId} — write-up`);
   out.push("");
-  out.push(
-    solved
-      ? `**Result: solved.** \`${opts.successNet}\` latches high at cycle ${latchedAt} ` +
-          `under the key on \`${opts.keyPort}\`:`
-      : `**Result: not solved.** \`${opts.successNet}\` has not latched high under the current ` +
-          `sequence on \`${opts.keyPort}\`.`,
-  );
-  out.push("");
-  out.push("```");
-  out.push(keyBits);
-  out.push("```");
+  if (keyBits === null) {
+    out.push(
+      solved
+        ? `**Result: solved.** \`${opts.successNet}\` latches high at cycle ${latchedAt}.`
+        : `**Result: not solved.** \`${opts.successNet}\` has not latched high.`,
+    );
+  } else {
+    out.push(
+      solved
+        ? `**Result: solved.** \`${opts.successNet}\` latches high at cycle ${latchedAt} ` +
+            `under the key on \`${opts.keyPort}\`:`
+        : `**Result: not solved.** \`${opts.successNet}\` has not latched high under the current ` +
+            `sequence on \`${opts.keyPort}\`.`,
+    );
+    out.push("");
+    out.push("```");
+    out.push(keyBits);
+    out.push("```");
+  }
   out.push("");
   out.push("---");
   out.push("");
@@ -198,13 +209,15 @@ export function generateWriteup(
   out.push("");
 
   // ---- 5. final key ---------------------------------------------------------
-  out.push("## Final key");
-  out.push("");
-  out.push(`Sequence on \`${opts.keyPort}\` (${simStore.cycles} cycles):`);
-  out.push("");
-  out.push("```");
-  out.push(keyBits);
-  out.push("```");
+  if (keyBits !== null) {
+    out.push("## Final key");
+    out.push("");
+    out.push(`Sequence on \`${opts.keyPort}\` (${simStore.cycles} cycles):`);
+    out.push("");
+    out.push("```");
+    out.push(keyBits);
+    out.push("```");
+  }
 
   return out.join("\n");
 }

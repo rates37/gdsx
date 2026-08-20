@@ -49,6 +49,23 @@
       .gdsx-toolbar-spacer {
         flex: 1;
       }
+      .gdsx-level-select {
+        background: #1a1f2b;
+        color: #cfd4de;
+        border: 1px solid #2e3444;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font: inherit;
+        max-width: 240px;
+        cursor: pointer;
+      }
+      .gdsx-level-select:hover:not(:disabled) {
+        border-color: #4a536b;
+      }
+      .gdsx-level-select:disabled {
+        opacity: 0.5;
+        cursor: progress;
+      }
       .gdsx-toolbar-status {
         color: #9aa2b5;
         font-size: 11px;

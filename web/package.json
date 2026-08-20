@@ -17,7 +17,8 @@
     "test:experiments": "node --experimental-strip-types scripts/test-experiments.mjs",
     "test:model": "node --experimental-strip-types scripts/test-model-diff.mjs",
     "test:writeup": "node --experimental-strip-types scripts/test-writeup.mjs",
-    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup"
+    "test:puzzles": "node --experimental-strip-types scripts/test-puzzles.mjs",
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:puzzles"
   },
   "dependencies": {
     "@types/three": "^0.185.4",
