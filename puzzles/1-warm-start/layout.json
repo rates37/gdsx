@@ -1,0 +1,12 @@
+{
+  "fill": 0.30,
+  "aspect": 1.0,
+  "mode": "banded",
+  "order": ["accumulator", "phase", "cycle"],
+  "groups_by_prefix": {
+    "acc": "accumulator",
+    "O": "accumulator",
+    "ph": "phase",
+    "cyc": "cycle"
+  }
+}

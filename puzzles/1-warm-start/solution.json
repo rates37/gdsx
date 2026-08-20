@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "answer_kind": "constant",
+  "answer": {
+    "value": 8,
+    "width": 8,
+    "note": "O[7:0] at the cycle success first goes high. acc = 0xA5C + 375*37 = 16527, which is 0x08F modulo 4096; O is acc[11:4], so 0x08. The trap is 375 rather than 500: the phase counter suppresses one accumulate in four. Assuming 500 gives 0x2A, which is also a plausible-looking byte."
+  },
+  "driver": {
+    "clock": {"port": "clk"},
+    "reset": {
+      "port": "rst_n",
+      "active_low": true,
+      "protocol": [{"cycles": 1, "values": {"rst_n": 0, "enable": 1}}],
+      "note": "One cycle with rst_n low clears the async resets, including the async-set flops holding the non-zero reset value. Every subsequent cycle runs with rst_n high."
+    },
+    "static_inputs": {"enable": 1},
+    "run_cycles": 520
+  },
+  "verify": {
+    "method": "simulate",
+    "predicate": {
+      "type": "bus_equals_when",
+      "bus": ["O[7]", "O[6]", "O[5]", "O[4]", "O[3]", "O[2]", "O[1]", "O[0]"],
+      "value": 8,
+      "when": {"port": "success", "value": 1}
+    }
+  },
+  "hint": "The accumulator does not advance on every cycle. Orbit the two-bit group before extrapolating."
+}
