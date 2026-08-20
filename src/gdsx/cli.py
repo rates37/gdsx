@@ -479,20 +479,76 @@ def puzzle_stats(puzzle_dir: Path = PuzzleDirArg) -> None:
 
 
 @puzzle_app.command("build")
-def puzzle_build() -> None:
-    """Synthesise + place + route RTL into a new puzzle (yosys + OpenLane)
+def puzzle_build(
+    source: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="the puzzle's Verilog source"
+    ),
+    top: str = typer.Option(..., "--top", help="the top-level module name"),
+    spec_path: Path = typer.Option(
+        ...,
+        "--spec",
+        exists=True,
+        dir_okay=False,
+        help="a layout spec JSON file (see docs/game/layout-guide.md §9)",
+    ),
+    out: Path = typer.Option(..., "-o", "--out", help="the design.gds to write"),
+    reference: Path = typer.Option(
+        Path("samples/puzzle.gds"),
+        "--reference",
+        exists=True,
+        dir_okay=False,
+        help="the GDS to copy standard-cell geometry from",
+    ),
+    recipe_name: str = typer.Option(
+        "default", "--recipe", help="a synth.py recipe name"
+    ),
+    check: bool = typer.Option(
+        True,
+        "--check/--no-check",
+        help="extract the result and compare it against the netlist that went in",
+    ),
+) -> None:
+    """Synthesise, place and route RTL into a design.gds.
 
-    Not implemented: the OpenLane flow that produced samples/puzzle.gds is
-    not reproducible in this environment (no `openlane` binary, no PDK-ready
-    OpenLane container image available locally), so this command has not
-    been written against a flow nobody could run to check it. See
-    docs/game/library-changes.md L16 for the fallback under consideration.
+    Runs yosys for synthesis and this repository's own placer and router for
+    the rest -- see docs/game/layout-guide.md, which specifies the flow. The
+    OpenLane path that produced samples/puzzle.gds is not reproducible here
+    (no `openlane` binary and no local PDK), and is not what this builds.
     """
-    console.print(
-        "[yellow]not implemented[/] -- the yosys+OpenLane flow is not "
-        "reproducible in this environment"
-    )
-    raise typer.Exit(1)
+    import tempfile
+
+    from . import synth
+    from .build.build import build as build_layout
+    from .build.spec import SpecError, load_spec
+
+    recipes = {r.name: r for r in synth.RECIPES}
+    if recipe_name not in recipes:
+        console.print(f"[red]unknown recipe {recipe_name!r}[/]; "
+                      f"try one of {sorted(recipes)}")
+        raise typer.Exit(1)
+
+    text = source.read_text()
+    workdir = Path(tempfile.mkdtemp(prefix=f"{top}_build_"))
+    try:
+        # The spec's groups are resolved against the netlist, so synthesis
+        # has to run before the spec can be read. It runs once: `build`
+        # takes the same workdir and yosys caches nothing, so this is the
+        # one place the cost is paid twice, and it is a second.
+        nl = synth.from_verilog(text, top, workdir, recipes[recipe_name])
+        spec = load_spec(spec_path, nl)
+        report = build_layout(
+            text, top, spec, out, workdir, reference,
+            recipe=recipes[recipe_name], check=check,
+        )
+    except (SpecError, ValueError) as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+
+    for line in report.lines():
+        console.print(line)
+    console.print(f"wrote {report.out_path}")
+    if not report.ok:
+        raise typer.Exit(1)
 
 
 def main() -> None:

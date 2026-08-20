@@ -18,7 +18,7 @@ beats preset beats the clock). `tests/test_gate_tape.py` holds them to that over
 
 from __future__ import annotations
 
-from .tape import DISPATCH, STRIDE, UNUSED, GateTape
+from .tape import DISPATCH, STRIDE, UNUSED, FlopKind, GateTape
 
 
 class TapeExecutor:
@@ -27,7 +27,6 @@ class TapeExecutor:
     def __init__(self, tape: GateTape) -> None:
         self.tape = tape
         self.values = [0] * tape.n_nets
-        self.state = [0] * tape.n_flops
         # The flat stream decoded once into (function, out, in0..in3) records.
         # The tape itself is still the artifact -- this is only the shape the
         # Python loop can run without slicing, which would allocate per op.
@@ -44,10 +43,16 @@ class TapeExecutor:
             for i in range(0, len(ops), STRIDE)
         ]
         self._flops = tuple((f.d, f.q, f.rst, f.set) for f in tape.flops)
+        # A preset-only flop (FlopKind.DFFS) powers up with Q=1, as
+        # `Simulator.reset` does -- see that method for why
+        self._reset_state = [
+            1 if f.kind == FlopKind.DFFS else 0 for f in tape.flops
+        ]
+        self.state = list(self._reset_state)
 
     def reset(self) -> None:
-        """Every flop to 0, as `Simulator.reset` does"""
-        self.state = [0] * self.tape.n_flops
+        """Every flop to its power-on value, as `Simulator.reset` does"""
+        self.state = list(self._reset_state)
 
     def settle(self, inputs: dict[str, int]) -> list[int]:
         """Evaluate all combinational logic for the current inputs and state

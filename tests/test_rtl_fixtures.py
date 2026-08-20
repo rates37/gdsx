@@ -73,7 +73,7 @@ def test_counter_counts(tmp_path):
     sim = Simulator(nl)
     for expected in range(1, 12):
         values = sim.step({"clk": 0, "rst_n": 1, "en": 1})
-        assert sum(values[f"q_{b}"] << b for b in range(8)) == expected
+        assert sum(values[f"q[{b}]"] << b for b in range(8)) == expected
 
 
 @needs_yosys
@@ -83,10 +83,10 @@ def test_accumulator_accumulates(tmp_path):
     total = 0
     for step in (3, 5, 1, 7):
         values = sim.step(
-            {"clk": 0, "rst_n": 1, **{f"d_{b}": (step >> b) & 1 for b in range(4)}}
+            {"clk": 0, "rst_n": 1, **{f"d[{b}]": (step >> b) & 1 for b in range(4)}}
         )
         total = (total + step) % 16
-        assert sum(values[f"q_{b}"] << b for b in range(4)) == total
+        assert sum(values[f"q[{b}]"] << b for b in range(4)) == total
 
 
 @needs_yosys

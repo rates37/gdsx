@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 from ..core.graph import Graph
 from ..functions import (
     async_nets,
-    base_name,
     clock_nets,
     data_nets,
     is_sequential,
@@ -101,10 +100,17 @@ def _survey(nl: Netlist) -> dict[str, _FlopInfo]:
         )
         # Signature on what drives the clock and reset, not on the net itself.
         # A buffered clock tree gives every few flops their own clock net, which
-        # would otherwise split one register into a group per buffer
+        # would otherwise split one register into a group per buffer.
+        #
+        # Deliberately not keyed on cell type: a register whose bits reset to
+        # a mix of 0 and 1 legalises as a mix of dfrtp (async clear) and dfstp
+        # (async preset) flops sharing the same clock and the same physical
+        # reset net -- that is one register, not two. async_nets already
+        # resolves clear/preset to the net that drives them, so dfrtp and
+        # dfstp sharing a reset line land on the same signature regardless of
+        # which pin (RESET_B vs SET_B) carries it.
         info[f.name] = _FlopInfo(
             signature=(
-                base_name(f.cell),
                 _roots(graph, clock_nets(cell, f.connections)),
                 _roots(graph, async_nets(cell, f.connections)),
             ),

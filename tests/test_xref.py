@@ -65,8 +65,8 @@ def test_cones_walk_in_the_right_direction():
 @needs_yosys
 def test_cones_stop_at_flops_unless_told_otherwise(tmp_path):
     nl = rtl_fixtures.from_verilog(rtl_fixtures.COUNTER, "counter", tmp_path)
-    shallow = xref.fanin(nl, "q_3", depth=6, through_flops=False)
-    deep = xref.fanin(nl, "q_3", depth=6, through_flops=True)
+    shallow = xref.fanin(nl, "q[3]", depth=6, through_flops=False)
+    deep = xref.fanin(nl, "q[3]", depth=6, through_flops=True)
     assert sum(len(level) for level in deep) > sum(len(level) for level in shallow)
 
 

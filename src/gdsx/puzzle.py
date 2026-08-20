@@ -241,7 +241,10 @@ def _driver_vectors(
     reset_port = reset["port"]
     inactive = 1 if reset.get("active_low", False) else 0
     static_inputs = driver.get("static_inputs", {})
-    input_port = driver["input_port"]
+    # A puzzle need not have a data input at all: an autonomous design is
+    # driven by its clock and its reset and nothing else, and its answer is a
+    # value it computes rather than a stimulus (game-plan.md §6b).
+    input_port = driver.get("input_port")
 
     vectors: list[dict[str, int]] = []
     for step in reset["protocol"]:
@@ -249,20 +252,20 @@ def _driver_vectors(
         vectors.extend([dict(values)] * step["cycles"])
     first_input_cycle = len(vectors)
 
-    bits = [int(c) for c in solution["key"]["bits"]]
-    for k in range(driver["input_cycles"]):
-        bit = bits[k] if k < len(bits) else 0
-        vectors.append(
-            {clock_port: 0, reset_port: inactive, **static_inputs, input_port: bit}
-        )
+    quiescent = {clock_port: 0, reset_port: inactive, **static_inputs}
+    if input_port is not None:
+        quiescent[input_port] = 0
+        bits = [int(c) for c in solution["key"]["bits"]]
+        for k in range(driver["input_cycles"]):
+            bit = bits[k] if k < len(bits) else 0
+            vectors.append(
+                {clock_port: 0, reset_port: inactive, **static_inputs, input_port: bit}
+            )
+    else:
+        vectors.extend([dict(quiescent)] * driver.get("run_cycles", 0))
 
-    quiescent = {
-        clock_port: 0,
-        reset_port: inactive,
-        **static_inputs,
-        input_port: 0,
-    }
-    by_cycle = solution["verify"]["predicate"]["by_cycle"]
+    predicate = solution["verify"]["predicate"]
+    by_cycle = predicate.get("by_cycle", driver.get("run_cycles", 0))
     return vectors, first_input_cycle, by_cycle, quiescent
 
 
@@ -319,6 +322,68 @@ def _check_key(nl, solution: dict) -> Check:
         f"held for {tail} extra cycles"
         if sticky
         else f"{port} reached {target} at cycle {reached_at}",
+    )
+
+
+def _check_constant(nl, solution: dict) -> Check:
+    """The value `solution.json` calls the answer is the value the design
+    actually produces.
+
+    For a `constant` puzzle there is no key to replay, so what has to be
+    checked is the other direction: drive the design exactly as the puzzle
+    tells the player to, sample the observation bus at the moment the puzzle
+    nominates, and confirm the answer really is what comes out. Without this
+    the bundle could ship an answer nobody can reach.
+    """
+    predicate = solution["verify"]["predicate"]
+    if predicate["type"] != "bus_equals_when":
+        return Check(
+            "answer is what the design produces",
+            False,
+            f"unknown predicate type {predicate['type']!r}",
+        )
+    bus = predicate["bus"]  # MSB first
+    expected = predicate["value"]
+    when = predicate["when"]
+
+    for port in [*bus, when["port"]]:
+        if port not in nl.ports:
+            return Check(
+                "answer is what the design produces",
+                False,
+                f"{port!r} is not a port of the netlist",
+            )
+
+    vectors, first_input_cycle, by_cycle, quiescent = _driver_vectors(solution)
+    sim = Simulator(nl)
+    for cycle, vector in enumerate(vectors):
+        values = sim.step(vector)
+        if values.get(when["port"]) != when["value"]:
+            continue
+        got = 0
+        for bit in bus:
+            got = (got << 1) | (values.get(bit) or 0)
+        at = cycle - first_input_cycle
+        if got != expected:
+            return Check(
+                "answer is what the design produces",
+                False,
+                f"at cycle {at}, {when['port']}={when['value']} and the bus "
+                f"reads {got:#x}; solution.json says the answer is "
+                f"{expected:#x}",
+            )
+        return Check(
+            "answer is what the design produces",
+            True,
+            f"bus reads {got:#x} at cycle {at}, when "
+            f"{when['port']}={when['value']}",
+        )
+    return Check(
+        "answer is what the design produces",
+        False,
+        f"{when['port']} never reached {when['value']} in "
+        f"{len(vectors) - first_input_cycle} cycles, so the answer is never "
+        f"observable",
     )
 
 
@@ -430,23 +495,33 @@ def verify(puzzle_dir: Path) -> VerifyResult:
     gds_path = _require(puzzle_dir, DESIGN_GDS)
     nl = Design.open(gds_path).netlist
 
-    if solution.get("answer_kind") != "sequence":
+    kind = solution.get("answer_kind")
+    if kind == "sequence":
         return VerifyResult(
             [
-                Check(
-                    "key raises success",
-                    False,
-                    f"answer_kind {solution.get('answer_kind')!r} is not "
-                    f"supported yet -- only 'sequence' is",
-                )
+                _check_key(nl, solution),
+                _check_naming(nl, puzzle_dir / NETLIST_JSON),
+                _check_structure(nl, solution),
             ]
         )
-
+    if kind == "constant":
+        # No key and no success flop to check the wiring of, so the structural
+        # check is the ports the observation depends on -- done inside
+        # `_check_constant` before it simulates anything.
+        return VerifyResult(
+            [
+                _check_constant(nl, solution),
+                _check_naming(nl, puzzle_dir / NETLIST_JSON),
+            ]
+        )
     return VerifyResult(
         [
-            _check_key(nl, solution),
-            _check_naming(nl, puzzle_dir / NETLIST_JSON),
-            _check_structure(nl, solution),
+            Check(
+                "answer kind supported",
+                False,
+                f"answer_kind {kind!r} is not implemented yet -- 'sequence' "
+                f"and 'constant' are. See game-plan.md section 6b.",
+            )
         ]
     )
 

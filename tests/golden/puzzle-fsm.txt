@@ -1,11 +1,2 @@
-3-state machine in reg_dfstp_2_1 (4 bits, 19% of the encoding space used)
-  inputs: I, enable
-
-  state    encoding outputs                  transitions
-  S0 (reset) 1111    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 
-00->S0 01->S1 10->S0 11->S2
-  S1       0000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S1 
-01->S1 10->S1 11->S2
-  S2       1000    O[0]=0, O[1]=0, O[2]=0, O[3]=0, O[4]=0, O[5]=0, O[6]=0, O[7]=0, success=0 00->S2 
-01->S1 10->S2 11->S2
-
+no state machines found -- every register reaches most of its encoding space, which is what data 
+registers do

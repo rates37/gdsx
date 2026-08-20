@@ -109,7 +109,15 @@ class Simulator:
         return self.free_nets | set(self.netlist.power_nets) | flop_outputs
 
     def reset(self) -> None:
-        self.state = {inst.name: 0 for inst, _ in self.flops}
+        # A preset-only flop (dfstp: clear is None, preset is not) powers up
+        # with Q=1, not Q=0 -- its internal state variable *is* Q (see
+        # `_state_values`), so zeroing it here would desync `reset()` from
+        # what an actual async-preset pulse produces. Everything else
+        # (plain DFF, clear-only, both) starts at 0, same as before.
+        self.state = {
+            inst.name: int(cell.sequential.clear is None and cell.sequential.preset is not None)
+            for inst, cell in self.flops
+        }
 
     # evaluation
 

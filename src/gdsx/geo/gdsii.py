@@ -42,6 +42,7 @@ __all__ = [
     "parse_real64",
     "read_file",
     "read_gds",
+    "structure_byte_ranges",
 ]
 
 #! record types (a subset of the GDSII stream format; see module docstring)
@@ -563,3 +564,38 @@ def read_gds(data: bytes) -> GdsLayout:
 
 def read_file(path: FsPath) -> GdsLayout:
     return read_gds(FsPath(path).read_bytes())
+
+
+def structure_byte_ranges(data: bytes) -> dict[str, tuple[int, int]]:
+    """Byte offset of each structure's ``BGNSTR``..``ENDSTR``, end exclusive.
+
+    For a GDSII *writer*: splicing these raw bytes into a new stream copies
+    cell geometry without re-serialising it, which is the only way to be sure
+    a polygon nobody looked at did not pick up a subtle bug. See
+    ``build/gdsii_write.py``.
+    """
+    ranges: dict[str, tuple[int, int]] = {}
+    pos = 0
+    n = len(data)
+    start: int | None = None
+    name: str | None = None
+    while pos + 4 <= n:
+        length = int.from_bytes(data[pos : pos + 2], "big")
+        if length == 0:
+            raise ValueError(f"zero-length GDSII record at offset {pos}")
+        rtype = data[pos + 2]
+        end = pos + length
+        if end > n:
+            raise ValueError(f"GDSII record at offset {pos} overruns the buffer")
+        if rtype == BGNSTR:
+            start, name = pos, None
+        elif rtype == STRNAME:
+            name = _ascii(memoryview(data)[pos + 4 : end])
+        elif rtype == ENDSTR:
+            if start is not None and name is not None:
+                ranges[name] = (start, end)
+            start = name = None
+        elif rtype == ENDLIB:
+            break
+        pos = end
+    return ranges

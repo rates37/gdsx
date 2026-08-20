@@ -1,0 +1,328 @@
+"""The layout generator, end to end: place, route, write, extract, compare.
+
+docs/game/layout-guide.md §8 and §10. The build itself is the interesting
+test -- the extractor is a complete oracle for whether the geometry is right,
+so most of what is asserted here is "extract the file we just wrote and check
+it is the netlist we put in".
+"""
+
+from __future__ import annotations
+
+import tempfile
+from collections import Counter
+from pathlib import Path
+
+import pytest
+
+from gdsx import config, loader, netlist as N, synth
+from gdsx.build import route as R
+from gdsx.build.build import build
+from gdsx.build.compare import compare
+from gdsx.build.groups import by_register, register_prefix
+from gdsx.build.place import LayoutSpec, ROW_HEIGHT, SITE, measure_widths, place
+from gdsx.build.spec import SpecError, load_spec
+from gdsx.netlist import Instance, Netlist
+
+PUZZLE_DIR = Path("puzzles/1-warm-start")
+REFERENCE = Path("samples/puzzle.gds")
+
+SPEC_FILE = PUZZLE_DIR / "layout.json"
+
+
+@pytest.fixture(scope="module")
+def intended() -> Netlist:
+    """Puzzle 1's netlist as synthesis produces it -- what the placer is given."""
+    source = (PUZZLE_DIR / "warm_start.v").read_text()
+    workdir = Path(tempfile.mkdtemp(prefix="warm_start_test_"))
+    return synth.from_verilog(source, "warm_start", workdir)
+
+
+@pytest.fixture(scope="module")
+def spec(intended) -> LayoutSpec:
+    """Puzzle 1's committed spec file, bound to its netlist -- the same path
+    the CLI takes, so the tests cannot pass on a spec the build never uses.
+    """
+    return load_spec(SPEC_FILE, intended)
+
+
+@pytest.fixture(scope="module")
+def built(tmp_path_factory, intended, spec) -> Path:
+    out = tmp_path_factory.mktemp("build") / "design.gds"
+    workdir = Path(tempfile.mkdtemp(prefix="warm_start_build_"))
+    build(
+        (PUZZLE_DIR / "warm_start.v").read_text(),
+        "warm_start",
+        spec,
+        out,
+        workdir,
+        REFERENCE,
+    )
+    return out
+
+
+@pytest.fixture(scope="module")
+def extracted(built) -> Netlist:
+    return N.build(loader.load(built, config.load()))
+
+
+# --- the acceptance test (layout-guide.md §8) ------------------------------
+
+
+def test_extracted_netlist_matches_the_intended_one(intended, extracted):
+    """§8's whole table at once: counts, cell types, floating, shorts, net
+    count, connection isomorphism, ports.
+    """
+    result = compare(intended, extracted)
+    assert result.ok, str(result)
+
+
+def test_no_floating_pins_and_no_shorts(extracted):
+    assert extracted.floating == []
+    assert extracted.conflicts == []
+
+
+def test_power_nets_are_one_each(extracted):
+    """Rows alternate orientation, so all VPWR rails sit at odd multiples of
+    the row height and all VGND rails at even ones. Without the met2 straps
+    `route.power` draws, each rail would extract as its own net.
+    """
+    assert extracted.power_nets == {"VPWR", "VGND"}
+
+
+def test_every_verilog_port_is_labelled(intended, extracted):
+    assert extracted.ports == intended.ports
+
+
+def test_rebuild_is_byte_identical(tmp_path, spec, built):
+    """layout-guide.md §10 point 8. Any set iteration or unseeded randomness
+    in the generator shows up here and nowhere else.
+    """
+    again = tmp_path / "again.gds"
+    workdir = Path(tempfile.mkdtemp(prefix="warm_start_again_"))
+    build(
+        (PUZZLE_DIR / "warm_start.v").read_text(),
+        "warm_start",
+        spec,
+        again,
+        workdir,
+        REFERENCE,
+    )
+    assert again.read_bytes() == built.read_bytes()
+
+
+def test_committed_puzzle_gds_is_what_the_generator_produces(built):
+    """The checked-in `design.gds` must be rebuildable from its own RTL, or
+    the file and the recipe have drifted apart.
+    """
+    assert (PUZZLE_DIR / "design.gds").read_bytes() == built.read_bytes()
+
+
+# --- the placer ------------------------------------------------------------
+
+
+def test_measured_widths_are_whole_sites():
+    widths = measure_widths(REFERENCE)
+    assert widths
+    assert all(w % SITE == 0 and w > 0 for w in widths.values())
+
+
+def test_cells_in_a_row_never_overlap(intended, spec):
+    placed = place(intended, spec, REFERENCE)
+    widths = measure_widths(REFERENCE)
+    # Keyed on (y, mirror), not y: a mirrored row's origin is at its top, so
+    # it shares a y with the unmirrored row above it and the two would
+    # otherwise be merged into one apparently-overlapping row.
+    rows: dict[tuple[int, bool], list[tuple[int, int]]] = {}
+    for name, p in placed.placements.items():
+        rows.setdefault((p.y, p.mirror), []).append((p.x, widths[placed.cells[name]]))
+    for members in rows.values():
+        members.sort()
+        for (x0, w0), (x1, _) in zip(members, members[1:]):
+            assert x0 + w0 <= x1, f"cell at x={x0} (width {w0}) runs into x={x1}"
+
+
+def test_rows_alternate_orientation(intended, spec):
+    """A mirrored row's origin is at the top of the row, so that it shares a
+    power rail with the row below (layout-guide.md §5).
+    """
+    placed = place(intended, spec, REFERENCE)
+    for p in placed.placements.values():
+        row = (p.y // ROW_HEIGHT) - (1 if p.mirror else 0)
+        assert p.mirror == (row % 2 == 1)
+
+
+def test_utilisation_and_aspect_follow_the_spec(intended, spec):
+    """§9's `fill` is utilisation and `aspect` is the core's width/height. A
+    placer that abuts every row and pads only the tail gets the area right
+    and the utilisation wrong, which the router then cannot cope with.
+    """
+    placed = place(intended, spec, REFERENCE)
+    widths = measure_widths(REFERENCE)
+    logic = sum(widths[i.cell] for i in intended.instances) * ROW_HEIGHT
+    die = placed.core_width * placed.rows * ROW_HEIGHT
+    assert spec.fill * 0.8 <= logic / die <= spec.fill * 1.2
+    assert 0.8 <= placed.core_width / (placed.rows * ROW_HEIGHT) <= 1.2
+
+
+def test_banded_mode_keeps_each_group_contiguous(intended, spec):
+    """`banded` means a group's cells occupy consecutive rows, in `order`."""
+    placed = place(intended, spec, REFERENCE)
+    def row_of(name: str) -> int:
+        p = placed.placements[name]
+        return p.y // ROW_HEIGHT - (1 if p.mirror else 0)
+
+    seen: list[str] = []
+    for name in sorted(
+        (n for n in placed.placements if n in spec.groups),
+        key=lambda n: (row_of(n), placed.placements[n].x),
+    ):
+        group = spec.groups[name]
+        if not seen or seen[-1] != group:
+            seen.append(group)
+    assert seen == list(spec.order), seen
+
+
+# --- the router ------------------------------------------------------------
+
+
+def test_occupancy_rejects_shapes_within_the_spacing_margin():
+    occ = R._Occupancy()
+    occ.add((0, 0, 100, 100), "a")
+    assert not occ.free((100, 0, 200, 100), "b")  # touching
+    assert not occ.free((100 + R.SPACING, 0, 200, 100), "b")  # exactly at margin
+    assert occ.free((101 + R.SPACING, 0, 200, 100), "b")  # clear of it
+    assert occ.free((100, 0, 200, 100), "a")  # same net may overlap freely
+
+
+def test_verify_catches_a_short():
+    shapes = [
+        (R.MET2, (0, 0, 100, 100), "a"),
+        (R.MET2, (100, 0, 200, 100), "b"),
+    ]
+    with pytest.raises(R.RouteError, match="short on layer 69/20"):
+        R.verify(shapes)
+
+
+def test_verify_allows_the_same_net_to_overlap_itself():
+    R.verify([(R.MET2, (0, 0, 100, 100), "a"), (R.MET2, (50, 0, 200, 100), "a")])
+
+
+def test_routed_geometry_has_no_shorts(intended, spec):
+    """`route` verifies itself, so this asserts the verification is reached
+    rather than skipped -- and that the shapes it checked are the ones
+    emitted.
+    """
+    placed = place(intended, spec, REFERENCE)
+    pin_table = R.build_pin_table(config.load(), REFERENCE)
+    result = R.route(
+        intended,
+        placed.placements,
+        placed.cells,
+        pin_table,
+        placed.core_width,
+        placed.rows,
+    )
+    # One met4 line per *link*, not per net: a net's pins are joined in a
+    # chain of neighbouring pairs, so a net with n pins uses n-1 lines. See
+    # route.signal's docstring for why one line per net does not scale.
+    signal_nets = [n for n in intended.nets if n not in intended.power_nets]
+    links = sum(max(1, len(intended.nets[n]) - 1) for n in signal_nets)
+    assert result.tracks_used == links
+    assert result.tracks_used > len(signal_nets)
+
+    layers = Counter(layer for layer, _, _ in result.boundaries)
+    for layer, _ in (R.MET1, R.MET2, R.MET3, R.MET4, R.MCON, R.VIA, R.VIA2, R.VIA3):
+        assert layers[layer] > 0
+
+
+def test_span_never_produces_a_degenerate_rectangle():
+    """A zero-area polygon is dropped by a region merge, which turns into a
+    via landing on nothing and a pin extraction reports as dangling.
+    """
+    for a, b in ((0, 0), (0, 10), (10, 0), (-5, 5)):
+        lo, hi = R._span(a, b, R.STUB)
+        assert hi - lo >= 2 * R.STUB
+
+
+# --- group derivation ------------------------------------------------------
+
+
+def test_register_prefix():
+    assert register_prefix("acc_11") == "acc"
+    assert register_prefix("O_0") == "O"
+    assert register_prefix("n147") is None
+    assert register_prefix("clk") is None
+
+
+def test_every_instance_gets_a_group(intended, spec):
+    assert set(spec.groups) == {i.name for i in intended.instances}
+    assert set(spec.groups.values()) <= {"accumulator", "phase", "cycle"}
+
+
+def test_unrecognised_register_name_is_an_error(intended):
+    with pytest.raises(ValueError, match="no recognised group prefix"):
+        by_register(intended, {"acc": "accumulator"})
+
+
+def test_spec_file_rejects_an_unknown_field(tmp_path, intended):
+    path = tmp_path / "bad.json"
+    path.write_text('{"fill": 0.3, "utilisation": 0.3}')
+    with pytest.raises(SpecError, match="unknown field"):
+        load_spec(path, intended)
+
+
+def test_spec_file_rejects_an_order_missing_a_group(tmp_path, intended):
+    path = tmp_path / "bad.json"
+    path.write_text(
+        '{"fill": 0.3, "order": ["accumulator"], "groups_by_prefix": '
+        '{"acc": "accumulator", "O": "accumulator", "ph": "phase", '
+        '"cyc": "cycle"}}'
+    )
+    with pytest.raises(SpecError, match="does not mention"):
+        load_spec(path, intended)
+
+
+# --- the comparison itself -------------------------------------------------
+
+
+def _tiny() -> Netlist:
+    nl = Netlist(top="t")
+    nl.instances = [
+        Instance("i0", "sky130_fd_sc_hd__inv_2", {"A": "a", "Y": "m"}),
+        Instance("i1", "sky130_fd_sc_hd__inv_2", {"A": "m", "Y": "z"}),
+    ]
+    nl.nets = {"a": ["i0/A"], "m": ["i0/Y", "i1/A"], "z": ["i1/Y"]}
+    nl.ports = {"a": "input", "z": "output"}
+    return nl
+
+
+def test_compare_accepts_a_renamed_copy():
+    """The internal net and the instances are renamed; the ports are not.
+    That is exactly the freedom extraction has.
+    """
+    other = _tiny()
+    other.instances = [
+        Instance("inv_2_9", "sky130_fd_sc_hd__inv_2", {"A": "a", "Y": "n7"}),
+        Instance("inv_2_4", "sky130_fd_sc_hd__inv_2", {"A": "n7", "Y": "z"}),
+    ]
+    other.nets = {"a": ["inv_2_9/A"], "n7": [], "z": ["inv_2_4/Y"]}
+    result = compare(_tiny(), other)
+    assert result.ok, str(result)
+    assert result.nets["m"] == "n7"
+
+
+def test_compare_rejects_a_swapped_connection():
+    broken = _tiny()
+    broken.instances[1].connections["A"] = "a"  # second inverter fed the input
+    result = compare(_tiny(), broken)
+    assert not result.ok
+
+
+def test_compare_reports_floating_and_conflicts():
+    broken = _tiny()
+    broken.floating = ["i1/A"]
+    broken.conflicts = ["i0/Y"]
+    result = compare(_tiny(), broken)
+    assert not result.ok
+    assert any("floating" in p for p in result.problems)
+    assert any("conflicting" in p for p in result.problems)

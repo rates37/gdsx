@@ -1,5 +1,5 @@
 registers
-  reg_dfrtp_2_40: 84-bit feedback register, bit order unknown
+  reg_dfrtp_2_40: 88-bit feedback register, bit order unknown
     dfrtp_2_40 -> dfrtp_2_41 -> dfrtp_2_47 -> dfrtp_2_51 -> dfrtp_2_26 -> dfrtp_2_17 -> dfrtp_2_20 
 -> dfrtp_2_25 -> dfrtp_2_61 -> dfrtp_2_53 -> dfrtp_2_82 -> dfrtp_2_9 -> dfrtp_2_11 -> dfrtp_2_12 -> 
 dfrtp_2_13 -> dfrtp_2_14 -> dfrtp_2_15 -> dfrtp_2_16 -> dfrtp_2_19 -> dfrtp_2_2 -> dfrtp_2_21 -> 
@@ -9,17 +9,15 @@ dfrtp_2_52 -> dfrtp_2_56 -> dfrtp_2_57 -> dfrtp_2_62 -> dfrtp_2_63 -> dfrtp_2_64
 dfrtp_2_66 -> dfrtp_2_67 -> dfrtp_2_68 -> dfrtp_2_69 -> dfrtp_2_7 -> dfrtp_2_70 -> dfrtp_2_71 -> 
 dfrtp_2_72 -> dfrtp_2_73 -> dfrtp_2_74 -> dfrtp_2_75 -> dfrtp_2_76 -> dfrtp_2_78 -> dfrtp_2_79 -> 
 dfrtp_2_8 -> dfrtp_2_80 -> dfrtp_2_81 -> dfrtp_2_84 -> dfrtp_2_18 -> dfrtp_2_3 -> dfrtp_2_54 -> 
-dfrtp_2_49 -> dfrtp_2_6 -> dfrtp_2_60 -> dfrtp_2_1 -> dfrtp_2_42 -> dfrtp_2_55 -> dfrtp_2_58 -> 
-dfrtp_2_59 -> dfrtp_2_38 -> dfrtp_2_4 -> dfrtp_2_43 -> dfrtp_2_5 -> dfrtp_2_10 -> dfrtp_2_33 -> 
-dfrtp_2_34 -> dfrtp_2_37 -> dfrtp_2_44 -> dfrtp_2_48 -> dfrtp_2_50 -> dfrtp_2_77 -> dfrtp_2_83
-  reg_dfstp_2_1: 4-bit feedback register, bit order unknown
-    dfstp_2_1 -> dfstp_2_2 -> dfstp_2_3 -> dfstp_2_4
+dfrtp_2_49 -> dfrtp_2_6 -> dfrtp_2_1 -> dfrtp_2_42 -> dfrtp_2_38 -> dfrtp_2_4 -> dfrtp_2_43 -> 
+dfrtp_2_5 -> dfrtp_2_10 -> dfrtp_2_33 -> dfstp_2_4 -> dfrtp_2_34 -> dfrtp_2_55 -> dfrtp_2_58 -> 
+dfrtp_2_59 -> dfrtp_2_60 -> dfstp_2_1 -> dfstp_2_2 -> dfstp_2_3 -> dfrtp_2_37 -> dfrtp_2_44 -> 
+dfrtp_2_48 -> dfrtp_2_50 -> dfrtp_2_77 -> dfrtp_2_83
   reg_dfxtp_2_1: 4-bit feedback register, bit order unknown
     dfxtp_2_1 -> dfxtp_2_2 -> dfxtp_2_3 -> dfxtp_2_4
 
 blocks (functional match, with the gates backing each call)
-  reg_dfrtp_2_40: 84-bit feedback register, bit order unknown  (504 cells)
-  reg_dfstp_2_1: 4-bit feedback register, bit order unknown  (32 cells)
+  reg_dfrtp_2_40: 88-bit feedback register, bit order unknown  (523 cells)
   reg_dfxtp_2_1: 4-bit feedback register, bit order unknown  (13 cells)
   clock_tree: buffers driving the flop clocks  (17 cells)
 
