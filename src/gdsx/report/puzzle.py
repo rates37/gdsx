@@ -21,10 +21,20 @@ def render_bake(console: Console, result: BakeResult) -> None:
 
 def render_verify(console: Console, result: VerifyResult) -> bool:
     for check in result.checks:
-        tag = "[green]ok[/]" if check.ok else "[red]FAIL[/]"
+        if not check.ok:
+            tag = "[red]FAIL[/]"
+        elif not check.simulated:
+            tag = "[yellow]said[/]"
+        else:
+            tag = "[green]ok[/]"
         console.print(f"{tag}  {check.name}")
         console.print(f"     {check.detail}")
-    if result.ok:
+    if result.ok and result.declared:
+        console.print(
+            f"[yellow]all checks passed, {len(result.declared)} on the "
+            f"author's word[/]"
+        )
+    elif result.ok:
         console.print("[green]all checks passed[/]")
     else:
         console.print("[red]verify failed[/]")
