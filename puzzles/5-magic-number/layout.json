@@ -1,0 +1,21 @@
+{
+  "fill": 0.55,
+  "aspect": 1.0,
+  "mode": "interleaved",
+  "order": ["shift", "count", "never", "lock",
+            "cmp_b", "cmp_c", "cmp_d", "cmp_a", "cmp_match"],
+  "groups_by_prefix": {
+    "sr": "shift",
+    "O": "shift",
+    "cnt": "count",
+    "never": "never",
+    "success": "lock"
+  },
+  "groups_by_cone": [
+    {"root": "O[6]", "label": "cmp_b"},
+    {"root": "O[5]", "label": "cmp_c"},
+    {"root": "O[4]", "label": "cmp_d"},
+    {"root": "O[7]", "label": "cmp_a"},
+    {"root": "success", "label": "cmp_match"}
+  ]
+}

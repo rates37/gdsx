@@ -17,6 +17,20 @@ A spec file for puzzle 1:
       "groups_by_prefix": {"acc": "accumulator", "O": "accumulator",
                            "ph": "phase", "cyc": "cycle"}
     }
+
+Registers are not always the right unit. A design whose interesting groups
+all read the *same* register bank -- five comparators over one shift register
+-- has every combinational cell nearest to that one bank, so `by_register`
+returns one group and `mode: "interleaved"` has nothing to interleave. For
+that case a spec may also carry `groups_by_cone`, an ordered list naming a
+cone by its root net and the group its cells belong to:
+
+    "groups_by_cone": [{"root": "O[6]", "label": "cmp_b"},
+                       {"root": "success", "label": "cmp_match"}]
+
+Cone labels win over prefix labels for the cells they claim; everything they
+do not claim, flops included, still comes from `groups_by_prefix`. See
+`groups.by_cone` for how a root is resolved and why the list is ordered.
 """
 
 from __future__ import annotations
@@ -24,10 +38,19 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .groups import by_register
+from .groups import by_cone, by_register
 from .place import LayoutSpec
 
-FIELDS = {"fill", "aspect", "mode", "order", "channels", "seed", "groups_by_prefix"}
+FIELDS = {
+    "fill",
+    "aspect",
+    "mode",
+    "order",
+    "channels",
+    "seed",
+    "groups_by_prefix",
+    "groups_by_cone",
+}
 
 
 class SpecError(ValueError):
@@ -50,9 +73,14 @@ def load_spec(path: Path, nl) -> LayoutSpec:
         raise SpecError(f"{path}: 'fill' is required -- it is §9's utilisation")
 
     by_prefix = data.get("groups_by_prefix", {})
+    cone_roots = data.get("groups_by_cone", [])
     try:
         groups = by_register(nl, by_prefix) if by_prefix else {}
-    except ValueError as exc:
+        if cone_roots:
+            groups.update(
+                by_cone(nl, [(c["root"], c["label"]) for c in cone_roots])
+            )
+    except (ValueError, KeyError, TypeError) as exc:
         raise SpecError(f"{path}: {exc}") from exc
 
     order = tuple(data.get("order", ()))

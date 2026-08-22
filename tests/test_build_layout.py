@@ -18,9 +18,10 @@ from gdsx import config, loader, netlist as N, synth
 from gdsx.build import route as R
 from gdsx.build.build import build
 from gdsx.build.compare import compare
-from gdsx.build.groups import by_register, register_prefix
+from gdsx.build.groups import by_cone, by_register, register_prefix
 from gdsx.build.place import LayoutSpec, ROW_HEIGHT, SITE, measure_widths, place
 from gdsx.build.spec import SpecError, load_spec
+from gdsx.functions import is_sequential
 from gdsx.netlist import Instance, Netlist
 
 PUZZLE_DIR = Path("puzzles/1-warm-start")
@@ -262,6 +263,52 @@ def test_every_instance_gets_a_group(intended, spec):
 def test_unrecognised_register_name_is_an_error(intended):
     with pytest.raises(ValueError, match="no recognised group prefix"):
         by_register(intended, {"acc": "accumulator"})
+
+
+def test_cone_groups_cover_only_combinational_cells(intended):
+    """A cone stops at flops, so a flop is never claimed by one."""
+    labels = by_cone(intended, [("success", "lock")])
+    flops = {i.name for i in intended.instances if is_sequential(i.cell)}
+    assert labels
+    assert set(labels.values()) == {"lock"}
+    assert not set(labels) & flops
+
+
+def test_a_cone_rooted_at_a_flop_walks_that_flop_s_d(intended):
+    """`O[7]` is a flop's Q in puzzle 1: the cone is the logic feeding it."""
+    labels = by_cone(intended, [("O[7]", "acc")])
+    assert labels
+    assert set(labels.values()) == {"acc"}
+
+
+def test_the_first_cone_to_claim_a_cell_keeps_it(intended):
+    first = by_cone(intended, [("success", "a"), ("O[7]", "b")])
+    second = by_cone(intended, [("O[7]", "b"), ("success", "a")])
+    shared = set(first) & set(second)
+    assert shared, "the two cones are expected to overlap"
+    assert any(first[n] != second[n] for n in shared)
+
+
+def test_cone_groups_override_prefix_groups(tmp_path, intended):
+    path = tmp_path / "spec.json"
+    path.write_text(
+        '{"fill": 0.3, "order": ["accumulator", "phase", "cycle", "lock"], '
+        '"groups_by_prefix": {"acc": "accumulator", "O": "accumulator", '
+        '"ph": "phase", "cyc": "cycle"}, '
+        '"groups_by_cone": [{"root": "success", "label": "lock"}]}'
+    )
+    spec = load_spec(path, intended)
+    assert set(spec.groups) == {i.name for i in intended.instances}
+    assert "lock" in set(spec.groups.values())
+
+
+def test_spec_file_rejects_an_unknown_cone_root(tmp_path, intended):
+    path = tmp_path / "bad.json"
+    path.write_text(
+        '{"fill": 0.3, "groups_by_cone": [{"root": "nope", "label": "x"}]}'
+    )
+    with pytest.raises(SpecError, match="not a net"):
+        load_spec(path, intended)
 
 
 def test_spec_file_rejects_an_unknown_field(tmp_path, intended):

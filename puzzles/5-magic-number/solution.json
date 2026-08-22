@@ -1,0 +1,37 @@
+{
+  "schema_version": 3,
+  "answer_kind": "constant",
+  "answer": {
+    "value": "0x5eedc0de",
+    "width": 32,
+    "note": "The 32-bit constant the real comparator tests `sr` against. It is not observable anywhere: it is read out of the gates, by flattening the first of the two OR terms under `success` into 32 polarity-annotated leaves and mapping each leaf onto a stage of the shift register recovered from Q->D adjacency. Sampling net values cannot distinguish the real comparator from the four decoys, which is the whole point of the puzzle. The second OR term, `decoy_a & never`, is reachable in structure and unsatisfiable in fact: `never` is only set when all 32 stages are high at a cycle when only 8 of them can be anything but their reset value."
+  },
+  "driver": {
+    "clock": {"port": "clk"},
+    "reset": {
+      "port": "rst_n",
+      "active_low": true,
+      "protocol": [{"cycles": 1, "values": {"rst_n": 0, "enable": 1, "I": 0}}],
+      "note": "One cycle with rst_n low clears sr, cnt, never and success. Every subsequent cycle runs with rst_n high and enable high."
+    },
+    "static_inputs": {"enable": 1},
+    "input_cycles": 40
+  },
+  "key": {
+    "tracks": [
+      {"port": "I", "bits": "01011110111011011100000011011110"}
+    ],
+    "note": "The confirmation run, not the graded answer: the constant driven in MSB-first. After 32 shifts sr holds it and cnt is 32, so success is set on the next edge, at cycle 32."
+  },
+  "verify": {
+    "method": "simulate",
+    "predicate": {
+      "type": "bus_equals_when",
+      "bus": ["O[7]", "O[6]", "O[5]", "O[4]", "O[3]", "O[2]", "O[1]", "O[0]"],
+      "value": 12,
+      "when": {"port": "success", "value": 1},
+      "note": "`constant` puzzles are verified by observation, and this design's answer is an input-space constant with no port to read it on. So what is checked here is the confirmation run: driving the key raises success, and at that cycle O reads 0x0c -- all four decoy bits low, sr[3:0] = 0xc, one shift past the match."
+    }
+  },
+  "hint": "Five wide equality comparators, one lock. Which of them the die view puts next to which tells you nothing; read the success cone instead."
+}

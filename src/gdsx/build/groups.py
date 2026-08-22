@@ -52,6 +52,60 @@ def register_prefix(net: str) -> str | None:
     return m.group(1) if m else None
 
 
+def by_cone(nl, roots: list[tuple[str, str]]) -> dict[str, str]:
+    """Instance name -> group label, for cells in a named net's fan-in cone.
+
+    `by_register` labels a combinational cell by the register it is nearest
+    to, which is the right answer when the groups the author cares about
+    *are* register banks. Puzzle 5's are not: five comparators all read the
+    same 32-stage shift register, so every one of their cells is nearest to
+    the same bank and they come back as one group. What tells them apart is
+    the cone each belongs to, so that is what an author names here.
+
+    `roots` is ordered and the first entry to claim a cell keeps it. The
+    comparators share subtrees -- one constant's low half is another's -- so
+    some cell always belongs to two cones, and an order is the only way to
+    say which group it counts towards. Name the smaller cone first and the
+    larger one gets the remainder.
+
+    A root whose driver is a flop is walked from that flop's `D` instead, so
+    that `"success"` names the logic that sets a registered output rather
+    than the empty cone above the flop itself.
+    """
+    driver_of: dict[str, str] = {}
+    for inst in nl.instances:
+        for pin, net in inst.connections.items():
+            if pin in OUTPUT_PINS or pin == "Q":
+                driver_of[net] = inst.name
+    by_name = {i.name: i for i in nl.instances}
+
+    labels: dict[str, str] = {}
+    for root, label in roots:
+        if root not in driver_of and root not in nl.nets:
+            raise ValueError(f"cone root {root!r} is not a net in the netlist")
+        seeds = [root]
+        driver = driver_of.get(root)
+        if driver is not None and is_sequential(by_name[driver].cell):
+            seeds = [
+                n for p, n in by_name[driver].connections.items() if p == "D"
+            ]
+        seen: set[str] = set()
+        queue = deque(seeds)
+        while queue:
+            net = queue.popleft()
+            if net in seen:
+                continue
+            seen.add(net)
+            name = driver_of.get(net)
+            if name is None or is_sequential(by_name[name].cell):
+                continue  # a primary input, or the far side of a register
+            labels.setdefault(name, label)
+            for pin, n in by_name[name].connections.items():
+                if pin not in OUTPUT_PINS:
+                    queue.append(n)
+    return labels
+
+
 def by_register(nl, groups_by_prefix: dict[str, str]) -> dict[str, str]:
     """Instance name -> group label.
 
