@@ -17,10 +17,18 @@ Some combinational logic reaches no flop at all going forward -- it sits
 (puzzle 2's byte-select mux reads the LFSR's 32 bits and drives `O`, with no
 flop downstream of it). For that case there is a second pass, breadth-first
 *backward* through fan-in, labelling the cell by the nearest flop that feeds
-it instead. Between the two passes, every cell in a design built from
-registers and the combinational logic around them has a flop within one hop
-in some direction; a cell that has neither is not connected to any register
-at all, which is the case the `ValueError` is for.
+it instead.
+
+A few cells have a flop in neither direction: their whole cone runs from an
+input port to an output port without passing through a register. Puzzle 3's
+read-mux address decode is the example -- it sits between the `addr` port and
+the `O` port, and the register banks it selects between are its *siblings* on
+the mux inputs, not its ancestors or its descendants. A third pass finds those
+by breadth-first search ignoring direction, which lands such a cell in the
+band of whichever register it is nearest to in the netlist. There is no better
+answer for a cell shared by eight banks, and a deterministic one is what the
+placer needs. A cell that no flop is reachable from even undirected is not
+connected to any register at all, which is what the `ValueError` is for.
 """
 
 from __future__ import annotations
@@ -106,6 +114,7 @@ def by_register(nl, groups_by_prefix: dict[str, str]) -> dict[str, str]:
 
     # Second pass, backward through fan-in, for cells with no flop downstream
     # -- see the module docstring.
+    still: list = []
     for inst in unresolved:
         inputs = [n for p, n in inst.connections.items() if p not in OUTPUT_PINS]
         seen = set(inputs)
@@ -124,7 +133,30 @@ def by_register(nl, groups_by_prefix: dict[str, str]) -> dict[str, str]:
                     seen.add(n)
                     queue.append(n)
         if found is None:
-            raise ValueError(f"{inst.name}: no flop reachable from its output or its inputs")
+            still.append(inst)
+        else:
+            labels[inst.name] = found
+
+    # Third pass, ignoring direction, for cells whose whole cone runs from an
+    # input port to an output port without passing through a register -- see
+    # the module docstring.
+    for inst in still:
+        pins = list(inst.connections.values())
+        seen = set(pins)
+        queue = deque(pins)
+        found = None
+        while queue and found is None:
+            net = queue.popleft()
+            for neighbour in fanout.get(net, ()):
+                if neighbour in flops:
+                    found = labels[neighbour]
+                    break
+                for n in by_name[neighbour].connections.values():
+                    if n not in seen:
+                        seen.add(n)
+                        queue.append(n)
+        if found is None:
+            raise ValueError(f"{inst.name}: no flop reachable from any of its pins")
         labels[inst.name] = found
 
     return labels

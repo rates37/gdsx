@@ -1,0 +1,22 @@
+{
+  "fill": 0.35,
+  "aspect": 1.0,
+  "mode": "banded",
+  "order": ["bank0", "bank1", "bank2", "bank3", "bank4", "bank5", "bank6",
+            "bank7", "control"],
+  "channels": ["bank0", "bank1", "bank2", "bank3", "bank4", "bank5", "bank6",
+               "bank7"],
+  "groups_by_prefix": {
+    "r0": "bank0",
+    "r1": "bank1",
+    "r2": "bank2",
+    "r3": "bank3",
+    "r4": "bank4",
+    "r5": "bank5",
+    "r6": "bank6",
+    "r7": "bank7",
+    "armed": "control",
+    "busy": "control",
+    "success": "control"
+  }
+}

@@ -38,7 +38,13 @@ PREFIX = "sky130_fd_sc_hd__"
 DECAP = f"{PREFIX}decap_3"
 TAP = f"{PREFIX}tapvpwrvgnd_1"
 TAP_SPACING = 15000  # nm, "every ~15 um" per layout-guide.md §7.2 step 5
-CHANNEL_ROWS = 4  # empty rows for a visible block boundary, layout-guide.md §7.2
+# Empty rows for a visible block boundary (layout-guide.md §7.2). A channel is
+# only a boundary if `physical.placement.bands` splits on it, and that splits
+# where the spacing exceeds 4x the median -- which here is one origin line,
+# 5.44 um. Four empty rows leave a 10.88-16.32 um gap, under the 21.76 um
+# threshold, so the eight bands of puzzle 3 came back as one. Ten empty rows
+# clear it with margin in both the alignments the row packer produces.
+CHANNEL_ROWS = 10
 
 # Filler is cosmetic -- decap and tap carry no function and `lookup()` returns
 # None for both -- so it is budgeted rather than poured into every gap. A
