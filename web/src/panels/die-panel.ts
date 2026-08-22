@@ -1,13 +1,17 @@
-// The 2D Die View panel: canvas, layer toggles, LOD select, minimap, and a
-// stats readout. Builds its DOM lazily -- the panel exists (and the
+// The 2D half of the Die View: canvas, layer toggles, LOD select, minimap,
+// and a stats readout. Builds its DOM lazily -- it is mounted (and the
 // workspace shell paints) before `render.bin` has even arrived; see
 // `bundleReady` in main.ts for the loading sequence this depends on.
+//
+// Not a panel in its own right. `die-view-panel.ts` owns the panel and
+// mounts either this or the 3D view into it, per game-plan.md §4.1's
+// `[2D|3D]` toggle; this module knows nothing about that choice beyond
+// being told to tear itself down when the player switches away.
 
 import type { RenderBundle } from "../render/bundle";
 import { DieView } from "../render/dieview";
 import { Minimap } from "../render/minimap";
 import { highlightBus } from "../store/highlight";
-import type { PanelDef } from "../workspace/workspace";
 
 const COLOUR_CSS: Record<string, string> = {
   instances: "#8c94a8",
@@ -63,153 +67,161 @@ export interface DiePanelOptions {
   bundleReady: Promise<RenderBundle>;
   /** Extra line shown under the frame stats, e.g. Pyodide boot status. */
   statusLine: () => string;
-  onReady?: (api: DieViewApi) => void;
+  /** Called with the live view once the bundle has loaded, and with `null`
+   *  when this mount is torn down -- so a holder (main.ts's `spike`) never
+   *  keeps calling into a renderer the player has switched away from. */
+  onReady?: (api: DieViewApi | null) => void;
 }
 
-export function dieViewPanel(opts: DiePanelOptions): PanelDef {
-  return {
-    id: "die-view",
-    title: "Die View",
-    render(container: HTMLElement) {
-      container.classList.add("die-panel");
-      container.innerHTML = `
-        <div class="die-canvas-wrap">
-          <canvas class="die-canvas"></canvas>
-          <div class="die-loading">loading render.bin&hellip;</div>
-          <div class="panel-overlay die-layers">
-            <h2>Layers</h2>
-            <div class="layer-list"></div>
-            <hr />
-            <h2>Detail</h2>
-            <select class="lod-select">
-              <option value="auto" selected>auto (by zoom)</option>
-              <option value="0">LOD 0 &mdash; full</option>
-              <option value="1">LOD 1 &mdash; collapsed</option>
-              <option value="2">LOD 2 &mdash; cells only</option>
-            </select>
-            <hr />
-            <div class="hint">drag: pan<br />wheel: zoom<br />F: fit die<br />hover: highlight net</div>
-          </div>
-          <pre class="panel-overlay die-stats"></pre>
-          <canvas class="die-minimap" title="click or drag to jump"></canvas>
-        </div>`;
+/** Mounts the 2D view into `container`, which must be a positioned element
+ *  it can fill. Returns a handle whose `dispose` stops the render loop and
+ *  drops the view. */
+export function mountDie2D(
+  container: HTMLElement,
+  opts: DiePanelOptions,
+): { dispose: () => void } {
+  container.classList.add("die-panel");
+  container.innerHTML = `
+    <div class="die-canvas-wrap">
+      <canvas class="die-canvas"></canvas>
+      <div class="die-loading">loading render.bin&hellip;</div>
+      <div class="panel-overlay die-layers">
+        <h2>Layers</h2>
+        <div class="layer-list"></div>
+        <hr />
+        <h2>Detail</h2>
+        <select class="lod-select">
+          <option value="auto" selected>auto (by zoom)</option>
+          <option value="0">LOD 0 &mdash; full</option>
+          <option value="1">LOD 1 &mdash; collapsed</option>
+          <option value="2">LOD 2 &mdash; cells only</option>
+        </select>
+        <hr />
+        <div class="hint">drag: pan<br />wheel: zoom<br />F: fit die<br />hover: highlight net</div>
+      </div>
+      <pre class="panel-overlay die-stats"></pre>
+      <canvas class="die-minimap" title="click or drag to jump"></canvas>
+    </div>`;
 
-      const canvas = container.querySelector(".die-canvas") as HTMLCanvasElement;
-      const loading = container.querySelector(".die-loading") as HTMLDivElement;
-      const layerList = container.querySelector(".layer-list") as HTMLDivElement;
-      const lodSelect = container.querySelector(".lod-select") as HTMLSelectElement;
-      const stats = container.querySelector(".die-stats") as HTMLPreElement;
-      const minimapCanvas = container.querySelector(".die-minimap") as HTMLCanvasElement;
+  const canvas = container.querySelector(".die-canvas") as HTMLCanvasElement;
+  const loading = container.querySelector(".die-loading") as HTMLDivElement;
+  const layerList = container.querySelector(".layer-list") as HTMLDivElement;
+  const lodSelect = container.querySelector(".lod-select") as HTMLSelectElement;
+  const stats = container.querySelector(".die-stats") as HTMLPreElement;
+  const minimapCanvas = container.querySelector(".die-minimap") as HTMLCanvasElement;
 
-      let disposed = false;
-      let rafId = 0;
-      let unsubHighlight: (() => void) | null = null;
+  let disposed = false;
+  let rafId = 0;
+  let unsubHighlight: (() => void) | null = null;
+  let onKeydown: ((e: KeyboardEvent) => void) | null = null;
 
-      opts.bundleReady
-        .then((bundle) => {
-          if (disposed) return;
-          loading.remove();
+  opts.bundleReady
+    .then((bundle) => {
+      if (disposed) return;
+      loading.remove();
 
-          const view = new DieView(canvas, bundle);
-          const minimap = new Minimap(minimapCanvas, bundle, view);
-          const meter = new FpsMeter();
-          const rendererInfo = view.rendererInfo();
-          let repeat = 1;
+      const view = new DieView(canvas, bundle);
+      const minimap = new Minimap(minimapCanvas, bundle, view);
+      const meter = new FpsMeter();
+      const rendererInfo = view.rendererInfo();
+      let repeat = 1;
 
-          for (const name of ["instances", ...bundle.header.layers]) {
-            const label = document.createElement("label");
-            const box = document.createElement("input");
-            box.type = "checkbox";
-            box.checked = view.isLayerOn(name);
-            box.addEventListener("change", () => view.setLayer(name, box.checked));
-            const swatch = document.createElement("span");
-            swatch.className = "swatch";
-            swatch.style.background = COLOUR_CSS[name] ?? "#fff";
-            const text = document.createElement("span");
-            const counts = bundle.header.lods["0"]?.[name]?.rects.count;
-            text.textContent =
-              name === "instances"
-                ? `cells (${bundle.header.instances.count})`
-                : `${name} (${counts ?? 0})`;
-            label.append(box, swatch, text);
-            layerList.append(label);
-          }
+      for (const name of ["instances", ...bundle.header.layers]) {
+        const label = document.createElement("label");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = view.isLayerOn(name);
+        box.addEventListener("change", () => view.setLayer(name, box.checked));
+        const swatch = document.createElement("span");
+        swatch.className = "swatch";
+        swatch.style.background = COLOUR_CSS[name] ?? "#fff";
+        const text = document.createElement("span");
+        const counts = bundle.header.lods["0"]?.[name]?.rects.count;
+        text.textContent =
+          name === "instances"
+            ? `cells (${bundle.header.instances.count})`
+            : `${name} (${counts ?? 0})`;
+        label.append(box, swatch, text);
+        layerList.append(label);
+      }
 
-          lodSelect.addEventListener("change", () => {
-            view.lodMode = lodSelect.value === "auto" ? "auto" : Number(lodSelect.value);
-            meter.reset();
-          });
+      lodSelect.addEventListener("change", () => {
+        view.lodMode = lodSelect.value === "auto" ? "auto" : Number(lodSelect.value);
+        meter.reset();
+      });
 
-          const onKeydown = (e: KeyboardEvent) => {
-            if (e.key === "f" || e.key === "F") {
-              view.fit();
-              meter.reset();
-            }
-          };
-          window.addEventListener("keydown", onKeydown);
-
-          canvas.addEventListener("pointermove", (e) => {
-            const hit = view.pickNet(e.clientX, e.clientY);
-            highlightBus.set(hit ? { name: hit.name } : null);
-          });
-          canvas.addEventListener("pointerleave", () => highlightBus.set(null));
-          unsubHighlight = highlightBus.subscribe((sel) =>
-            view.setHighlightNet(sel ? view.netIdOf(sel.name) : null),
-          );
-
-          function frame(now: number): void {
-            for (let i = 0; i < repeat; i++) view.render();
-            minimap.render();
-            meter.tick(now);
-            stats.textContent = [
-              `${bundle.header.top}`,
-              `lod ${view.lastFrame.lod}   ${view.lastFrame.drawCalls} draws   ${view.lastFrame.instances} rects`,
-              `${meter.fps.toFixed(1)} fps   ${meter.frameMs.toFixed(2)} ms/frame`,
-              "",
-              opts.statusLine(),
-            ].join("\n");
-            rafId = requestAnimationFrame(frame);
-          }
-          rafId = requestAnimationFrame(frame);
-
-          opts.onReady?.({
-            view,
-            rendererInfo,
-            fit: () => {
-              view.fit();
-              meter.reset();
-            },
-            setLod: (l) => {
-              view.lodMode = l;
-              lodSelect.value = String(l);
-              meter.reset();
-            },
-            resetMeter: () => meter.reset(),
-            setRepeat: (n) => {
-              repeat = Math.max(1, n);
-              meter.reset();
-            },
-            frame: () => ({
-              fps: meter.fps,
-              frameMs: meter.frameMs,
-              drawCalls: view.lastFrame.drawCalls,
-              instances: view.lastFrame.instances,
-              lod: view.lastFrame.lod,
-            }),
-          });
-        })
-        .catch((err) => {
-          loading.textContent = `ERROR: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`;
-          console.error(err);
-        });
-
-      return {
-        dispose() {
-          disposed = true;
-          cancelAnimationFrame(rafId);
-          unsubHighlight?.();
-        },
+      onKeydown = (e: KeyboardEvent) => {
+        if (e.key === "f" || e.key === "F") {
+          view.fit();
+          meter.reset();
+        }
       };
+      window.addEventListener("keydown", onKeydown);
+
+      canvas.addEventListener("pointermove", (e) => {
+        const hit = view.pickNet(e.clientX, e.clientY);
+        highlightBus.set(hit ? { name: hit.name } : null);
+      });
+      canvas.addEventListener("pointerleave", () => highlightBus.set(null));
+      unsubHighlight = highlightBus.subscribe((sel) =>
+        view.setHighlightNet(sel ? view.netIdOf(sel.name) : null),
+      );
+
+      function frame(now: number): void {
+        for (let i = 0; i < repeat; i++) view.render();
+        minimap.render();
+        meter.tick(now);
+        stats.textContent = [
+          `${bundle.header.top}`,
+          `lod ${view.lastFrame.lod}   ${view.lastFrame.drawCalls} draws   ${view.lastFrame.instances} rects`,
+          `${meter.fps.toFixed(1)} fps   ${meter.frameMs.toFixed(2)} ms/frame`,
+          "",
+          opts.statusLine(),
+        ].join("\n");
+        rafId = requestAnimationFrame(frame);
+      }
+      rafId = requestAnimationFrame(frame);
+
+      opts.onReady?.({
+        view,
+        rendererInfo,
+        fit: () => {
+          view.fit();
+          meter.reset();
+        },
+        setLod: (l) => {
+          view.lodMode = l;
+          lodSelect.value = String(l);
+          meter.reset();
+        },
+        resetMeter: () => meter.reset(),
+        setRepeat: (n) => {
+          repeat = Math.max(1, n);
+          meter.reset();
+        },
+        frame: () => ({
+          fps: meter.fps,
+          frameMs: meter.frameMs,
+          drawCalls: view.lastFrame.drawCalls,
+          instances: view.lastFrame.instances,
+          lod: view.lastFrame.lod,
+        }),
+      });
+    })
+    .catch((err) => {
+      loading.textContent = `ERROR: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`;
+      console.error(err);
+    });
+
+  return {
+    dispose() {
+      disposed = true;
+      cancelAnimationFrame(rafId);
+      unsubHighlight?.();
+      if (onKeydown) window.removeEventListener("keydown", onKeydown);
+      opts.onReady?.(null);
+      container.classList.remove("die-panel");
+      container.replaceChildren();
     },
   };
 }

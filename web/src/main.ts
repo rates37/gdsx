@@ -9,8 +9,8 @@ import { wrap, type Remote } from "comlink";
 import type { GdsxWorker, Envelope } from "./worker";
 import { RenderBundle } from "./render/bundle";
 import { Workspace } from "./workspace/workspace";
-import { dieViewPanel, type DieViewApi, type FrameStats } from "./panels/die-panel";
-import { die3dViewPanel } from "./panels/die-3d-panel";
+import type { DieViewApi, FrameStats } from "./panels/die-panel";
+import { dieViewPanel } from "./panels/die-view-panel";
 import { netlistBrowserPanel } from "./panels/netlist-panel";
 import { coneWalkerPanel } from "./panels/cone-walker-panel";
 import { waveformPanel } from "./panels/waveform-panel";
@@ -128,7 +128,6 @@ async function main(): Promise<void> {
           dieApi = api;
         },
       }),
-      die3dViewPanel({ bundleReady }),
       netlistBrowserPanel(designReady),
       coneWalkerPanel(designReady),
       waveformPanel(storeReady),
@@ -154,11 +153,25 @@ async function main(): Promise<void> {
       constraintsPanel({ designReady }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
+    // One tabbed group, roughly in the order of game-plan.md §2's core loop:
+    // look at the die, read the netlist, walk a cone, write it down, then the
+    // measurement and solving panels.
     [
-      ["die-view", "die-view-3d", "netlist", "cone-walker", "notebook"],
-      ["waveform", "sequence-editor", "experiments", "model-builder"],
-      ["register-inspector", "requirements", "sensitivity", "register-decoder"],
-      ["sticky-flops", "constraints", "repl"],
+      "die-view",
+      "netlist",
+      "cone-walker",
+      "notebook",
+      "waveform",
+      "sequence-editor",
+      "experiments",
+      "model-builder",
+      "register-inspector",
+      "requirements",
+      "sensitivity",
+      "register-decoder",
+      "sticky-flops",
+      "constraints",
+      "repl",
     ],
     {
       puzzles: catalog.map((p) => ({
