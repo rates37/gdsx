@@ -1,0 +1,39 @@
+{
+  "schema_version": 3,
+  "answer_kind": "sequence",
+  "key": {
+    "tracks": [
+      {
+        "bus": ["I[1]", "I[0]"],
+        "values": [2, 3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      },
+      {
+        "port": "enable",
+        "bits": "1111111111111111"
+      }
+    ],
+    "note": "The accepting word is 2 3 1 0 2, walking S0 -2-> S1 -3-> S2 -1-> S3 -0-> S4 -2-> S8. State flop 8 is set at the end of cycle 4 and `success` latches one cycle later, at cycle 5. Every symbol after that is free, which is why the track is padded with zeros: S8 is absorbing and is `good` on all four symbols, so `lives` never moves once the machine has accepted. The word is unique as a path, and it is unique as an answer too, because any deviation spends a life and the accept condition requires lives to still read 9 -- a spent life can never be recovered. Leading enable-low cycles are equally harmless, so the verifier checks the outcome rather than the literal stimulus. The brute-force route exists and the game does not pretend otherwise: 4^5 is 1024 words.",
+    "trap": "From S2 the symbol 3 -- the symbol that was correct one state earlier, at S1 -- leads to S5, and S5/S6/S7 are strongly connected with no edge out. A forward walk that greedily reuses a symbol that worked before falls in and can never reach S8. O[6:4] numbers the sink state, so the evidence is on the bus, but nothing announces that the component is a sink."
+  },
+  "driver": {
+    "clock": {"port": "clk"},
+    "reset": {
+      "port": "rst_n",
+      "active_low": true,
+      "protocol": [{"cycles": 1, "values": {"rst_n": 0, "enable": 1, "I[1]": 0, "I[0]": 0}}],
+      "note": "One cycle with rst_n low puts the machine in S0 (state flop 0 is an async-set flop, the other eight are async-reset), lives at 9, locked and success clear. Every subsequent cycle runs with rst_n high; enable is a stimulus track rather than a static input, so a player may gate the machine with it."
+    },
+    "input_cycles": 16
+  },
+  "verify": {
+    "method": "simulate",
+    "predicate": {
+      "type": "port_reaches_value_by_cycle",
+      "port": "success",
+      "value": 1,
+      "by_cycle": 5,
+      "sticky": true
+    }
+  },
+  "hint": "Recover the transition relation before you drive anything: for each of the nine state flops, evaluate its D under each of the four symbols with that flop's own state asserted. Thirty-six evaluations give you a graph, and the question is then which of its states can reach flop 8 -- three of them cannot reach anything outside themselves. Then read the success cone rather than assuming what it says: it names the counter as well as the state."
+}

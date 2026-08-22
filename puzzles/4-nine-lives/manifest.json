@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "4-nine-lives",
+  "title": "Nine Lives",
+  "difficulty": 4,
+  "blurb": "A one-hot state machine with nine lives, one word it accepts, and three states it never leaves.",
+  "author": "gdsx",
+  "answer_kind": "sequence",
+  "tools_enabled": ["die", "netlist", "registers", "cone", "waveform", "repl"],
+  "par_seconds": 2700,
+  "tags": ["fsm", "one-hot", "reachability", "accept-condition", "stimulus"]
+}
