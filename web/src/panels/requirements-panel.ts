@@ -8,9 +8,9 @@
 // into "must", which is exactly the transcription error this panel exists to
 // remove.
 
-import { highlightBus } from "../store/highlight.ts";
 import { coneRootBus } from "../store/selection.ts";
 import { cursorBus } from "../store/cursor.ts";
+import { instanceChip, netChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 import type { DesignClient } from "../design/client.ts";
@@ -87,14 +87,16 @@ export function requirementsPanel(options: RequirementsPanelOptions): PanelDef {
         const row = el("div", "rq-leaf");
         const ok = satisfied(leaf.net, leaf.value);
         row.append(el("span", "rq-check", ok === null ? "·" : ok ? "✓" : "✗"));
-        const chip = el("span", "net-chip", leaf.net);
+        // A leaf is written `dfrtp_2_50.Q` or a bare net name. The labellable
+        // thing is the flop or the net, never the composite string, so the
+        // chip is built from the decoded half and carries the pin as a suffix.
         const decoded = leafKind(leaf.net);
-        const highlightName = decoded.kind === "flop" ? decoded.instance : decoded.kind === "input" ? decoded.net : null;
-        if (highlightName) {
-          chip.addEventListener("pointerenter", () => highlightBus.set({ name: highlightName }));
-          chip.addEventListener("pointerleave", () => highlightBus.set(null));
-          chip.addEventListener("click", () => coneRootBus.open(highlightName));
-        }
+        const chip =
+          decoded.kind === "flop"
+            ? instanceChip(decoded.instance, { suffix: ".Q" })
+            : decoded.kind === "input"
+              ? netChip(decoded.net)
+              : el("span", "net-chip", leaf.net);
         row.append(chip, el("span", "rq-eq", ` == ${leaf.value}`));
         if (decoded.kind === "flop") {
           const claimBtn = document.createElement("button");
@@ -143,8 +145,9 @@ export function requirementsPanel(options: RequirementsPanelOptions): PanelDef {
             const line = el("div", "rq-choice-option");
             line.append(el("span", "rq-choice-bullet", "— "));
             for (const lit of option.literals) {
-              const chip = el("span", "net-chip rq-choice-chip", `${lit.net}=${lit.value}`);
-              line.append(chip);
+              line.append(
+                netChip(lit.net, { className: "rq-choice-chip", suffix: `=${lit.value}` }),
+              );
             }
             cbox.append(line);
           }

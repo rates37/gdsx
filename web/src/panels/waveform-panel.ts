@@ -12,8 +12,9 @@
 
 import type { SimStore } from "../sim/store.ts";
 import { busValueAt } from "../sim/store.ts";
-import { highlightBus } from "../store/highlight.ts";
 import { cursorBus } from "../store/cursor.ts";
+import { labels } from "../store/labels.ts";
+import { instanceChip, netChip } from "./chips.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 
 const ROW_H = 28;
@@ -140,18 +141,18 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
             });
             continue;
           }
-          if (!prefix && name.toLowerCase().includes(q)) {
+          if (!prefix && (name.toLowerCase().includes(q) || labels.matches("net", name, q))) {
             out.push({
-              label: name,
+              label: labels.has("net", name) ? `${labels.display("net", name)}  ${name}` : name,
               add: () => addWatch({ kind: "net", label: name, ref: name, radix: "hex" }),
             });
           }
         }
         for (const name of store.tape.header.flop_names) {
           if (out.length >= 30) break;
-          if (name.toLowerCase().includes(q)) {
+          if (name.toLowerCase().includes(q) || labels.matches("instance", name, q)) {
             out.push({
-              label: `${name} (flop)`,
+              label: `${labels.display("instance", name)} (flop)`,
               add: () => addWatch({ kind: "flop", label: name, ref: name, radix: "hex" }),
             });
           }
@@ -303,12 +304,17 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
         row.draggable = true;
         const label = el("div", "wave-row-label");
         label.append(el("span", "wave-drag-handle", "⋮⋮"));
-        const nameEl = el("span", "wave-row-name", item.label);
-        if (item.kind === "net") {
-          nameEl.addEventListener("pointerenter", () => highlightBus.set({ name: item.ref as string }));
-          nameEl.addEventListener("pointerleave", () => highlightBus.set(null));
-        }
-        label.append(nameEl);
+        // A watched net or flop is drawn as a chip, so the name in the
+        // waveform is the same name (and the same rename affordance) as
+        // everywhere else. A bus has no single underlying name to label, so it
+        // keeps the prefix it was added under.
+        label.append(
+          item.kind === "net"
+            ? netChip(item.ref as string, { className: "wave-row-name", onClick: false })
+            : item.kind === "flop"
+              ? instanceChip(item.ref as string, { className: "wave-row-name", onClick: false })
+              : el("span", "wave-row-name", item.label),
+        );
         if (item.kind === "bus") {
           const radixSel = el("select", "wave-row-radix") as HTMLSelectElement;
           for (const r of ["hex", "dec", "bin", "ascii"] as const) {

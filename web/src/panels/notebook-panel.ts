@@ -24,8 +24,7 @@
 
 import type { DesignClient, ClaimVocabulary } from "../design/client";
 import type { SimStore } from "../sim/store";
-import { coneRootBus } from "../store/selection";
-import { highlightBus } from "../store/highlight";
+import { instanceChip, netChip } from "./chips";
 import { attachPythonCallButton } from "./python-call";
 import type { PanelDef } from "../workspace/workspace";
 import {
@@ -60,14 +59,6 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
   if (className) e.className = className;
   if (text !== undefined) e.textContent = text;
   return e;
-}
-
-function netChip(name: string): HTMLElement {
-  const chip = el("span", "net-chip", name);
-  chip.addEventListener("pointerenter", () => highlightBus.set({ name }));
-  chip.addEventListener("pointerleave", () => highlightBus.set(null));
-  chip.addEventListener("click", () => coneRootBus.open(name));
-  return chip;
 }
 
 function when(at: number): string {
@@ -276,16 +267,14 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
               const chips = el("div", "nb-witness");
               chips.append(el("span", "nb-witness-label", "counterexample:"));
               for (const [net, value] of Object.entries(witness.leaves)) {
-                const chip = netChip(net);
-                chip.append(el("span", "nb-bit", `=${value}`));
-                chips.append(chip);
+                chips.append(netChip(net, { suffix: `=${value}` }));
               }
               detail.append(chips);
             } else if (witness?.kind === "state") {
               const chips = el("div", "nb-witness");
               chips.append(el("span", "nb-witness-label", "from state:"));
               for (const [net, value] of Object.entries(witness.flops)) {
-                chips.append(el("span", "net-chip", `${net}=${value}`));
+                chips.append(instanceChip(net, { suffix: `=${value}` }));
               }
               detail.append(chips);
             } else if (witness?.kind === "trace") {

@@ -10,7 +10,7 @@
 //   repeatedly from reset and watch the state sequence, which is how a
 //   player discovers "saturating counter" instead of being told.
 
-import { highlightBus } from "../store/highlight.ts";
+import { instanceChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import { VirtualList } from "./virtual-list.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
@@ -116,10 +116,10 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         } else {
           for (const g of flopGuards) {
             const line = el("div", "ri-guard-line");
-            const flop = el("span", "net-chip", String(g.flop));
-            flop.addEventListener("pointerenter", () => highlightBus.set({ name: String(g.flop) }));
-            flop.addEventListener("pointerleave", () => highlightBus.set(null));
-            line.append(flop, el("span", "ri-guard-cond", ` holds while ${g.condition}`));
+            line.append(
+              instanceChip(String(g.flop), { onClick: false }),
+              el("span", "ri-guard-cond", ` holds while ${g.condition}`),
+            );
             guardBox.append(line);
           }
         }
@@ -129,11 +129,9 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         flopsBox.append(el("div", "ri-section-title", "flops (bit order)"));
         const flopsRow = el("div", "ri-flops-row");
         for (const f of reg.flops) {
-          const chip = el("span", "net-chip ri-flop-chip", f);
-          chip.addEventListener("pointerenter", () => highlightBus.set({ name: f }));
-          chip.addEventListener("pointerleave", () => highlightBus.set(null));
-          chip.addEventListener("click", () => void loadTruthTable(f));
-          flopsRow.append(chip);
+          flopsRow.append(
+            instanceChip(f, { className: "ri-flop-chip", onClick: () => void loadTruthTable(f) }),
+          );
         }
         flopsBox.append(flopsRow);
         detailBody.append(flopsBox);

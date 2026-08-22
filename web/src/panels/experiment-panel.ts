@@ -25,6 +25,8 @@
 import type { SimStore } from "../sim/store.ts";
 import { cursorBus } from "../store/cursor.ts";
 import { highlightBus } from "../store/highlight.ts";
+import { labels } from "../store/labels.ts";
+import { instanceChip, netChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 import { evidenceLog } from "../notebook/evidence.ts";
@@ -132,6 +134,22 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       // the die view is drawing on.
       const sweeps = new SweepClient(options.tapeUrl);
       let store: SimStore | null = null;
+
+      /**
+       * A watch-set column, as a chip of the right kind. The result carries
+       * only names, so the gate tape decides: anything it knows as a flop is
+       * an instance, everything else is a net. Getting this wrong would put a
+       * flop's label in the nets' namespace and silently split one glossary
+       * into two.
+       */
+      function columnKind(name: string): "net" | "instance" {
+        return store?.tape.header.flop_names.includes(name) ? "instance" : "net";
+      }
+      function columnChip(name: string): HTMLElement {
+        return columnKind(name) === "instance"
+          ? instanceChip(name, { onClick: false })
+          : netChip(name, { onClick: false });
+      }
       let result: ExperimentResult | null = null;
       let running = false;
       let disposed = false;
@@ -381,10 +399,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             break;
           }
           const line = el("div", "xp-table-row");
-          const name = el("span", "net-chip", result.columns[c]);
-          name.addEventListener("pointerenter", () => highlightBus.set({ name: result!.columns[c] }));
-          name.addEventListener("pointerleave", () => highlightBus.set(null));
-          line.append(name, el("span", "xp-hits", hits.join(", ")));
+          line.append(columnChip(result.columns[c]), el("span", "xp-hits", hits.join(", ")));
           table.append(line);
         }
         if (!shown) table.append(el("div", "xp-summary-note", "nothing moved in any run"));
@@ -415,11 +430,12 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         }
         const row = result.rows[at.row];
         const column = result.columns[at.column];
+        const columnText = labels.display(columnKind(column), column);
         const cell = row.cells[at.column];
         readoutEl.textContent =
           result.cellKind === "changed"
-            ? `${row.label} × ${column} — ${cell ? "moved" : "unchanged"} (final value, vs the baseline)`
-            : `${row.label} × ${column} = ${cell}`;
+            ? `${row.label} × ${columnText} — ${cell ? "moved" : "unchanged"} (final value, vs the baseline)`
+            : `${row.label} × ${columnText} = ${cell}`;
         highlightBus.set({ name: column });
         draw();
       });

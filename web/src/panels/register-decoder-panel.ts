@@ -18,7 +18,7 @@
 // worse than not offering it: `wrapping`/`fixed-point` results are described
 // in the panel and are not claimable today.
 
-import { highlightBus } from "../store/highlight.ts";
+import { instanceChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 import type { DesignClient } from "../design/client.ts";
@@ -286,10 +286,7 @@ export function registerDecoderPanel(options: RegisterDecoderPanelOptions): Pane
         for (const flop of group) {
           const w = weights[flop];
           const line = el("div", "rd-weight-line");
-          const chip = el("span", "net-chip", flop);
-          chip.addEventListener("pointerenter", () => highlightBus.set({ name: flop }));
-          chip.addEventListener("pointerleave", () => highlightBus.set(null));
-          line.append(chip);
+          line.append(instanceChip(flop, { onClick: false }));
           if (!w || w.confidence === "unknown") {
             const v = el("span", "rd-weight-unknown", " — (unknown: neither observed nor uniquely determined by elimination)");
             line.append(v);

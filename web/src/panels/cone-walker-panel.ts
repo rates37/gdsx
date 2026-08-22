@@ -20,7 +20,8 @@
 import type { DesignClient } from "../design/client";
 import type { ConeNode, RequirementsView } from "../gdsx-types";
 import { coneRootBus } from "../store/selection";
-import { highlightBus } from "../store/highlight";
+import { labels } from "../store/labels";
+import { instanceChip, netChip, openLabelEditor, refreshChips } from "./chips";
 import { attachPythonCallButton } from "./python-call";
 import type { PanelDef } from "../workspace/workspace";
 
@@ -51,11 +52,11 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
   return e;
 }
 
+/** A net inside the tree: hover-highlights and can be labelled, but does not
+ *  re-root the walk on click -- clicking a row sets the flatten focus, and a
+ *  chip stealing that would make the tree hard to navigate. */
 function netSpan(name: string): HTMLElement {
-  const s = el("span", "net-chip", name);
-  s.addEventListener("pointerenter", () => highlightBus.set({ name }));
-  s.addEventListener("pointerleave", () => highlightBus.set(null));
-  return s;
+  return netChip(name, { onClick: false });
 }
 
 const LEAF_LABEL: Record<string, string> = {
@@ -86,6 +87,7 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
         </div>
         <div class="cw-flatten-bar">
           <span class="cw-focus">focus: <span class="cw-focus-net">—</span></span>
+          <button class="cw-label-btn" type="button" disabled title="give the focused net a name you'll recognise">label</button>
           <button class="cw-flatten-btn" type="button" disabled>flatten AND/OR tree</button>
           <div class="cw-value-toggle">
             <button class="cw-val-btn active" data-val="1" type="button">→ 1</button>
@@ -111,6 +113,7 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
       );
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
       const focusNetEl = container.querySelector(".cw-focus-net") as HTMLSpanElement;
+      const labelBtn = container.querySelector(".cw-label-btn") as HTMLButtonElement;
       const flattenBtn = container.querySelector(".cw-flatten-btn") as HTMLButtonElement;
       const valBtns = Array.from(
         container.querySelectorAll<HTMLButtonElement>(".cw-val-btn"),
@@ -129,14 +132,19 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
       let design: DesignClient | null = null;
       let direction: "in" | "out" = "in";
       let root: UiNode | null = null;
+      //: Kept so a rename can redraw the flatten result in place; re-running
+      //: `requirements()` for a cosmetic change would be a wasted round trip.
+      let lastFlatten: RequirementsView | null = null;
       let focusNet: string | null = null;
       let flattenValue: 0 | 1 = 1;
       let disposed = false;
 
       function setFocus(net: string): void {
         focusNet = net;
-        focusNetEl.textContent = net;
+        focusNetEl.replaceChildren(netChip(net, { onClick: false }));
         flattenBtn.disabled = direction !== "in";
+        labelBtn.disabled = false;
+        labelBtn.textContent = labels.has("net", net) ? "relabel" : "label";
       }
 
       function renderTree(): void {
@@ -151,13 +159,12 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
         row.style.marginLeft = `${depth * 18}px`;
 
         if (node.steppedFrom) {
-          row.append(
-            el(
-              "span",
-              "cw-cycle-badge",
-              `${node.steppedFrom.flopInstance}  T-${node.steppedFrom.cycle}`,
-            ),
+          const badge = el("span", "cw-cycle-badge");
+          badge.append(
+            instanceChip(node.steppedFrom.flopInstance, { onClick: false }),
+            el("span", "cw-cycle-t", `T-${node.steppedFrom.cycle}`),
           );
+          row.append(badge);
         }
 
         if (node.leaf) {
@@ -278,7 +285,8 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
       }
 
       function renderFlatten(r: RequirementsView): void {
-        flattenTitle.textContent = `${r.net} == ${r.value}`;
+        lastFlatten = r;
+        flattenTitle.textContent = `${labels.display("net", r.net)} == ${r.value}`;
         flattenBody.replaceChildren();
 
         const summary = el(
@@ -308,9 +316,13 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
           cbox.append(el("h4", undefined, "not forced — any one option suffices"));
           for (const c of r.choices) {
             const crow = el("div", "cw-choice");
-            crow.append(el("div", "cw-choice-head", `${c.net} == ${c.value}:`));
+            crow.append(
+              el("div", "cw-choice-head", `${labels.display("net", c.net)} == ${c.value}:`),
+            );
             for (const opt of c.options) {
-              const text = opt.literals.map((l) => `${l.net}=${l.value}`).join("  &  ");
+              const text = opt.literals
+                .map((l) => `${labels.display("net", l.net)}=${l.value}`)
+                .join("  &  ");
               crow.append(el("div", "cw-choice-option", text || "(always true)"));
             }
             cbox.append(crow);
@@ -341,9 +353,18 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
         }
       }
 
-      goBtn.addEventListener("click", () => void loadRoot(netInput.value.trim()));
+      /** What the player typed, as a raw net name: a label they gave a net is
+       *  a perfectly good way to ask for it back. Unrecognised text is passed
+       *  through unchanged so the walk fails with the name they actually
+       *  typed rather than a silent substitution. */
+      function typedNet(): string {
+        const text = netInput.value.trim();
+        return labels.resolve("net", text) ?? text;
+      }
+
+      goBtn.addEventListener("click", () => void loadRoot(typedNet()));
       netInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") void loadRoot(netInput.value.trim());
+        if (e.key === "Enter") void loadRoot(typedNet());
       });
 
       for (const b of dirBtns) {
@@ -363,12 +384,24 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
         });
       }
 
+      labelBtn.addEventListener("click", () => {
+        if (focusNet) openLabelEditor("net", focusNet, labelBtn);
+      });
+
       flattenBtn.addEventListener("click", () => void runFlatten());
       flattenClose.addEventListener("click", () => (flattenPanel.hidden = true));
 
       const unsubRoot = coneRootBus.subscribe((net) => {
         netInput.value = net;
         void loadRoot(net);
+      });
+
+      // Chips repaint themselves; the flatten panel's plain text and the
+      // label button's wording do not.
+      const unsubLabels = labels.subscribe(() => {
+        refreshChips(container);
+        if (lastFlatten && !flattenPanel.hidden) renderFlatten(lastFlatten);
+        if (focusNet) labelBtn.textContent = labels.has("net", focusNet) ? "relabel" : "label";
       });
 
       designReady
@@ -385,6 +418,7 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
         dispose() {
           disposed = true;
           unsubRoot();
+          unsubLabels();
         },
       };
     },

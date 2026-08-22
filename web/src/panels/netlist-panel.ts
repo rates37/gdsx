@@ -8,6 +8,8 @@ import type { DesignClient } from "../design/client";
 import type { InstanceView, NetView } from "../gdsx-types";
 import { highlightBus } from "../store/highlight";
 import { coneRootBus } from "../store/selection";
+import { labels, type LabelKind } from "../store/labels";
+import { instanceChip, netChip, openLabelEditor } from "./chips";
 import { attachPythonCallButton } from "./python-call";
 import { VirtualList } from "./virtual-list";
 import type { PanelDef } from "../workspace/workspace";
@@ -21,16 +23,24 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
   return e;
 }
 
-/** A net name rendered as a small clickable/hoverable chip. */
-function netChip(name: string): HTMLElement {
-  const chip = el("span", "net-chip", name);
-  chip.addEventListener("pointerenter", () => highlightBus.set({ name }));
-  chip.addEventListener("pointerleave", () => highlightBus.set(null));
-  chip.addEventListener("click", (e) => {
-    e.stopPropagation();
-    coneRootBus.open(name);
-  });
-  return chip;
+/**
+ * The heading of a detail box: the label if there is one, the raw name if
+ * not, and a button to change that. The raw name is always shown -- as the
+ * heading itself, or dimmed beside the label -- because this is the panel
+ * where a player decides *what* something is, and hiding the extracted name
+ * behind their own guess is exactly the wrong trade here.
+ */
+function titleRow(kind: LabelKind, name: string): HTMLElement {
+  const row = el("div", "detail-title");
+  const label = labels.get(kind, name);
+  row.append(el("h3", undefined, label ?? name));
+  if (label !== null) row.append(el("span", "detail-rawname", name));
+  const btn = el("button", "detail-label-btn", label === null ? "label" : "relabel");
+  (btn as HTMLButtonElement).type = "button";
+  btn.title = `give ${name} a name you'll recognise`;
+  btn.addEventListener("click", () => openLabelEditor(kind, name, btn));
+  row.append(btn);
+  return row;
 }
 
 function driverText(net: NetView): string {
@@ -110,7 +120,7 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
 
       function showInstanceDetail(inst: InstanceView): void {
         const box = el("div", "detail-box");
-        box.append(el("h3", undefined, inst.name));
+        box.append(titleRow("instance", inst.name));
         const meta = el("div", "detail-meta");
         meta.append(
           el("div", undefined, `cell: ${inst.cell}`),
@@ -137,7 +147,7 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
 
       function showNetDetail(net: NetView): void {
         const box = el("div", "detail-box");
-        box.append(el("h3", undefined, net.name));
+        box.append(titleRow("net", net.name));
         const meta = el("div", "detail-meta");
         meta.append(el("div", undefined, `driver: ${driverText(net)}`));
         if (net.is_port) meta.append(el("div", undefined, `port: ${net.is_port}`));
@@ -154,15 +164,34 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
         box.append(el("h4", undefined, `readers (${net.readers.length})`));
         const readers = el("div", "detail-conns");
         for (const r of net.readers) {
-          readers.append(el("div", "detail-conn-row", `${r.instance}.${r.pin}`));
+          const row = el("div", "detail-conn-row");
+          row.append(
+            instanceChip(r.instance, { onClick: false }),
+            el("span", "detail-pin", `.${r.pin}`),
+          );
+          readers.append(row);
         }
         box.append(readers);
         detailEl.replaceChildren(box);
       }
 
+      /** A row's name cell: the label in front, the raw name kept beside it
+       *  so a scan of the list still shows what the netlist actually calls
+       *  each thing. */
+      function nameCell(kind: LabelKind, name: string): HTMLElement {
+        const cell = el("span", "nrow-name");
+        const label = labels.get(kind, name);
+        if (label === null) {
+          cell.textContent = name;
+        } else {
+          cell.append(el("span", "nrow-label", label), el("span", "nrow-rawname", name));
+        }
+        return cell;
+      }
+
       const instList = new VirtualList<InstanceView>(instListEl, ROW_H, (inst) => {
         const row = el("div", "nrow" + (inst.name === selectedName ? " active" : ""));
-        row.append(el("span", "nrow-name", inst.name));
+        row.append(nameCell("instance", inst.name));
         row.append(el("span", "nrow-badge", inst.generic));
         if (inst.is_sequential) row.append(el("span", "nrow-seq", "seq"));
         row.addEventListener("click", () => {
@@ -175,7 +204,7 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
 
       const netList = new VirtualList<NetView>(netListEl, ROW_H, (net) => {
         const row = el("div", "nrow" + (net.name === selectedName ? " active" : ""));
-        row.append(el("span", "nrow-name", net.name));
+        row.append(nameCell("net", net.name));
         row.append(el("span", "nrow-badge", driverText(net)));
         if (net.is_port) row.append(el("span", "nrow-port", net.is_port));
         row.addEventListener("pointerenter", () =>
@@ -198,10 +227,13 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
           const filtered = allInstances.filter((i) => {
             if (seqOnly && !i.is_sequential) return false;
             if (!q) return true;
+            // Labels are searchable too, or naming a cell would make it
+            // harder to find rather than easier.
             return (
               i.name.toLowerCase().includes(q) ||
               i.base_cell.toLowerCase().includes(q) ||
-              i.generic.toLowerCase().includes(q)
+              i.generic.toLowerCase().includes(q) ||
+              labels.matches("instance", i.name, q)
             );
           });
           countEl.textContent = `${filtered.length} / ${allInstances.length} instances`;
@@ -214,7 +246,7 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
             if (kind === "combinational" && n.leaf !== null) return false;
             if (kind && kind !== "combinational" && n.leaf !== kind) return false;
             if (!q) return true;
-            return n.name.toLowerCase().includes(q);
+            return n.name.toLowerCase().includes(q) || labels.matches("net", n.name, q);
           });
           countEl.textContent = `${filtered.length} / ${allNets.length} nets`;
           netList.setItems(filtered);
@@ -266,10 +298,24 @@ export function netlistBrowserPanel(designReady: Promise<DesignClient>): PanelDe
         netList.refresh();
       });
 
+      // A rename has to re-run the filter, not just repaint: it can change
+      // which rows match the current query.
+      const unsubLabels = labels.subscribe(() => {
+        applyFilter();
+        const selected =
+          tab === "instances"
+            ? allInstances.find((i) => i.name === selectedName)
+            : allNets.find((n) => n.name === selectedName);
+        if (!selected) return;
+        if (tab === "instances") showInstanceDetail(selected as InstanceView);
+        else showNetDetail(selected as NetView);
+      });
+
       return {
         dispose() {
           disposed = true;
           unsub();
+          unsubLabels();
         },
       };
     },

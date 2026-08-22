@@ -15,8 +15,7 @@
 // it is shown as a **marked suggestion** chip next to the two buttons --
 // never written into the buttons themselves.
 
-import { highlightBus } from "../store/highlight.ts";
-import { coneRootBus } from "../store/selection.ts";
+import { instanceChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 import type { DesignClient } from "../design/client.ts";
@@ -106,11 +105,7 @@ export function stickyFlopsPanel(options: StickyFlopsPanelOptions): PanelDef {
         bodyEl.replaceChildren();
         for (const s of sticky) {
           const row = el("div", "sf-row");
-          const chip = el("span", "net-chip sf-flop", s.flop);
-          chip.addEventListener("pointerenter", () => highlightBus.set({ name: s.flop }));
-          chip.addEventListener("pointerleave", () => highlightBus.set(null));
-          chip.addEventListener("click", () => coneRootBus.open(s.flop));
-          row.append(chip);
+          row.append(instanceChip(s.flop, { className: "sf-flop" }));
           row.append(el("span", "sf-polarity", `latches ${s.polarity ? "high" : "low"}`));
           row.append(el("span", "sf-condition", `D = ${s.condition} | Q`));
 

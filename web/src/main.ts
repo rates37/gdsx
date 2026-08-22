@@ -25,6 +25,8 @@ import { registerDecoderPanel } from "./panels/register-decoder-panel";
 import { stickyFlopsPanel } from "./panels/sticky-flops-panel";
 import { constraintsPanel } from "./panels/constraints-panel";
 import { replPanel } from "./panels/repl-panel";
+import { labelsPanel } from "./panels/labels-panel";
+import { labels } from "./store/labels";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
@@ -56,6 +58,9 @@ async function main(): Promise<void> {
     lastPlayed: lastPlayedId(),
   });
   rememberPuzzle(puzzle.id);
+  //: Before any panel is built, so the first chip drawn already knows what the
+  //: player called it. Per puzzle: `n96` means nothing in another design.
+  labels.open(puzzle.id);
   document.title = `DIESHARK — ${puzzle.title}`;
 
   const driver = puzzle.driver;
@@ -152,6 +157,7 @@ async function main(): Promise<void> {
       stickyFlopsPanel({ designReady, puzzleId: puzzle.id, successNet }),
       constraintsPanel({ designReady }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
+      labelsPanel(),
     ],
     // One tabbed group, roughly in the order of game-plan.md §2's core loop:
     // look at the die, read the netlist, walk a cone, write it down, then the
@@ -171,6 +177,7 @@ async function main(): Promise<void> {
       "register-decoder",
       "sticky-flops",
       "constraints",
+      "labels",
       "repl",
     ],
     {
