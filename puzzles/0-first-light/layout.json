@@ -1,0 +1,15 @@
+{
+  "fill": 0.35,
+  "aspect": 1.0,
+  "mode": "banded",
+  "order": ["shift", "compare", "lock"],
+  "groups_by_prefix": {
+    "code": "shift",
+    "O": "shift",
+    "lock": "lock",
+    "success": "lock"
+  },
+  "groups_by_cone": [
+    {"root": "success", "label": "compare"}
+  ]
+}

@@ -27,6 +27,8 @@ import { constraintsPanel } from "./panels/constraints-panel";
 import { replPanel } from "./panels/repl-panel";
 import { labelsPanel } from "./panels/labels-panel";
 import { labels } from "./store/labels";
+import { Guide, armAutostart } from "./guide/guide";
+import { GUIDE_PUZZLE_ID } from "./guide/steps";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
@@ -122,6 +124,40 @@ async function main(): Promise<void> {
     createDesignClient(api, puzzle.assets.netlist),
   );
 
+  // The guide needs the workspace (it moves the player between panels) and
+  // the workspace's toolbar needs the guide (it draws the button), so the
+  // control is a thin indirection created first and pointed at the Guide the
+  // moment it exists. Nothing calls into it before then: every entry point is
+  // a click.
+  let guide: Guide | null = null;
+  const guideListeners: (() => void)[] = [];
+  const notifyGuideChange = (): void => {
+    for (const fn of guideListeners) fn();
+  };
+  const isGuidePuzzle = puzzle.id === GUIDE_PUZZLE_ID;
+  const hasGuidePuzzle = catalog.some((p) => p.id === GUIDE_PUZZLE_ID);
+
+  const guideControl = hasGuidePuzzle
+    ? {
+        isOpen: () => guide?.active ?? false,
+        toggle: () => {
+          // From another level the walkthrough is about a design that is not
+          // loaded, so asking for it means "take me there" -- a navigation,
+          // with the intent parked in storage across it.
+          if (!isGuidePuzzle) {
+            armAutostart();
+            openPuzzle(GUIDE_PUZZLE_ID);
+            return;
+          }
+          if (guide?.active) guide.close();
+          else guide?.open();
+        },
+        subscribe: (fn: () => void) => {
+          guideListeners.push(fn);
+        },
+      }
+    : undefined;
+
   const workspaceEl = document.getElementById("workspace") as HTMLDivElement;
   const workspace = new Workspace(
     workspaceEl,
@@ -190,7 +226,19 @@ async function main(): Promise<void> {
       currentId: puzzle.id,
       onSelect: openPuzzle,
     },
+    guideControl,
+    {
+      blurb: puzzle.blurb,
+      answerKind: puzzle.answerKind,
+      parMinutes: puzzle.parMinutes,
+    },
   );
+
+  if (isGuidePuzzle) {
+    guide = new Guide(workspace);
+    guide.subscribe(notifyGuideChange);
+    notifyGuideChange();
+  }
 
   /** Time api.analyse() on the loaded puzzle's baked netlist -- what the
    *  game does at load. */

@@ -149,6 +149,13 @@ export function mountDie3D(
       traceBtn.disabled = v.highlightedNetId === null;
 
       function frame(now: number): void {
+        // Same reasoning as the 2D view: an inactive tab's canvas is detached
+        // from the document, and the extruded stack is much the more
+        // expensive of the two to draw into nothing.
+        if (!canvas.isConnected) {
+          rafId = requestAnimationFrame(frame);
+          return;
+        }
         v.render();
         meter.tick(now);
         // The trace read-out says which net the camera is following, which is

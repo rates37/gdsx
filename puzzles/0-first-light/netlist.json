@@ -1,0 +1,283 @@
+{
+  "top": "first_light",
+  "ports": {
+    "clk": "input",
+    "rst_n": "input",
+    "O[0]": "output",
+    "O[1]": "output",
+    "O[2]": "output",
+    "O[3]": "output",
+    "O[4]": "output",
+    "O[5]": "output",
+    "success": "output",
+    "I": "input"
+  },
+  "power_nets": [
+    "VGND",
+    "VPWR"
+  ],
+  "instances": [
+    {
+      "name": "and2_2_1",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "O[3]",
+        "B": "O[2]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n118"
+      }
+    },
+    {
+      "name": "and2_2_2",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n118",
+        "B": "n128",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n143"
+      }
+    },
+    {
+      "name": "and2_2_3",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n134",
+        "B": "n130",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n128"
+      }
+    },
+    {
+      "name": "and2_2_4",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "O[0]",
+        "B": "O[5]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n134"
+      }
+    },
+    {
+      "name": "dfrtp_2_1",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "I",
+        "Q": "O[0]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_2",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "O[0]",
+        "Q": "O[1]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_3",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "O[1]",
+        "Q": "O[2]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_4",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "O[2]",
+        "Q": "O[3]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_5",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "O[3]",
+        "Q": "O[4]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_6",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "O[4]",
+        "Q": "O[5]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_7",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n158",
+        "Q": "success",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "nor2_2_1",
+      "cell": "sky130_fd_sc_hd__nor2_2",
+      "connections": {
+        "A": "O[4]",
+        "B": "O[1]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n130"
+      }
+    },
+    {
+      "name": "or2_2_1",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "success",
+        "B": "n143",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n158"
+      }
+    }
+  ],
+  "nets": {
+    "O[3]": [
+      "and2_2_1/A",
+      "dfrtp_2_4/Q",
+      "dfrtp_2_5/D"
+    ],
+    "O[2]": [
+      "and2_2_1/B",
+      "dfrtp_2_3/Q",
+      "dfrtp_2_4/D"
+    ],
+    "VGND": [
+      "and2_2_1/VGND",
+      "and2_2_2/VGND",
+      "and2_2_3/VGND",
+      "and2_2_4/VGND",
+      "dfrtp_2_1/VGND",
+      "dfrtp_2_2/VGND",
+      "dfrtp_2_3/VGND",
+      "dfrtp_2_4/VGND",
+      "dfrtp_2_5/VGND",
+      "dfrtp_2_6/VGND",
+      "dfrtp_2_7/VGND",
+      "nor2_2_1/VGND",
+      "or2_2_1/VGND"
+    ],
+    "VPWR": [
+      "and2_2_1/VPWR",
+      "and2_2_2/VPWR",
+      "and2_2_3/VPWR",
+      "and2_2_4/VPWR",
+      "dfrtp_2_1/VPWR",
+      "dfrtp_2_2/VPWR",
+      "dfrtp_2_3/VPWR",
+      "dfrtp_2_4/VPWR",
+      "dfrtp_2_5/VPWR",
+      "dfrtp_2_6/VPWR",
+      "dfrtp_2_7/VPWR",
+      "nor2_2_1/VPWR",
+      "or2_2_1/VPWR"
+    ],
+    "n118": [
+      "and2_2_1/X",
+      "and2_2_2/A"
+    ],
+    "n128": [
+      "and2_2_2/B",
+      "and2_2_3/X"
+    ],
+    "n143": [
+      "and2_2_2/X",
+      "or2_2_1/B"
+    ],
+    "n134": [
+      "and2_2_3/A",
+      "and2_2_4/X"
+    ],
+    "n130": [
+      "and2_2_3/B",
+      "nor2_2_1/Y"
+    ],
+    "O[0]": [
+      "and2_2_4/A",
+      "dfrtp_2_1/Q",
+      "dfrtp_2_2/D"
+    ],
+    "O[5]": [
+      "and2_2_4/B",
+      "dfrtp_2_6/Q"
+    ],
+    "clk": [
+      "dfrtp_2_1/CLK",
+      "dfrtp_2_2/CLK",
+      "dfrtp_2_3/CLK",
+      "dfrtp_2_4/CLK",
+      "dfrtp_2_5/CLK",
+      "dfrtp_2_6/CLK",
+      "dfrtp_2_7/CLK"
+    ],
+    "I": [
+      "dfrtp_2_1/D"
+    ],
+    "rst_n": [
+      "dfrtp_2_1/RESET_B",
+      "dfrtp_2_2/RESET_B",
+      "dfrtp_2_3/RESET_B",
+      "dfrtp_2_4/RESET_B",
+      "dfrtp_2_5/RESET_B",
+      "dfrtp_2_6/RESET_B",
+      "dfrtp_2_7/RESET_B"
+    ],
+    "O[1]": [
+      "dfrtp_2_2/Q",
+      "dfrtp_2_3/D",
+      "nor2_2_1/B"
+    ],
+    "O[4]": [
+      "dfrtp_2_5/Q",
+      "dfrtp_2_6/D",
+      "nor2_2_1/A"
+    ],
+    "n158": [
+      "dfrtp_2_7/D",
+      "or2_2_1/X"
+    ],
+    "success": [
+      "dfrtp_2_7/Q",
+      "or2_2_1/A"
+    ]
+  },
+  "floating": [],
+  "conflicts": []
+}

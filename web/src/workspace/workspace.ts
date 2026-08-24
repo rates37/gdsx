@@ -15,7 +15,12 @@ import {
   type SerializedDockview,
 } from "dockview-core";
 import "./dockview.css";
-import { attachToolbar, type LevelPicker } from "./toolbar.ts";
+import {
+  attachToolbar,
+  type GuideControl,
+  type LevelPicker,
+  type Objective,
+} from "./toolbar.ts";
 
 // v2: the default arrangement changed from a four-row grid to a single
 // tabbed group. The key is versioned so a returning player gets the new
@@ -43,12 +48,18 @@ export class Workspace {
    * @param levels The level picker's contents, if there is more than one
    *   puzzle to offer. The shell hands it straight to the toolbar; it does
    *   not itself know which puzzle is loaded.
+   * @param guide The guided walkthrough's button wiring, if this build has a
+   *   tutorial puzzle. Also handed straight to the toolbar.
+   * @param objective What the loaded puzzle is asking for, shown beside the
+   *   level picker. Also handed straight to the toolbar.
    */
   constructor(
     container: HTMLElement,
     panels: PanelDef[],
     private readonly order: string[],
     levels?: LevelPicker,
+    guide?: GuideControl,
+    objective?: Objective,
   ) {
     for (const p of panels) this.defs.set(p.id, p);
 
@@ -60,7 +71,18 @@ export class Workspace {
       theme: themeAbyss,
       createComponent: (options: CreateComponentOptions): IContentRenderer => {
         const def = this.defs.get(options.name);
-        if (!def) throw new Error(`no panel registered for component "${options.name}"`);
+        // A saved layout can name a panel this build no longer has -- a merged
+        // or renamed one. Throwing here makes dockview tear the *whole*
+        // deserialisation down and revert, so one stale id would cost the
+        // player their entire arrangement. `restore` prunes these before
+        // `fromJSON`; this is the belt to that pair of braces, covering
+        // anything the prune misses (floating and popout groups).
+        if (!def) {
+          const element = document.createElement("div");
+          element.className = "gdsx-panel gdsx-panel-missing";
+          element.textContent = `“${options.name}” is no longer part of this build.`;
+          return { element, init: () => {} };
+        }
         const element = document.createElement("div");
         element.className = "gdsx-panel";
         let handle: { dispose?: () => void } | null = null;
@@ -79,7 +101,7 @@ export class Workspace {
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
 
-    this.status = attachToolbar(container, this, levels);
+    this.status = attachToolbar(container, this, levels, guide, objective);
   }
 
   /** The toolbar's status readout -- the coverage percentage, per §3's title
@@ -107,6 +129,15 @@ export class Workspace {
       title: def.title,
       position: active ? { referencePanel: active.id, direction: "within" } : undefined,
     });
+  }
+
+  /** Brings a panel to the front, reopening it first if the player has closed
+   *  it. What the guided walkthrough drives; nothing else should need to move
+   *  the player's focus for them. */
+  focus(id: string): void {
+    if (!this.defs.has(id)) return;
+    if (!this.api.panels.some((p) => p.id === id)) this.reopen(id);
+    this.api.getPanel(id)?.api.setActive();
   }
 
   /** Fires whenever the set of open panels (or their arrangement) changes -- what the toolbar redraws on. */
@@ -150,11 +181,37 @@ export class Workspace {
     }
   }
 
+  /**
+   * Drops saved panels whose component this build no longer registers.
+   *
+   * dockview's own deserialiser treats an unknown component as fatal: it
+   * unwinds every group it has built, calls `clear()` and rethrows, so a
+   * single stale id costs the player their whole arrangement. Pruning first
+   * turns that into "the panel that went away is gone, everything else is
+   * where you left it" -- which is what a merged or renamed panel should cost.
+   *
+   * The group's own view list and active panel are left alone on purpose:
+   * dockview already filters views down to the panels that survived, and
+   * re-opens a group's last panel when its `activePanel` is not among them.
+   */
+  private prune(data: SerializedDockview): SerializedDockview {
+    const panels = data.panels as Record<string, { contentComponent?: string }> | undefined;
+    if (!panels) return data;
+    const dropped = Object.keys(panels).filter((id) => {
+      const component = panels[id]?.contentComponent;
+      return component !== undefined && !this.defs.has(component);
+    });
+    if (dropped.length === 0) return data;
+    console.warn(`gdsx: dropping ${dropped.join(", ")} from the saved layout — no longer registered`);
+    for (const id of dropped) delete panels[id];
+    return data;
+  }
+
   private restore(): boolean {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     try {
-      const data = JSON.parse(raw) as SerializedDockview;
+      const data = this.prune(JSON.parse(raw) as SerializedDockview);
       this.api.fromJSON(data);
       return this.api.panels.length > 0;
     } catch (err) {

@@ -175,14 +175,25 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
           resultEl.className = stale ? "seq-result stale" : "seq-result";
           return;
         }
+        // Some puzzles stream a message on `O` once the lock opens, one byte
+        // per cycle. Most do not -- `O` is just as often a counter or a shift
+        // register, and decoding one of those as text produces control-code
+        // noise sitting next to the thing the player actually wanted to read.
+        // So the bytes have to *look* like a message before they are shown as
+        // one: printable, and more than one of them.
         let message = "";
         if (bus) {
           for (let c = latch; c < store.cycles; c++) {
             const byte = busValueAt(store, c, bus);
             if (byte === 0 && c > latch) break;
+            if (byte < 32 || byte > 126) {
+              message = "";
+              break;
+            }
             message += String.fromCharCode(byte);
           }
         }
+        if (message.length < 2) message = "";
         resultEl.textContent =
           `${stale ? "(stale) " : ""}success latches at cycle ${latch}` +
           (message ? `  →  ${JSON.stringify(message)}` : "");

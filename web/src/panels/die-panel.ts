@@ -114,6 +114,7 @@ export function mountDie2D(
   let rafId = 0;
   let unsubHighlight: (() => void) | null = null;
   let onKeydown: ((e: KeyboardEvent) => void) | null = null;
+  let resizeObserver: ResizeObserver | null = null;
 
   opts.bundleReady
     .then((bundle) => {
@@ -158,6 +159,24 @@ export function mountDie2D(
       };
       window.addEventListener("keydown", onKeydown);
 
+      // `fit` reads `canvas.clientWidth`, and the view is built before
+      // dockview has finished sizing the group -- so the camera can be framed
+      // against a canvas a few tens of pixels wide and then keep that framing
+      // for the rest of the session, drawing the die as a speck in the middle
+      // of a large panel. Refit whenever the canvas resizes, up until the
+      // player first moves the camera themselves; after that the framing is
+      // theirs and nothing should take it back.
+      let cameraIsOurs = true;
+      const releaseCamera = (): void => {
+        cameraIsOurs = false;
+      };
+      canvas.addEventListener("pointerdown", releaseCamera);
+      canvas.addEventListener("wheel", releaseCamera, { passive: true });
+      resizeObserver = new ResizeObserver(() => {
+        if (cameraIsOurs) view.fit();
+      });
+      resizeObserver.observe(canvas);
+
       canvas.addEventListener("pointermove", (e) => {
         const hit = view.pickNet(e.clientX, e.clientY);
         highlightBus.set(hit ? { name: hit.name } : null);
@@ -168,6 +187,17 @@ export function mountDie2D(
       );
 
       function frame(now: number): void {
+        // dockview detaches an inactive tab's content from the document, so
+        // this canvas can be off-screen while the loop keeps running. Drawing
+        // into a detached canvas is pure waste, and on a machine with no GPU
+        // (a headless browser, a VM) it is software-rasterised waste that
+        // pins a core. Keep the loop alive so switching back is instant, and
+        // skip the work.
+        if (!canvas.isConnected) {
+          meter.reset();
+          rafId = requestAnimationFrame(frame);
+          return;
+        }
         for (let i = 0; i < repeat; i++) view.render();
         minimap.render();
         meter.tick(now);
@@ -218,6 +248,7 @@ export function mountDie2D(
       disposed = true;
       cancelAnimationFrame(rafId);
       unsubHighlight?.();
+      resizeObserver?.disconnect();
       if (onKeydown) window.removeEventListener("keydown", onKeydown);
       opts.onReady?.(null);
       container.classList.remove("die-panel");
