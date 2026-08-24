@@ -102,9 +102,10 @@ export const STEPS: GuideStep[] = [
   {
     id: "netlist",
     panel: "netlist",
+    section: "browser",
     title: "What the extractor actually found",
     body: [
-      "The Netlist Browser lists every instance and every net recovered from that geometry. Thirteen instances: seven {{dfrtp}} flops and six gates.",
+      "The {{Browser}} sub-tab lists every instance and every net recovered from that geometry. Thirteen instances: seven {{dfrtp}} flops and six gates.",
       "Click any row. The detail pane on the right gives you the cell, its Liberty function, and every pin with the net it is on. Click a net chip in there and it opens in the Cone Walker.",
       "Switch to the {{Nets}} tab and set the kind filter to {{flop output}} — those are the state elements' Q pins, and they are where a design keeps everything it knows.",
     ],
@@ -114,11 +115,12 @@ export const STEPS: GuideStep[] = [
   {
     id: "labels",
     panel: "netlist",
+    section: "labels",
     title: "Name things as you learn them",
     body: [
       "The extracted names are honest and unmemorable: {{n143}} is whatever the tracer numbered it. When you work out what something is, say so.",
       "Double-click any net or cell name — here, in the cone walker, in the waveform — and give it a name you will recognise. Or use the {{label}} button in the detail pane.",
-      "Labels are yours, not renames: the raw name stays visible beside them and everything underneath still uses it. The {{Labels}} tab is the glossary you end up with, and the filter box searches labels too.",
+      "Labels are yours, not renames: the raw name stays visible beside them and everything underneath still uses it. This {{Labels}} sub-tab, beside {{Browser}}, is the glossary you end up with — and the browser's filter box searches labels too.",
     ],
     goal: "label a net or a cell",
     done: () => labels.size > 0,
@@ -248,15 +250,15 @@ export const STEPS: GuideStep[] = [
   },
   {
     id: "sensitivity",
-    panel: "sensitivity",
-    title: "Sensitivity: which cycle touches which flop",
+    panel: "experiments",
+    title: "The same sweep, read the other way",
     body: [
-      "The same idea as a dedicated matrix: state elements down the side, cycles across the top, a mark where a pulse at that cycle changes that element. Press {{run}}.",
-      "It surfaces two self-checks as warnings: an element no cycle can move, or a cycle that moves nothing. Both mean your grouping or your window is wrong, and finding that out immediately is worth more than a matrix that merely looks plausible.",
-      "Click a row to send it to the Constraints panel.",
+      "Tick {{elements down the side}} in the toolbar. The matrix flips: watched elements down the side, runs across the top — the slot map, rather than the run log.",
+      "Nothing re-runs. It is the same result you already have, indexed the other way round, which is worth knowing because on a shift register the diagonal only becomes obvious in this orientation.",
+      "Both orientations surface the same two self-checks as warnings: an element no cycle can move, or a cycle that moves nothing. Either means your grouping or your window is wrong, and finding that out immediately is worth more than a matrix that merely looks plausible. Press {{→ constraints}} on a summary row to send what you measured to the Constraints panel.",
     ],
-    goal: "run the sensitivity sweep",
-    done: () => q(".sv-body:not([hidden]) .sv-canvas") !== null,
+    goal: "flip the matrix round",
+    done: () => (q(".xp-transpose") as HTMLInputElement | null)?.checked === true,
   },
   {
     id: "constraints",

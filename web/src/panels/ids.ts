@@ -27,11 +27,9 @@ export const PANEL_IDS = [
   "model-builder",
   "register-inspector",
   "requirements",
-  "sensitivity",
   "register-decoder",
   "sticky-flops",
   "constraints",
-  "labels",
   "repl",
 ] as const;
 
@@ -42,7 +40,9 @@ export type PanelId = (typeof PANEL_IDS)[number];
  * test reads it so that a step naming a section of a panel that has none is
  * caught the same way a bad panel id is.
  */
-export const PANEL_SECTIONS: Partial<Record<PanelId, readonly string[]>> = {};
+export const PANEL_SECTIONS: Partial<Record<PanelId, readonly string[]>> = {
+  netlist: ["browser", "labels"],
+};
 
 export function isPanelId(value: string): value is PanelId {
   return (PANEL_IDS as readonly string[]).includes(value);

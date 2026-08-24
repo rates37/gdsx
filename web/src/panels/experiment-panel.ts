@@ -1,6 +1,14 @@
 // The Experiment Runner (game-plan.md §4.7): pick a baseline, a perturbation
 // set and a watch set, get a matrix.
 //
+// This panel absorbed the former Sensitivity panel, which was this same
+// engine with the recipe pinned to `single-pulse`, the watch set pinned to
+// every flop, and the axes transposed -- so it is now the `elements down the
+// side` toggle rather than a tab of its own. That also settles a real
+// inconsistency: the old panel hardcoded a baseline of every port at 0, which
+// differs from this one's "idle" whenever a port's cycle-0 level is 1, and
+// nothing said which you were looking at.
+//
 // This is the panel where a puzzle is usually cracked, and three things about
 // it are deliberate:
 //
@@ -24,6 +32,7 @@
 
 import type { SimStore } from "../sim/store.ts";
 import { cursorBus } from "../store/cursor.ts";
+import { constraintsInbox } from "../store/constraints-inbox.ts";
 import { highlightBus } from "../store/highlight.ts";
 import { labels } from "../store/labels.ts";
 import { instanceChip, netChip } from "./chips.ts";
@@ -90,6 +99,9 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           </select></label>
           <label class="xp-inline">pulse <select class="xp-port"></select></label>
           <button class="xp-run" type="button" disabled>▶ Run</button>
+          <label class="xp-inline xp-orient" title="swap the axes: watched elements down the side, runs across the top">
+            <input type="checkbox" class="xp-transpose" /> elements down the side
+          </label>
           <span class="xp-status"></span>
           <span class="py-call-slot"></span>
         </div>
@@ -112,6 +124,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       const baselineBox = container.querySelector(".xp-baseline") as HTMLSelectElement;
       const portBox = container.querySelector(".xp-port") as HTMLSelectElement;
       const runBtn = container.querySelector(".xp-run") as HTMLButtonElement;
+      const transposeBox = container.querySelector(".xp-transpose") as HTMLInputElement;
       const statusEl = container.querySelector(".xp-status") as HTMLSpanElement;
       const paramsEl = container.querySelector(".xp-params") as HTMLDivElement;
       const blurbEl = container.querySelector(".xp-blurb") as HTMLDivElement;
@@ -154,6 +167,46 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       let running = false;
       let disposed = false;
       let hovered: { row: number; column: number } | null = null;
+      // Which way round the matrix is drawn. Runs-down-the-side is the natural
+      // reading of "here are my runs"; elements-down-the-side is the natural
+      // reading of "here is my slot map", and on a shift register that view
+      // makes the diagonal obvious. It is the *same* result either way -- this
+      // never re-runs the sweep, it only swaps the indexing in draw().
+      let transposed = false;
+
+      /**
+       * The matrix as drawn: what is down the side, what is across the top,
+       * and how to get from a drawn (row, column) back to the run and watched
+       * element it stands for.
+       */
+      function axes() {
+        const runs = result ? result.rows.length : 0;
+        const cols = result ? result.columns.length : 0;
+        return {
+          rowCount: transposed ? cols : runs,
+          colCount: transposed ? runs : cols,
+          /** Label down the left gutter. */
+          rowLabel: (r: number): string =>
+            transposed ? labelFor(result!.columns[r]) : result!.rows[r].label,
+          /** Is this drawn row "interesting" -- used to dim empty gutter labels. */
+          rowMarked: (r: number): boolean =>
+            transposed
+              ? result!.rows.some((row) => row.cells[r])
+              : Boolean(result!.rows[r].marked),
+          cell: (r: number, c: number): number =>
+            transposed ? (result!.rows[c]?.cells[r] ?? 0) : (result!.rows[r]?.cells[c] ?? 0),
+          /** Index into result.rows for a drawn cell. */
+          runIndex: (at: { row: number; column: number }): number =>
+            transposed ? at.column : at.row,
+          /** Index into result.columns for a drawn cell. */
+          columnIndex: (at: { row: number; column: number }): number =>
+            transposed ? at.row : at.column,
+        };
+      }
+
+      function labelFor(column: string): string {
+        return labels.display(columnKind(column), column);
+      }
 
       attachPythonCallButton(callSlot, () => result?.call ?? null);
 
@@ -327,8 +380,9 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       function draw(): void {
         if (!result) return;
         const dpr = window.devicePixelRatio || 1;
-        const width = GUTTER_W + result.columns.length * CELL_W;
-        const height = result.rows.length * CELL_H;
+        const ax = axes();
+        const width = GUTTER_W + ax.colCount * CELL_W;
+        const height = ax.rowCount * CELL_H;
         canvas.width = Math.ceil(width * dpr);
         canvas.height = Math.ceil(height * dpr);
         canvas.style.width = `${width}px`;
@@ -340,16 +394,15 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         ctx2d.font = "10px ui-monospace, Menlo, monospace";
         ctx2d.textBaseline = "middle";
 
-        for (let r = 0; r < result.rows.length; r++) {
-          const row = result.rows[r];
+        for (let r = 0; r < ax.rowCount; r++) {
           const y = r * CELL_H;
           ctx2d.fillStyle = r % 2 ? "#10131a" : "#0d0f14";
           ctx2d.fillRect(0, y, width, CELL_H);
-          ctx2d.fillStyle = row.marked ? "#9aa2b5" : "#4b5162";
-          ctx2d.fillText(row.label, 4, y + CELL_H / 2);
+          ctx2d.fillStyle = ax.rowMarked(r) ? "#9aa2b5" : "#4b5162";
+          ctx2d.fillText(ax.rowLabel(r), 4, y + CELL_H / 2);
 
-          for (let c = 0; c < result.columns.length; c++) {
-            const value = row.cells[c];
+          for (let c = 0; c < ax.colCount; c++) {
+            const value = ax.cell(r, c);
             if (!value) continue;
             // "changed" is one colour because it is one bit. A value scan is
             // showing the value itself, and 1 and 0 are not "hit" and "miss".
@@ -368,6 +421,20 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             CELL_H - 1,
           );
         }
+      }
+
+      /** The cycle numbers a watched element responded at, read back out of
+       *  the run labels. `single-pulse` names its runs "cycle N", which is the
+       *  only form the constraints system can consume. */
+      function cycleNumbersFor(columnIndex: number): number[] {
+        if (!result) return [];
+        const out: number[] = [];
+        for (const row of result.rows) {
+          if (!row.cells[columnIndex]) continue;
+          const m = /^cycle (\d+)/.exec(row.label);
+          if (m) out.push(Number(m[1]));
+        }
+        return out;
       }
 
       function renderSummary(): void {
@@ -400,6 +467,20 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           }
           const line = el("div", "xp-table-row");
           line.append(columnChip(result.columns[c]), el("span", "xp-hits", hits.join(", ")));
+          // The canvas click is already spoken for ("load this run into the
+          // waveform"), so the constraints hand-off lives here instead: a
+          // labelled button, discoverable, and it survives the transpose.
+          const element = result.columns[c];
+          const cycles = cycleNumbersFor(c);
+          const send = el("button", "xp-to-constraints", "→ constraints") as HTMLButtonElement;
+          send.type = "button";
+          send.title = `send "${element} moves at ${cycles.join(", ")}" to the Constraints panel`;
+          send.addEventListener("click", () => {
+            constraintsInbox.push({ name: element, elements: cycles, source: "experiments" });
+            send.textContent = "sent";
+            send.disabled = true;
+          });
+          line.append(send);
           table.append(line);
         }
         if (!shown) table.append(el("div", "xp-summary-note", "nothing moved in any run"));
@@ -415,8 +496,9 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         const y = event.clientY - rect.top;
         const column = Math.floor(x / CELL_W);
         const row = Math.floor(y / CELL_H);
+        const ax = axes();
         if (column < 0 || row < 0) return null;
-        if (column >= result.columns.length || row >= result.rows.length) return null;
+        if (column >= ax.colCount || row >= ax.rowCount) return null;
         return { row, column };
       }
 
@@ -428,10 +510,11 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           draw();
           return;
         }
-        const row = result.rows[at.row];
-        const column = result.columns[at.column];
-        const columnText = labels.display(columnKind(column), column);
-        const cell = row.cells[at.column];
+        const ax = axes();
+        const row = result.rows[ax.runIndex(at)];
+        const column = result.columns[ax.columnIndex(at)];
+        const columnText = labelFor(column);
+        const cell = row.cells[ax.columnIndex(at)];
         readoutEl.textContent =
           result.cellKind === "changed"
             ? `${row.label} × ${columnText} — ${cell ? "moved" : "unchanged"} (final value, vs the baseline)`
@@ -451,13 +534,19 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       canvas.addEventListener("click", (event) => {
         const at = cellAt(event);
         if (!at || !result || !store) return;
-        const row = result.rows[at.row];
+        const row = result.rows[axes().runIndex(at)];
         const ctx = contextOf();
         const tracks = tracksOf(row.perturbations, ctx.baseVector, ctx.cycles, ctx.inputPorts);
         for (const [port, bits] of Object.entries(tracks)) store.setPattern(port, bits);
         const cycles = [...row.perturbations.keys()].sort((a, b) => a - b);
         if (cycles.length) cursorBus.set(cycles[cycles.length - 1]);
         statusEl.textContent = `loaded ${row.label} into the waveform`;
+      });
+
+      transposeBox.addEventListener("change", () => {
+        transposed = transposeBox.checked;
+        hovered = null;
+        draw();
       });
 
       evidenceBtn.addEventListener("click", () => {

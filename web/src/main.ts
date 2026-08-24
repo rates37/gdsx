@@ -11,7 +11,7 @@ import { RenderBundle } from "./render/bundle";
 import { Workspace } from "./workspace/workspace";
 import type { DieViewApi, FrameStats } from "./panels/die-panel";
 import { dieViewPanel } from "./panels/die-view-panel";
-import { netlistBrowserPanel } from "./panels/netlist-panel";
+import { netlistPanel } from "./panels/netlist-host";
 import { coneWalkerPanel } from "./panels/cone-walker-panel";
 import { waveformPanel } from "./panels/waveform-panel";
 import { sequenceEditorPanel } from "./panels/sequence-editor-panel";
@@ -20,12 +20,10 @@ import { experimentPanel } from "./panels/experiment-panel";
 import { modelPanel } from "./panels/model-panel";
 import { registerInspectorPanel } from "./panels/register-inspector-panel";
 import { requirementsPanel } from "./panels/requirements-panel";
-import { sensitivityPanel } from "./panels/sensitivity-panel";
 import { registerDecoderPanel } from "./panels/register-decoder-panel";
 import { stickyFlopsPanel } from "./panels/sticky-flops-panel";
 import { constraintsPanel } from "./panels/constraints-panel";
 import { replPanel } from "./panels/repl-panel";
-import { labelsPanel } from "./panels/labels-panel";
 import { labels } from "./store/labels";
 import { Guide, armAutostart } from "./guide/guide";
 import { GUIDE_PUZZLE_ID } from "./guide/steps";
@@ -169,7 +167,7 @@ async function main(): Promise<void> {
           dieApi = api;
         },
       }),
-      netlistBrowserPanel(designReady),
+      netlistPanel(designReady),
       coneWalkerPanel(designReady),
       waveformPanel(storeReady),
       sequenceEditorPanel(storeReady),
@@ -188,12 +186,10 @@ async function main(): Promise<void> {
       modelPanel({ storeReady, puzzleId: puzzle.id }),
       registerInspectorPanel({ designReady }),
       requirementsPanel({ designReady, storeReady, puzzleId: puzzle.id }),
-      sensitivityPanel({ storeReady, tapeUrl }),
       registerDecoderPanel({ designReady, puzzleId: puzzle.id }),
       stickyFlopsPanel({ designReady, puzzleId: puzzle.id, successNet }),
       constraintsPanel({ designReady }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
-      labelsPanel(),
     ],
     // One tabbed group, roughly in the order of game-plan.md §2's core loop:
     // look at the die, read the netlist, walk a cone, write it down, then the
@@ -209,11 +205,9 @@ async function main(): Promise<void> {
       "model-builder",
       "register-inspector",
       "requirements",
-      "sensitivity",
       "register-decoder",
       "sticky-flops",
       "constraints",
-      "labels",
       "repl",
     ],
     {

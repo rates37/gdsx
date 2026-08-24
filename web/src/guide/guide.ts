@@ -14,6 +14,7 @@
 // it whatever the check was looking at) cannot un-tick it.
 
 import { STEPS, type GuideStep } from "./steps";
+import { panelRouteBus } from "../store/panel-route";
 import type { Workspace } from "../workspace/workspace";
 
 const STATE_KEY = "gdsx.guide.state.v1";
@@ -190,7 +191,13 @@ export class Guide {
 
   private focusPanel(): void {
     const id = this.step.panel;
-    if (id) this.workspace.focus(id);
+    if (!id) return;
+    this.workspace.focus(id);
+    // `focus` gets the panel to the front; the section half is a separate
+    // request, because a panel hosting sub-tabs otherwise lands on whichever
+    // one the player used last -- which for a step that says "here is the
+    // glossary" is the wrong half of the panel.
+    panelRouteBus.open(id, this.step.section);
   }
 
   private save(): void {

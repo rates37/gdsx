@@ -158,6 +158,56 @@
         background: #0d0f14;
       }
 
+      /* ---- sub-tab host (panels/mounts.ts) ----------------------------- */
+      /* One panel, several former panels beneath it. Visually quieter than
+         dockview's own tab strip on purpose: this is a division *within* a
+         tab, and making it look like a peer of the tab strip above would read
+         as two competing rows of tabs. */
+      .pt-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .pt-tabs {
+        display: flex;
+        gap: 2px;
+        flex: none;
+        padding: 4px 6px 0;
+        border-bottom: 1px solid #1c2130;
+      }
+      .pt-tab {
+        background: transparent;
+        border: 1px solid transparent;
+        border-bottom: 0;
+        border-radius: 3px 3px 0 0;
+        padding: 3px 12px;
+        color: #7d8598;
+        cursor: pointer;
+      }
+      .pt-tab:hover {
+        color: #cfd4de;
+      }
+      .pt-tab.on {
+        background: #0d0f14;
+        border-color: #262b36;
+        color: #f2cc4d;
+      }
+      .pt-host {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      /* One per section, so a kept-alive section can be hidden without the
+         next one having to clear up after it. */
+      .pt-section {
+        position: absolute;
+        inset: 0;
+      }
+      .pt-section[hidden] {
+        display: none;
+      }
+
       /* ---- die view panel: 2D/3D toggle + debug switch ----------------- */
       .die-modebar {
         position: absolute;
@@ -1484,6 +1534,20 @@
         gap: 8px;
         padding: 1px 0;
         font-size: 11px;
+      }
+      .xp-orient {
+        color: #7d8598;
+      }
+      .xp-to-constraints {
+        margin-left: auto;
+        flex: none;
+        padding: 0 6px;
+        font-size: 10px;
+        color: #7d8598;
+      }
+      .xp-to-constraints:disabled {
+        color: #6fbf73;
+        opacity: 1;
       }
       .xp-table-row .net-chip {
         flex: none;
