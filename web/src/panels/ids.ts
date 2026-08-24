@@ -26,7 +26,6 @@ export const PANEL_IDS = [
   "experiments",
   "model-builder",
   "register-inspector",
-  "requirements",
   "repl",
 ] as const;
 

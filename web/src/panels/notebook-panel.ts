@@ -36,7 +36,7 @@ import {
   latest,
   verdictStyle,
 } from "../notebook/model";
-import { Notebook } from "../notebook/store";
+import { notebookFor } from "../notebook/store";
 import { evidenceLog, type EvidenceRecord } from "../notebook/evidence";
 import { VerifyEngine, estimate } from "../notebook/engine";
 import { asPercent, coverage, pointsFor } from "../notebook/scoring";
@@ -171,7 +171,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
       const evidenceEl = container.querySelector(".nb-evidence") as HTMLDivElement;
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
 
-      const notebook = new Notebook(options.puzzleId);
+      const notebook = notebookFor(options.puzzleId);
       // The same log the Experiment Runner writes to: two panels looking at one
       // notebook, not two notebooks. Evidence sits below the claims and scores
       // nothing -- a measurement is not an assertion, and the points are in

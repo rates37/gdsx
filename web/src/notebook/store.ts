@@ -106,6 +106,32 @@ export class Notebook {
   }
 }
 
+/**
+ * The one notebook for a puzzle.
+ *
+ * Three panels write claims -- the Notebook itself, the Cone Walker's
+ * requirement pins, the Registers panel's `pin as role` -- and each used to
+ * construct its own `Notebook`. Every instance reads and writes the same
+ * localStorage key, so nothing was *lost*, but each held its own in-memory
+ * `records` array and its own listener set: pinning a claim from one panel
+ * wrote it to storage and the Notebook panel, holding a different instance,
+ * never heard about it. The claim appeared to vanish until a reload.
+ *
+ * Keyed by puzzle rather than a bare singleton because `Notebook` is
+ * constructed with a puzzle id and the class stays independently usable (the
+ * write-up and verification tests build their own).
+ */
+const shared = new Map<string, Notebook>();
+
+export function notebookFor(puzzleId: string): Notebook {
+  let notebook = shared.get(puzzleId);
+  if (!notebook) {
+    notebook = new Notebook(puzzleId);
+    shared.set(puzzleId, notebook);
+  }
+  return notebook;
+}
+
 /** Every claim whose current verdict is a proof. */
 export function proven(notebook: Notebook): ClaimRecord[] {
   return notebook.all().filter((r) => latest(r)?.verdict.kind === "PROVEN");

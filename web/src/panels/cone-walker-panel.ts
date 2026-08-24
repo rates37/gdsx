@@ -23,6 +23,11 @@ import { coneRootBus } from "../store/selection";
 import { labels } from "../store/labels";
 import { instanceChip, netChip, openLabelEditor, refreshChips } from "./chips";
 import { attachPythonCallButton } from "./python-call";
+import { renderRequirements, leafKind } from "./requirements-view";
+import { cursorBus } from "../store/cursor";
+import { notebookFor } from "../notebook/store";
+import type { Claim } from "../notebook/model";
+import type { SimStore } from "../sim/store";
 import type { PanelDef } from "../workspace/workspace";
 
 const DEPTH = 5;
@@ -69,7 +74,17 @@ const LEAF_LABEL: Record<string, string> = {
 
 const SHORT_CELL = /^sky130_fd_sc_hd__/;
 
-export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
+export interface ConeWalkerPanelOptions {
+  designReady: Promise<DesignClient>;
+  /** For the live ✓/✗ column on a flattened cone. The walk itself is pure
+   *  analysis and does not need it. */
+  storeReady: Promise<SimStore>;
+  /** For the `pin` button on a forced flop leaf. */
+  puzzleId: string;
+}
+
+export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
+  const designReady = options.designReady;
   return {
     id: "cone-walker",
     title: "Cone Walker",
@@ -138,6 +153,8 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
       let focusNet: string | null = null;
       let flattenValue: 0 | 1 = 1;
       let disposed = false;
+      let store: SimStore | null = null;
+      const notebook = notebookFor(options.puzzleId);
 
       function setFocus(net: string): void {
         focusNet = net;
@@ -287,56 +304,36 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
       function renderFlatten(r: RequirementsView): void {
         lastFlatten = r;
         flattenTitle.textContent = `${labels.display("net", r.net)} == ${r.value}`;
-        flattenBody.replaceChildren();
-
-        const summary = el(
-          "div",
-          "cw-flatten-summary",
-          `${r.leaves.length} ${r.leaves.length === 1 ? "leaf" : "leaves"} forced` +
-            (r.choices.length
-              ? `, ${r.choices.length} choice${r.choices.length === 1 ? "" : "s"} unresolved`
-              : ", tree is pure AND/OR") +
-            (r.consistent ? "" : " — INCONSISTENT (conflicting requirements)"),
-        );
-        flattenBody.append(summary);
-
-        if (r.leaves.length) {
-          const list = el("div", "cw-flatten-leaves");
-          for (const leaf of r.leaves) {
-            const row = el("div", "cw-flatten-leaf");
-            row.append(el("span", `cw-polarity cw-polarity-${leaf.value}`, String(leaf.value)));
-            row.append(netSpan(leaf.net));
-            list.append(row);
-          }
-          flattenBody.append(list);
-        }
-
-        if (r.choices.length) {
-          const cbox = el("div", "cw-flatten-choices");
-          cbox.append(el("h4", undefined, "not forced — any one option suffices"));
-          for (const c of r.choices) {
-            const crow = el("div", "cw-choice");
-            crow.append(
-              el("div", "cw-choice-head", `${labels.display("net", c.net)} == ${c.value}:`),
-            );
-            for (const opt of c.options) {
-              const text = opt.literals
-                .map((l) => `${labels.display("net", l.net)}=${l.value}`)
-                .join("  &  ");
-              crow.append(el("div", "cw-choice-option", text || "(always true)"));
-            }
-            cbox.append(crow);
-          }
-          flattenBody.append(cbox);
-        }
-
-        if (r.conflicts.length) {
-          flattenBody.append(
-            el("div", "cw-flatten-conflicts", `conflicting: ${r.conflicts.join(", ")}`),
-          );
-        }
-
+        // One renderer, shared with what used to be the Requirements panel:
+        // the ✓/✗ column against the waveform cursor and the `pin` button come
+        // with it, so flattening here is now the whole derivation rather than
+        // a read-only preview of it.
+        renderRequirements(flattenBody, r, {
+          live: (label, wanted) => satisfied(label, wanted),
+          onPin: (leaf, decoded) => {
+            notebook.add({
+              kind: "requirement",
+              output: r.net,
+              value: r.value,
+              flop: decoded.instance,
+              flop_value: leaf.value,
+            } as Claim);
+          },
+        });
         flattenPanel.hidden = false;
+      }
+
+      /** Whether a leaf holds the value it needs at the cursor's cycle.
+       *  `null` while the gate tape is still loading, or for a leaf it does
+       *  not carry -- never a silent "false", which would read as a
+       *  requirement the player has failed to meet. */
+      function satisfied(label: string, wanted: number): boolean | null {
+        if (!store) return null;
+        const cycle = cursorBus.get();
+        const decoded = leafKind(label);
+        if (decoded.kind === "const") return decoded.value === wanted;
+        if (decoded.kind === "flop") return store.flopValueAt(cycle, decoded.instance) === wanted;
+        return store.netValueAt(cycle, decoded.net) === wanted;
       }
 
       async function runFlatten(): Promise<void> {
@@ -398,6 +395,19 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
 
       // Chips repaint themselves; the flatten panel's plain text and the
       // label button's wording do not.
+      // The ✓/✗ column is a statement about one cycle, so it has to follow the
+      // cursor. Only the drawer is redrawn -- rebuilding the tree on every
+      // cursor move would be both wasteful and visually noisy.
+      const unsubCursor = cursorBus.subscribe(() => {
+        if (lastFlatten && !flattenPanel.hidden) renderFlatten(lastFlatten);
+      });
+
+      options.storeReady.then((s) => {
+        if (disposed) return;
+        store = s;
+        if (lastFlatten && !flattenPanel.hidden) renderFlatten(lastFlatten);
+      });
+
       const unsubLabels = labels.subscribe(() => {
         refreshChips(container);
         if (lastFlatten && !flattenPanel.hidden) renderFlatten(lastFlatten);
@@ -419,6 +429,7 @@ export function coneWalkerPanel(designReady: Promise<DesignClient>): PanelDef {
           disposed = true;
           unsubRoot();
           unsubLabels();
+          unsubCursor();
         },
       };
     },

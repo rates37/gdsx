@@ -924,7 +924,10 @@
         font-size: 11px;
       }
       .cw-flatten-panel {
-        width: 320px;
+        /* Wider than it was: this drawer now carries the whole derivation --
+           the forced checklist with its live column and pin buttons, and the
+           choices -- rather than a read-only preview of it. */
+        width: min(440px, 45%);
         flex: none;
         border-left: 1px solid #1c2130;
         overflow-y: auto;
@@ -1773,7 +1776,6 @@
       .ri-orbit-state { white-space: nowrap; }
 
       /* ---- requirements panel (§4.9) ------------------------------------- */
-      .rq-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
       .rq-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
       .rq-net { width: 140px; }
       .rq-status { color: #9aa2b5; font-size: 11px; }
@@ -1785,7 +1787,12 @@
       .rq-section { margin-bottom: 16px; }
       .rq-section-title { color: #9aa2b5; font-size: 11px; margin-bottom: 6px; }
       .rq-leaf { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 1px 0; }
-      .rq-check { width: 14px; text-align: center; color: #6fbf73; }
+      .rq-check { width: 14px; text-align: center; }
+      .rq-check-yes { color: #6fbf73; }
+      .rq-check-no { color: #f08a90; }
+      .rq-check-unknown { color: #4b5162; }
+      .rq-hint { color: #6d7486; font-size: 11px; }
+      .rq-hint.bad { color: #f08a90; }
       .rq-eq { color: #6d7486; }
       .rq-claim-btn { margin-left: auto; font-size: 10px; padding: 1px 6px; }
       .rq-choice { border-left: 2px solid #2e3444; padding-left: 8px; margin-bottom: 8px; font-size: 12px; }

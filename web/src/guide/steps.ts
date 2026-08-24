@@ -198,19 +198,19 @@ export const STEPS: GuideStep[] = [
       "Now flatten the {{or2}} above it instead. You get two options rather than forced leaves — {{the comparator fires}}, or {{success is already set}} — because with a sticky latch that genuinely is a choice. Forced and choice are drawn apart on purpose; collapsing one into the other is a lie.",
     ],
     goal: "flatten a cone",
-    done: () => q(".cw-flatten-panel:not([hidden]) .cw-flatten-leaf") !== null,
+    done: () => q(".cw-flatten-panel:not([hidden]) .rq-leaf") !== null,
   },
   {
     id: "requirements",
-    panel: "requirements",
-    title: "The same thing as a checklist",
+    panel: "cone-walker",
+    title: "Forced, chosen, and satisfied right now",
     body: [
-      "This panel is that derivation as a list you can tick off, with a live ✓ or ✗ against whatever your current sequence produces at the cursor cycle, and a {{pin}} button that turns any row into a notebook claim.",
-      "Type {{success}} and press {{derive}} first, to see what it says: one row, {{dfrtp_2_7.Q == 1}}. Of course — {{success}} *is* that flop's output, and justification stops at flops exactly like the cone walk does. Not a dead end, a reminder of which cycle you are standing in.",
-      "Now put in the comparator net you flattened in the last step — the cone walker showed you its name — and derive that. Six rows. Read them in shift order: the flop whose D is {{I}} holds the bit you drove {{last}}, and the far end of the chain holds the one you drove {{first}}. Write the word down in that order; it is the answer.",
+      "Look at the flatten result again. Each forced row carries a live ✓ or ✗ against whatever your current sequence produces {{at the cursor cycle}} — move the waveform cursor and the column follows it. A ✗ is not a failure, it is the gap between where the design is and where it has to be.",
+      "{{pin}} turns any forced flop row into a notebook requirement claim, which is how a derivation becomes something the game can score.",
+      "Now flatten {{success}} itself for contrast: one row, {{dfrtp_2_7.Q == 1}}. Of course — {{success}} *is* that flop's output, and justification stops at flops exactly as the walk does. Not a dead end; a reminder of which cycle you are standing in.",
     ],
-    goal: "derive the requirements for a net",
-    done: () => q(".rq-body .rq-leaf") !== null,
+    goal: "pin a requirement to the notebook",
+    done: () => q(".rq-claim-btn[disabled]") !== null,
   },
   {
     id: "waveform",
@@ -282,7 +282,13 @@ export const STEPS: GuideStep[] = [
       "A disproof scores too, and stays in the notebook struck through and timestamped. Discovering your earlier conclusion was wrong is the best thing that happens in a real session. {{export write-up}} turns the whole notebook into a Markdown account of the investigation.",
     ],
     goal: "record a claim",
-    done: () => q(".nb-list .nb-claim") !== null || q(".nb-form:not([hidden])") !== null,
+    //: `.nb-row` is what the list actually emits -- this looked for
+    //: `.nb-claim`, which the panel has never rendered, so only the open-form
+    //: fallback could ever fire. Evidence rows share `.nb-row`, hence the
+    //: exclusion.
+    done: () =>
+      q(".nb-list .nb-row:not(.nb-evidence-row)") !== null ||
+      q(".nb-form:not([hidden])") !== null,
   },
   {
     id: "model",

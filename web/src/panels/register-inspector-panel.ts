@@ -12,7 +12,7 @@
 
 import { instanceChip } from "./chips.ts";
 import { mountGroupTools } from "./group-tools.ts";
-import { Notebook } from "../notebook/store.ts";
+import { notebookFor } from "../notebook/store.ts";
 import type { Mounted } from "./mounts.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import { VirtualList } from "./virtual-list.ts";
@@ -87,7 +87,7 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
       let selected: RegisterEntry | null = null;
       let lastCall: string | null = null;
       let groupTools: Mounted | null = null;
-      const notebook = new Notebook(options.puzzleId);
+      const notebook = notebookFor(options.puzzleId);
 
       attachPythonCallButton(callSlot, () => lastCall);
 

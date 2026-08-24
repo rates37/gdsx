@@ -19,7 +19,6 @@ import { notebookPanel } from "./panels/notebook-panel";
 import { experimentPanel } from "./panels/experiment-panel";
 import { modelPanel } from "./panels/model-panel";
 import { registerPanel } from "./panels/register-host";
-import { requirementsPanel } from "./panels/requirements-panel";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
 import { Guide, armAutostart } from "./guide/guide";
@@ -165,7 +164,7 @@ async function main(): Promise<void> {
         },
       }),
       netlistPanel(designReady),
-      coneWalkerPanel(designReady),
+      coneWalkerPanel({ designReady, storeReady, puzzleId: puzzle.id }),
       waveformPanel(storeReady),
       sequenceEditorPanel(storeReady),
       notebookPanel({
@@ -182,7 +181,6 @@ async function main(): Promise<void> {
       experimentPanel({ storeReady, designReady, puzzleId: puzzle.id, tapeUrl }),
       modelPanel({ storeReady, puzzleId: puzzle.id }),
       registerPanel({ designReady, puzzleId: puzzle.id, successNet }),
-      requirementsPanel({ designReady, storeReady, puzzleId: puzzle.id }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
     // One tabbed group, roughly in the order of game-plan.md §2's core loop:
@@ -198,7 +196,6 @@ async function main(): Promise<void> {
       "experiments",
       "model-builder",
       "register-inspector",
-      "requirements",
       "repl",
     ],
     {
