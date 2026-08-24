@@ -45,6 +45,85 @@ export interface SubTab {
   keepAlive?: boolean;
 }
 
+export interface Drawer extends Mounted {
+  /** Text beside the title, e.g. a pending count. `null` clears it. */
+  setBadge(text: string | null): void;
+}
+
+/**
+ * A collapsible region at the foot of a panel, for a secondary tool that
+ * belongs *next to* the primary one rather than in a tab of its own.
+ *
+ * The child is mounted on first expand, not on creation, and that is the
+ * point rather than an optimisation: it lets a panel that is deliberately
+ * free of some dependency host a section that needs it, without taking the
+ * dependency itself. The Experiments panel runs on the gate tape and is live
+ * before Pyodide has booted; the Constraints drawer inside it needs Python,
+ * and because it does not mount until the player opens it, the sweep never
+ * waits on the analysis engine.
+ */
+export function drawer(
+  container: HTMLElement,
+  opts: { id: string; title: string; mount: Mount },
+): Drawer {
+  const storageKey = `gdsx.drawer.${opts.id}`;
+  const root = document.createElement("div");
+  root.className = "pd-drawer";
+  root.innerHTML = `
+    <button class="pd-drawer-head" type="button" aria-expanded="false">
+      <span class="pd-drawer-caret">▸</span>
+      <span class="pd-drawer-title"></span>
+      <span class="pd-drawer-badge"></span>
+    </button>
+    <div class="pd-drawer-body" hidden></div>`;
+  (root.querySelector(".pd-drawer-title") as HTMLElement).textContent = opts.title;
+  const head = root.querySelector(".pd-drawer-head") as HTMLButtonElement;
+  const caret = root.querySelector(".pd-drawer-caret") as HTMLElement;
+  const badge = root.querySelector(".pd-drawer-badge") as HTMLElement;
+  const body = root.querySelector(".pd-drawer-body") as HTMLElement;
+  container.append(root);
+
+  let open = false;
+  let mounted: Mounted | null = null;
+
+  function setOpen(next: boolean, remember = false): void {
+    open = next;
+    body.hidden = !open;
+    caret.textContent = open ? "▾" : "▸";
+    head.setAttribute("aria-expanded", String(open));
+    root.classList.toggle("on", open);
+    if (open && !mounted) mounted = opts.mount(body);
+    if (remember) {
+      try {
+        localStorage.setItem(storageKey, open ? "1" : "0");
+      } catch {
+        // Storage disabled: the drawer works, it just opens closed next time.
+      }
+    }
+  }
+
+  head.addEventListener("click", () => setOpen(!open, true));
+
+  let initial = false;
+  try {
+    initial = localStorage.getItem(storageKey) === "1";
+  } catch {
+    initial = false;
+  }
+  if (initial) setOpen(true);
+
+  return {
+    setBadge(text) {
+      badge.textContent = text ?? "";
+      badge.hidden = text === null;
+    },
+    dispose() {
+      mounted?.dispose?.();
+      mounted = null;
+    },
+  };
+}
+
 /**
  * Renders a sub-tab strip into `container` and mounts one child beneath it.
  *

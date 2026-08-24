@@ -27,9 +27,6 @@ export const PANEL_IDS = [
   "model-builder",
   "register-inspector",
   "requirements",
-  "register-decoder",
-  "sticky-flops",
-  "constraints",
   "repl",
 ] as const;
 
@@ -42,6 +39,7 @@ export type PanelId = (typeof PANEL_IDS)[number];
  */
 export const PANEL_SECTIONS: Partial<Record<PanelId, readonly string[]>> = {
   netlist: ["browser", "labels"],
+  "register-inspector": ["registers", "sticky"],
 };
 
 export function isPanelId(value: string): value is PanelId {

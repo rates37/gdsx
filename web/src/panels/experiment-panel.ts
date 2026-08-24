@@ -33,6 +33,9 @@
 import type { SimStore } from "../sim/store.ts";
 import { cursorBus } from "../store/cursor.ts";
 import { constraintsInbox } from "../store/constraints-inbox.ts";
+import type { DesignClient } from "../design/client.ts";
+import { drawer } from "./mounts.ts";
+import { mountConstraints } from "./constraints-panel.ts";
 import { highlightBus } from "../store/highlight.ts";
 import { labels } from "../store/labels.ts";
 import { instanceChip, netChip } from "./chips.ts";
@@ -77,6 +80,10 @@ function names(text: string): string[] {
 }
 
 export interface ExperimentPanelOptions {
+  /** For the Constraints drawer only. The sweep itself never touches Python,
+   *  and the drawer does not mount until the player opens it, so this promise
+   *  is not awaited anywhere on the path to a first result. */
+  designReady: Promise<DesignClient>;
   storeReady: Promise<SimStore>;
   /** Which notebook the evidence lands in. */
   puzzleId: string;
@@ -118,7 +125,8 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             <button class="xp-copy" type="button" disabled>copy as TSV</button>
             <span class="xp-evidence-note"></span>
           </div>
-        </div>`;
+        </div>
+        <div class="xp-drawer-slot"></div>`;
 
       const recipeBox = container.querySelector(".xp-recipe") as HTMLSelectElement;
       const baselineBox = container.querySelector(".xp-baseline") as HTMLSelectElement;
@@ -543,6 +551,23 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         statusEl.textContent = `loaded ${row.label} into the waveform`;
       });
 
+      // The Constraints system, beside the sweep that feeds it. Lazily
+      // mounted: closed, it costs nothing and needs no analysis engine.
+      const constraintsDrawer = drawer(
+        container.querySelector(".xp-drawer-slot") as HTMLElement,
+        {
+          id: "experiments.constraints",
+          title: "Constraints",
+          mount: (host) => mountConstraints(host, { designReady: options.designReady }),
+        },
+      );
+      const unsubInbox = constraintsInbox.subscribe((items) => {
+        constraintsDrawer.setBadge(items.length ? `${items.length} pending` : null);
+      });
+      constraintsDrawer.setBadge(
+        constraintsInbox.all().length ? `${constraintsInbox.all().length} pending` : null,
+      );
+
       transposeBox.addEventListener("change", () => {
         transposed = transposeBox.checked;
         hovered = null;
@@ -626,6 +651,8 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         dispose() {
           disposed = true;
           sweeps.dispose();
+          unsubInbox();
+          constraintsDrawer.dispose?.();
         },
       };
     },

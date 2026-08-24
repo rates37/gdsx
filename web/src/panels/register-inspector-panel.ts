@@ -11,6 +11,9 @@
 //   player discovers "saturating counter" instead of being told.
 
 import { instanceChip } from "./chips.ts";
+import { mountGroupTools } from "./group-tools.ts";
+import { Notebook } from "../notebook/store.ts";
+import type { Mounted } from "./mounts.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import { VirtualList } from "./virtual-list.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
@@ -35,6 +38,8 @@ interface RegisterEntry {
 
 export interface RegisterInspectorOptions {
   designReady: Promise<DesignClient>;
+  /** For the `pin as role` button on an orbit result. */
+  puzzleId: string;
 }
 
 export function registerInspectorPanel(options: RegisterInspectorOptions): PanelDef {
@@ -48,7 +53,14 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         <div class="ri-body" hidden>
           <div class="ri-toolbar"><span class="ri-count"></span><span class="py-call-slot"></span></div>
           <div class="ri-main">
-            <div class="ri-list-col"><div class="ri-list-viewport"></div></div>
+            <div class="ri-list-col">
+              <div class="ri-list-viewport"></div>
+              <div class="ri-adhoc">
+                <input type="text" class="ri-adhoc-flops" placeholder="ad-hoc group: flop names, comma separated" />
+                <button type="button" class="ri-adhoc-find">group</button>
+                <span class="ri-adhoc-status"></span>
+              </div>
+            </div>
             <div class="ri-detail">
               <div class="ri-detail-header"><span class="ri-pick-a-register">pick a register</span></div>
               <div class="ri-detail-body"></div>
@@ -63,6 +75,9 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
       const headerEl = container.querySelector(".ri-detail-header") as HTMLDivElement;
       const detailBody = container.querySelector(".ri-detail-body") as HTMLDivElement;
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
+      const adhocInput = container.querySelector(".ri-adhoc-flops") as HTMLInputElement;
+      const adhocBtn = container.querySelector(".ri-adhoc-find") as HTMLButtonElement;
+      const adhocStatus = container.querySelector(".ri-adhoc-status") as HTMLSpanElement;
 
       let design: DesignClient | null = null;
       let disposed = false;
@@ -71,6 +86,8 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
       let inputs: string[] = [];
       let selected: RegisterEntry | null = null;
       let lastCall: string | null = null;
+      let groupTools: Mounted | null = null;
+      const notebook = new Notebook(options.puzzleId);
 
       attachPythonCallButton(callSlot, () => lastCall);
 
@@ -81,6 +98,55 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         row.append(el("span", "ri-row-width", `×${reg.width}`));
         row.addEventListener("click", () => select(reg));
         return row;
+      });
+
+      /**
+       * Decode a group the player named rather than one `find_registers`
+       * discovered.
+       *
+       * On a large design the interesting group is often precisely the one the
+       * recovery pass did not find, so this has to stay reachable -- it was
+       * the whole of the old Register Decoder panel. What has changed is that
+       * it is now an entry beside the discovered list rather than a blank
+       * screen in a tab of its own.
+       */
+      async function groupAdHoc(): Promise<void> {
+        if (!design) return;
+        const flops = adhocInput.value.split(",").map((f) => f.trim()).filter(Boolean);
+        if (!flops.length) return;
+        adhocStatus.textContent = "grouping…";
+        adhocStatus.className = "ri-adhoc-status";
+        try {
+          const { data, call } = await design.grouping(flops);
+          lastCall = call;
+          const groups = data.groups;
+          if (!groups.length) {
+            adhocStatus.textContent = "no groups";
+            return;
+          }
+          adhocStatus.textContent = `${groups.length} group${groups.length === 1 ? "" : "s"}`;
+          // Present each as a pseudo-register so the detail pane, the flop
+          // chips and the group tools all work on it unchanged.
+          const pseudo: RegisterEntry[] = groups.map((flopNames, i) => ({
+            name: `ad-hoc ${i + 1}`,
+            flops: flopNames,
+            width: flopNames.length,
+            kind: "ad-hoc",
+            description: `grouped from ${flops.length} flop name(s) you supplied`,
+          }) as unknown as RegisterEntry);
+          registers = [...pseudo, ...registers.filter((r) => r.kind !== "ad-hoc")];
+          countEl.textContent = `${registers.length} registers`;
+          list.setItems(registers);
+          select(registers[0]);
+        } catch (err) {
+          adhocStatus.textContent = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
+          adhocStatus.className = "ri-adhoc-status bad";
+        }
+      }
+
+      adhocBtn.addEventListener("click", () => void groupAdHoc());
+      adhocInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") void groupAdHoc();
       });
 
       function select(reg: RegisterEntry): void {
@@ -140,38 +206,24 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         truthBox.append(el("div", "ri-section-title", "truth table — click a flop above"));
         detailBody.append(truthBox);
 
-        const orbitBox = el("div", "ri-section ri-orbit-section");
-        orbitBox.append(el("div", "ri-section-title", "orbit — apply a stimulus repeatedly from reset"));
-        const stimForm = el("div", "ri-orbit-form");
-        const toggles = new Map<string, HTMLButtonElement>();
-        for (const port of inputs) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = `${port}=0`;
-          btn.dataset.value = "0";
-          btn.addEventListener("click", () => {
-            const next = btn.dataset.value === "0" ? "1" : "0";
-            btn.dataset.value = next;
-            btn.textContent = `${port}=${next}`;
-            btn.classList.toggle("active", next === "1");
+        // Bit weights, orbit and select values, against the register this
+        // panel discovered. Shared with the ad-hoc group entry below rather
+        // than written twice -- the Register Decoder used to be a whole panel
+        // for this, reachable only by typing flop names into a blank screen.
+        if (design) {
+          groupTools?.dispose?.();
+          const toolsBox = el("div", "ri-section");
+          detailBody.append(toolsBox);
+          groupTools = mountGroupTools(toolsBox, {
+            design,
+            notebook,
+            inputs,
+            group: reg.flops,
+            onCall: (call) => {
+              lastCall = call;
+            },
           });
-          toggles.set(port, btn);
-          stimForm.append(btn);
         }
-        const runOrbitBtn = document.createElement("button");
-        runOrbitBtn.type = "button";
-        runOrbitBtn.textContent = "▶ walk orbit";
-        stimForm.append(runOrbitBtn);
-        const orbitOut = document.createElement("div");
-        orbitOut.className = "ri-orbit-out";
-        orbitBox.append(stimForm, orbitOut);
-        detailBody.append(orbitBox);
-
-        runOrbitBtn.addEventListener("click", () => {
-          const stimulus: Record<string, number> = {};
-          for (const [port, btn] of toggles) stimulus[port] = Number(btn.dataset.value);
-          void runOrbit(reg, stimulus, orbitOut);
-        });
       }
 
       async function loadTruthTable(flop: string): Promise<void> {
@@ -225,33 +277,6 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         return line;
       }
 
-      async function runOrbit(
-        reg: RegisterEntry,
-        stimulus: Record<string, number>,
-        out: HTMLDivElement,
-      ): Promise<void> {
-        if (!design) return;
-        out.replaceChildren(el("div", "ri-hint", "walking…"));
-        try {
-          const { data, call } = await design.decodeOrbit(reg.flops, stimulus, null);
-          lastCall = call;
-          out.replaceChildren();
-          out.append(el("div", "ri-orbit-kind", `classification: ${data.kind}`));
-          if (data.kind === "counter") {
-            out.append(el("div", "ri-hint", "step budget hit before a repeat — not a final answer yet"));
-          }
-          if (data.kind === "unknown") {
-            out.append(el("div", "ri-hint", "a real cycle was found, but it fits none of the named shapes"));
-          }
-          const states = el("div", "ri-orbit-states");
-          for (const [i, state] of data.states.entries()) {
-            states.append(el("span", "ri-orbit-state", `${i}:[${state.join("")}]`));
-          }
-          out.append(states);
-        } catch (err) {
-          out.replaceChildren(el("div", "ri-hint bad", err instanceof Error ? err.message : String(err)));
-        }
-      }
 
       options.designReady
         .then(async (d) => {

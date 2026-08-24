@@ -208,6 +208,53 @@
         display: none;
       }
 
+      /* ---- collapsible drawer (panels/mounts.ts) ----------------------- */
+      .pd-drawer {
+        flex: none;
+        border-top: 1px solid #262b36;
+        background: #0d0f14;
+      }
+      .pd-drawer-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 5px 8px;
+        text-align: left;
+        color: #7d8598;
+        cursor: pointer;
+      }
+      .pd-drawer-head:hover {
+        color: #cfd4de;
+        background: #121722;
+      }
+      .pd-drawer.on .pd-drawer-title {
+        color: #cfd4de;
+      }
+      .pd-drawer-caret {
+        width: 10px;
+        flex: none;
+      }
+      .pd-drawer-badge {
+        margin-left: auto;
+        font-size: 10px;
+        color: #f2cc4d;
+        border: 1px solid #5a4d1f;
+        border-radius: 3px;
+        padding: 0 5px;
+      }
+      .pd-drawer-badge:empty {
+        display: none;
+      }
+      .pd-drawer-body {
+        max-height: 45vh;
+        overflow-y: auto;
+        border-top: 1px solid #1c2130;
+      }
+
       /* ---- die view panel: 2D/3D toggle + debug switch ----------------- */
       .die-modebar {
         position: absolute;
@@ -1667,8 +1714,34 @@
       .ri-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
       .ri-count { color: #9aa2b5; font-size: 11px; }
       .ri-main { display: flex; flex: 1; min-height: 0; }
-      .ri-list-col { width: 260px; flex: none; border-right: 1px solid #1c2130; min-height: 0; }
-      .ri-list-viewport { height: 100%; overflow-y: auto; position: relative; }
+      .ri-adhoc {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+        padding: 6px;
+        border-top: 1px solid #1c2130;
+      }
+      .ri-adhoc-flops {
+        flex: 1;
+        min-width: 0;
+        background: #10131a;
+        color: #cfd4de;
+        border: 1px solid #262b36;
+        border-radius: 3px;
+        padding: 3px 6px;
+      }
+      .ri-adhoc-status {
+        color: #7d8598;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .ri-adhoc-status.bad {
+        color: #f08a90;
+      }
+      /* A column now, because the ad-hoc group row sits below the list. */
+      .ri-list-col { width: 260px; flex: none; border-right: 1px solid #1c2130; min-height: 0; display: flex; flex-direction: column; }
+      .ri-list-viewport { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
       .ri-row { display: flex; align-items: center; gap: 6px; padding: 0 8px; cursor: pointer; font-size: 12px; }
       .ri-row:hover { background: #12151d; }
       .ri-row-selected { background: #1a2130; }

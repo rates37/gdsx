@@ -18,11 +18,8 @@ import { sequenceEditorPanel } from "./panels/sequence-editor-panel";
 import { notebookPanel } from "./panels/notebook-panel";
 import { experimentPanel } from "./panels/experiment-panel";
 import { modelPanel } from "./panels/model-panel";
-import { registerInspectorPanel } from "./panels/register-inspector-panel";
+import { registerPanel } from "./panels/register-host";
 import { requirementsPanel } from "./panels/requirements-panel";
-import { registerDecoderPanel } from "./panels/register-decoder-panel";
-import { stickyFlopsPanel } from "./panels/sticky-flops-panel";
-import { constraintsPanel } from "./panels/constraints-panel";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
 import { Guide, armAutostart } from "./guide/guide";
@@ -182,13 +179,10 @@ async function main(): Promise<void> {
       // Both of M3's measurement panels run on the gate tape, so they are live
       // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
       // cracks a puzzle open is available before the analysis engine boots.
-      experimentPanel({ storeReady, puzzleId: puzzle.id, tapeUrl }),
+      experimentPanel({ storeReady, designReady, puzzleId: puzzle.id, tapeUrl }),
       modelPanel({ storeReady, puzzleId: puzzle.id }),
-      registerInspectorPanel({ designReady }),
+      registerPanel({ designReady, puzzleId: puzzle.id, successNet }),
       requirementsPanel({ designReady, storeReady, puzzleId: puzzle.id }),
-      registerDecoderPanel({ designReady, puzzleId: puzzle.id }),
-      stickyFlopsPanel({ designReady, puzzleId: puzzle.id, successNet }),
-      constraintsPanel({ designReady }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
     // One tabbed group, roughly in the order of game-plan.md §2's core loop:
@@ -205,9 +199,6 @@ async function main(): Promise<void> {
       "model-builder",
       "register-inspector",
       "requirements",
-      "register-decoder",
-      "sticky-flops",
-      "constraints",
       "repl",
     ],
     {

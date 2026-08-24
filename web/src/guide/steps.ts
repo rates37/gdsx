@@ -128,6 +128,7 @@ export const STEPS: GuideStep[] = [
   {
     id: "registers",
     panel: "register-inspector",
+    section: "registers",
     title: "Group the flops before reading the logic",
     body: [
       "Registers, not flops, are the unit a design is written in. This panel recovers them from Q→D adjacency: which flop feeds which.",
@@ -139,25 +140,24 @@ export const STEPS: GuideStep[] = [
   },
   {
     id: "decoder",
-    panel: "register-decoder",
+    panel: "register-inspector",
+    section: "registers",
     title: "Confirm it rather than assume it",
     body: [
-      "Press {{find groups}}. The decoder groups flops by mutual dependency, without you having to eyeball pairs, and then orbits the group — applies a stimulus repeatedly from reset and watches the state sequence.",
-      "It reports a classification: {{shift}} here, which is the claim you just made by eye, now measured.",
-      "Where a bit weight could not be observed directly it says {{by_elimination}} in amber rather than presenting a guess as a reading. Take that distinction seriously; it is the difference between knowing and assuming, and it is the whole game.",
+      "With the register still selected, look at the decoding sections in the detail pane. {{▶ walk orbit}} applies a stimulus repeatedly from reset and watches the state sequence, then names the shape it found. Leave every input at 0 and you get {{fixed-point}} — nothing is being shifted in, so nothing moves. Set {{I=1}} first and walk it again: now it is a {{shift}}, which is the claim you made by eye a moment ago, measured. Where the shape is one the notebook accepts, {{pin as role}} turns it into a claim.",
+      "{{▶ infer weights}} recovers what each bit is worth. Where a weight could not be observed directly it says {{by elimination}} in amber rather than presenting a guess as a reading. Take that distinction seriously; it is the difference between knowing and assuming, and it is the whole game.",
+      "The {{ad-hoc group}} box under the register list decodes flops you name yourself — for when the interesting group is one the recovery pass did not find.",
     ],
-    goal: "run “find groups”",
-    //: `.rd-group-chip` is what `renderGroups` actually emits -- this used to
-    //: look for `.rd-group`, which the panel has never rendered, so only the
-    //: `.rd-detail` fallback could ever fire.
-    done: () => q(".rd-groups .rd-group-chip") !== null || q(".rd-detail *") !== null,
+    goal: "walk an orbit or infer weights",
+    done: () => q(".rd-orbit-kind") !== null || q(".rd-weight-line") !== null,
   },
   {
     id: "sticky",
-    panel: "sticky-flops",
+    panel: "register-inspector",
+    section: "sticky",
     title: "Find the lock",
     body: [
-      "A sticky flop is a one-way latch: once set, its own Q holds it set. This panel lists every one in the design.",
+      "A sticky flop is a one-way latch: once set, its own Q holds it set. This section lists every one in the design.",
       "There is exactly one here, and it drives {{success}}. Its set condition is the thing you have to make true — and because it is sticky, you only have to make it true once, for one cycle.",
       "The two columns are yours to fill in: is a given latch a {{checkpoint}} you must reach, or a {{trap}} you must avoid? Stickiness alone does not say which, so the game will not guess. On this design it is plainly a checkpoint.",
     ],
@@ -262,13 +262,15 @@ export const STEPS: GuideStep[] = [
   },
   {
     id: "constraints",
-    panel: "constraints",
+    panel: "experiments",
     title: "Constraints: bookkeeping, not solving",
     body: [
-      "Rows you have measured — “exactly k of these cycles” — accumulate here, and the panel says how many assignments satisfy all of them, and whether the system is under-constrained.",
-      "It scores nothing, and the panel says so itself. The points are in deriving the rows; on a large puzzle this is what stops you doing that arithmetic on paper.",
-      "This design needs one row at most, so the panel is mostly here for you to have seen it.",
+      "Open the {{Constraints}} drawer at the foot of this panel. Rows you have measured — “exactly k of these cycles” — accumulate there, and it says how many assignments satisfy all of them, and whether the system is under-constrained.",
+      "It scores nothing, and it says so itself. The points are in deriving the rows; on a large puzzle this is what stops you doing that arithmetic on paper.",
+      "It lives here, next to the sweep that feeds it, rather than in a tab of its own — and it does not even load until you open it, so it never delays a sweep.",
     ],
+    goal: "open the Constraints drawer",
+    done: () => q(".pd-drawer.on .cs-rows") !== null,
   },
   {
     id: "notebook",
