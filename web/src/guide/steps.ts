@@ -219,7 +219,7 @@ export const STEPS: GuideStep[] = [
     body: [
       "The waveform runs on a compiled gate tape in the browser, so scrubbing is instant — there is no round trip to Python here.",
       "Type in the search box to add any net or flop to the watch list; {{O}} is offered as a bus, {{O[5:0]}}, with a radix you can change. Drag rows to reorder, click a cycle to move the cursor.",
-      "The cursor is shared: move it here and the Requirements panel's ✓/✗ column follows it. Add {{success}} and {{O}} now — you will want them both in front of you for the next step.",
+      "The cursor is shared: move it here and the flatten result's ✓/✗ column back in the Cone Walker follows it. Add {{success}} and {{O}} now — you will want them both in front of you for the next step.",
     ],
     goal: "add a signal to the waveform",
     done: () => qq(".wave-row") > 2,
@@ -235,6 +235,17 @@ export const STEPS: GuideStep[] = [
     ],
     goal: "make success latch",
     done: () => q(".seq-result.latched") !== null,
+  },
+  {
+    id: "submit",
+    title: "Hand in the answer",
+    body: [
+      "{{submit}}, in the toolbar, is what actually resolves the puzzle — separate from the notebook, which records how you got there. It only appears when a puzzle can be checked, and First Light can.",
+      "Open it. For a sequence puzzle like this one it offers one field per input port, and prefills each from whatever you already painted in the Sequence Editor — so the six bits you just proved out are already sitting there.",
+      "Press {{check}}. {{✓ accepted}} is the actual win condition; a rejection shows what was observed instead of just a buzzer, so a near miss tells you how near.",
+    ],
+    goal: "submit an answer",
+    done: () => q(".gdsx-submit-verdict.gdsx-submit-ok") !== null,
   },
   {
     id: "experiments",
@@ -255,7 +266,7 @@ export const STEPS: GuideStep[] = [
     body: [
       "Tick {{elements down the side}} in the toolbar. The matrix flips: watched elements down the side, runs across the top — the slot map, rather than the run log.",
       "Nothing re-runs. It is the same result you already have, indexed the other way round, which is worth knowing because on a shift register the diagonal only becomes obvious in this orientation.",
-      "Both orientations surface the same two self-checks as warnings: an element no cycle can move, or a cycle that moves nothing. Either means your grouping or your window is wrong, and finding that out immediately is worth more than a matrix that merely looks plausible. Press {{→ constraints}} on a summary row to send what you measured to the Constraints panel.",
+      "Both orientations surface the same two self-checks as warnings: an element no cycle can move, or a cycle that moves nothing. Either means your grouping or your window is wrong, and finding that out immediately is worth more than a matrix that merely looks plausible. Press {{→ constraints}} on a summary row to send what you measured to the Constraints drawer.",
     ],
     goal: "flip the matrix round",
     done: () => (q(".xp-transpose") as HTMLInputElement | null)?.checked === true,
