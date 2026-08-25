@@ -20,6 +20,7 @@ import {
   type GuideControl,
   type LevelPicker,
   type Objective,
+  type SubmitControl,
 } from "./toolbar.ts";
 
 // v2: the default arrangement changed from a four-row grid to a single
@@ -69,6 +70,8 @@ export class Workspace {
    *   tutorial puzzle. Also handed straight to the toolbar.
    * @param objective What the loaded puzzle is asking for, shown beside the
    *   level picker. Also handed straight to the toolbar.
+   * @param submit The submit surface's wiring, if the loaded puzzle has a
+   *   checkable answer. Also handed straight to the toolbar.
    */
   constructor(
     container: HTMLElement,
@@ -78,6 +81,7 @@ export class Workspace {
     levels?: LevelPicker,
     guide?: GuideControl,
     objective?: Objective,
+    submit?: SubmitControl,
   ) {
     for (const p of panels) this.defs.set(p.id, p);
     this.order = defaultPanelIds.filter((id) => this.defs.has(id));
@@ -120,7 +124,7 @@ export class Workspace {
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
 
-    this.status = attachToolbar(container, this, this.menus, levels, guide, objective);
+    this.status = attachToolbar(container, this, this.menus, levels, guide, objective, submit);
   }
 
   /** The toolbar's status readout -- the coverage percentage, per §3's title

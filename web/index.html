@@ -178,13 +178,101 @@
         visibility: visible;
       }
       .gdsx-submit-slot {
-        /* Empty on purpose -- the submit surface lands here in 10.2. */
-        width: 4px;
+        position: relative;
         flex: none;
       }
       .gdsx-notebook-btn.on {
         border-color: #5a4d1f;
         color: #f2cc4d;
+      }
+      /* ---- submit surface: value against the checks block (web-ui-architecture.md §8) --- */
+      .gdsx-submit-btn.on {
+        border-color: #2b4a2b;
+        color: #9fe39f;
+      }
+      .gdsx-submit-popover {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: 32;
+        margin-top: 4px;
+        width: max-content;
+        max-width: min(420px, 70vw);
+        background: #0d0f14;
+        border: 1px solid #2e3444;
+        border-radius: 4px;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      /* The class rule above's `display: flex` outranks the browser's
+         default `[hidden] { display: none }` (an author rule beats a
+         user-agent one at equal specificity), so setting `.hidden = true`
+         flipped the DOM property but left the popover visibly on screen.
+         `[hidden]` as part of the selector raises this rule's specificity
+         past the base one and wins regardless of source order. */
+      .gdsx-submit-popover[hidden] {
+        display: none;
+      }
+      .gdsx-submit-header {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .gdsx-submit-close {
+        flex: none;
+        padding: 0 6px;
+        line-height: 1.4;
+      }
+      .gdsx-submit-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .gdsx-submit-label {
+        flex: none;
+        min-width: 90px;
+        color: #9aa2b5;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .gdsx-submit-input {
+        flex: 1;
+        min-width: 140px;
+        background: #1a1f2b;
+        color: #cfd4de;
+        border: 1px solid #2e3444;
+        border-radius: 3px;
+        padding: 2px 6px;
+        font: inherit;
+      }
+      .gdsx-submit-radix {
+        flex: none;
+        background: #1a1f2b;
+        color: #cfd4de;
+        border: 1px solid #2e3444;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font: inherit;
+      }
+      .gdsx-submit-footer {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .gdsx-submit-verdict {
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .gdsx-submit-pending {
+        color: #9aa2b5;
+      }
+      .gdsx-submit-ok {
+        color: #9fe39f;
+      }
+      .gdsx-submit-bad {
+        color: #e08a8a;
       }
       .gdsx-dock-mount {
         position: absolute;

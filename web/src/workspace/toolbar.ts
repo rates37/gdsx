@@ -6,6 +6,8 @@
 // localStorage by hand -- both are one click here.
 
 import type { MenuGroup, Workspace } from "./workspace.ts";
+import type { PuzzleChecks } from "../puzzles/catalog.ts";
+import type { Submission, Verdict } from "../puzzles/answer-check.ts";
 
 /** The guided-walkthrough button's wiring. Supplied by main.ts, which owns
  *  the Guide; the toolbar only renders a button for it. Absent when the
@@ -18,6 +20,32 @@ export interface GuideControl {
   toggle: () => void;
   /** Re-renders the button when the guide opens or closes by other means. */
   subscribe: (fn: () => void) => void;
+}
+
+/**
+ * The submit surface's data: whether this puzzle's answer can be checked at
+ * all, what shape of answer it wants, and how to check one.
+ *
+ * Supplied by main.ts, which owns the descriptor and the running `SimStore`
+ * a `sequence`/`constant` answer needs simulated; the toolbar only draws the
+ * widget `checks.kind` calls for and reports what `submit` returns. This is
+ * deliberately not an eleventh panel (game-plan.md §8 puts the result in the
+ * notebook, not a new tab) -- it is the toolbar button 10.1 left this slot
+ * for, beside `guide`.
+ */
+export interface SubmitControl {
+  /** Null hides the button entirely: a puzzle whose answer kind has no
+   *  `checks` derivation yet (game-plan.md §6b lists more kinds than this
+   *  block covers) cannot offer a widget that means anything. */
+  checks: PuzzleChecks | null;
+  /** The sequence editor's input ports, in the order a `sequence` answer's
+   *  one-field-per-port widget offers them. Unused for every other kind. */
+  trackPorts: readonly string[];
+  /** What is currently driven on `port`, to prefill a `sequence` field so
+   *  confirming an answer already found in the sequence editor is not a
+   *  retype. `""` before the simulator has loaded. */
+  currentBits: (port: string) => string;
+  submit: (submission: Submission) => Promise<Verdict>;
 }
 
 /** The level picker's data: what to offer, what is open, and what to do
@@ -68,6 +96,7 @@ export function attachToolbar(
   levels?: LevelPicker,
   guide?: GuideControl,
   objective?: Objective,
+  submit?: SubmitControl,
 ): (text: string) => void {
   const bar = document.createElement("div");
   bar.className = "gdsx-toolbar";
@@ -102,6 +131,8 @@ export function attachToolbar(
   const updateNotebookState = (): void => {
     notebookBtn.classList.toggle("on", workspace.isOpen("notebook"));
   };
+
+  attachSubmitButton(bar.querySelector(".gdsx-submit-slot") as HTMLSpanElement, submit);
 
   attachGuideButton(bar.querySelector(".gdsx-guide-btn") as HTMLButtonElement, guide);
 
@@ -301,4 +332,207 @@ function attachGuideButton(button: HTMLButtonElement, guide?: GuideControl): voi
   });
   guide.subscribe(refresh);
   refresh();
+}
+
+/** One text field, with a label, in a submit popover. */
+function submitRow(label: string, ...controls: HTMLElement[]): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "gdsx-submit-row";
+  const labelEl = document.createElement("label");
+  labelEl.className = "gdsx-submit-label";
+  labelEl.textContent = label;
+  row.append(labelEl, ...controls);
+  return row;
+}
+
+/** A bit-string field for one `sequence` track. Plain text -- not a number,
+ *  so it gets no radix control. */
+function bitField(port: string, initial: string): { row: HTMLElement; get: () => string } {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "gdsx-submit-input";
+  input.placeholder = "0101…";
+  input.value = initial;
+  return { row: submitRow(port, input), get: () => input.value.trim() };
+}
+
+/**
+ * A value field for a `constant`/`parameter` answer: a bare digit string
+ * plus a radix selector, so a player can type `2A` and pick hex rather than
+ * having to remember the `0x` spelling. Typing a prefix directly (`0x2A`,
+ * `0b101`) is also honoured, and then the selector is moot -- the check is
+ * normaliseAnswer's, which reads any radix the same way regardless of which
+ * path produced the string.
+ */
+function valueField(name: string): { row: HTMLElement; get: () => string } {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "gdsx-submit-input";
+  input.placeholder = name === "value" ? "e.g. 2A or 42" : `${name}, e.g. A3000000`;
+
+  const radix = document.createElement("select");
+  radix.className = "gdsx-submit-radix";
+  for (const [value, label] of [
+    ["hex", "hex"],
+    ["dec", "dec"],
+    ["bin", "bin"],
+  ] as const) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    radix.append(option);
+  }
+
+  const get = (): string => {
+    const raw = input.value.trim();
+    if (/^[-+]?0[xXbBoO]/.test(raw)) return raw;
+    return radix.value === "hex" ? `0x${raw}` : radix.value === "bin" ? `0b${raw}` : raw;
+  };
+  return { row: submitRow(name, input, radix), get };
+}
+
+/**
+ * The submit button and its popover: the widget game-plan.md §6b describes,
+ * chosen by `checks.kind` -- one bit-string field per input port for
+ * `sequence`, a value+radix field for `constant`, one value+radix field per
+ * named parameter for `parameter`. Absent entirely when the puzzle has
+ * nothing checkable (`submit` undefined, or `checks: null`).
+ *
+ * Verification is `submit.submit()`'s job, not this function's -- it only
+ * collects the fields into a `Submission`, shows what came back, and never
+ * scores it (game-plan.md §8's weights are a separate piece of work). A
+ * rejection shows `verdict.reason` AND `verdict.observed` together: this
+ * audience wants the measurement, not a buzzer.
+ */
+function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void {
+  if (!submit?.checks) {
+    slot.remove();
+    return;
+  }
+  const checks = submit.checks;
+  const control = submit;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "gdsx-submit-btn";
+  btn.textContent = "submit";
+  btn.title = "check whether your answer is right";
+
+  const popover = document.createElement("div");
+  popover.className = "gdsx-submit-popover";
+  popover.hidden = true;
+
+  const header = document.createElement("div");
+  header.className = "gdsx-submit-header";
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "gdsx-submit-close";
+  closeBtn.textContent = "×";
+  closeBtn.title = "close";
+  header.append(closeBtn);
+
+  const body = document.createElement("div");
+  body.className = "gdsx-submit-body";
+
+  const getters: { name: string; get: () => string }[] =
+    checks.kind === "latch"
+      ? submit.trackPorts.map((port) => {
+          const f = bitField(port, "");
+          body.append(f.row);
+          return { name: port, get: f.get };
+        })
+      : checks.kind === "bus-at"
+        ? [
+            (() => {
+              const f = valueField("value");
+              body.append(f.row);
+              return { name: "value", get: f.get };
+            })(),
+          ]
+        : checks.fields.map((field) => {
+            const f = valueField(field.name);
+            body.append(f.row);
+            return { name: field.name, get: f.get };
+          });
+
+  const verdictEl = document.createElement("div");
+  verdictEl.className = "gdsx-submit-verdict";
+
+  const checkBtn = document.createElement("button");
+  checkBtn.type = "button";
+  checkBtn.className = "gdsx-submit-check";
+  checkBtn.textContent = "check";
+
+  const footer = document.createElement("div");
+  footer.className = "gdsx-submit-footer";
+  footer.append(checkBtn);
+
+  popover.append(header, body, footer, verdictEl);
+
+  checkBtn.addEventListener("click", () => {
+    const values = getters.map((g) => g.get());
+    if (values.some((v) => v.length === 0)) {
+      verdictEl.textContent = "fill every field in first";
+      verdictEl.className = "gdsx-submit-verdict gdsx-submit-bad";
+      return;
+    }
+    checkBtn.disabled = true;
+    verdictEl.textContent = "checking…";
+    verdictEl.className = "gdsx-submit-verdict gdsx-submit-pending";
+
+    const submission: Submission =
+      checks.kind === "latch"
+        ? { tracks: Object.fromEntries(getters.map((g, i) => [g.name, values[i]])) }
+        : checks.kind === "bus-at"
+          ? { value: values[0] }
+          : { fields: Object.fromEntries(getters.map((g, i) => [g.name, values[i]])) };
+
+    submit
+      .submit(submission)
+      .then((verdict) => {
+        const parts = [verdict.accepted ? "✓ accepted" : `✗ ${verdict.reason}`];
+        if (verdict.observed) parts.push(`observed: ${verdict.observed}`);
+        verdictEl.textContent = parts.join(" — ");
+        verdictEl.className = `gdsx-submit-verdict ${verdict.accepted ? "gdsx-submit-ok" : "gdsx-submit-bad"}`;
+        if (verdict.accepted) btn.classList.add("on");
+      })
+      .catch((err: unknown) => {
+        verdictEl.textContent = err instanceof Error ? err.message : String(err);
+        verdictEl.className = "gdsx-submit-verdict gdsx-submit-bad";
+      })
+      .finally(() => {
+        checkBtn.disabled = false;
+      });
+  });
+
+  function close(): void {
+    popover.hidden = true;
+  }
+
+  function open(): void {
+    popover.hidden = false;
+    // Prefilled once, on open, and only into fields nobody has typed into
+    // yet -- so reopening the popover never clobbers an edit.
+    if (checks.kind === "latch") {
+      for (const g of getters) {
+        const input = body.querySelector<HTMLInputElement>(
+          `.gdsx-submit-row:nth-child(${control.trackPorts.indexOf(g.name) + 1}) .gdsx-submit-input`,
+        );
+        if (input && input.value === "") input.value = control.currentBits(g.name);
+      }
+    }
+  }
+
+  btn.addEventListener("click", () => (popover.hidden ? open() : close()));
+  closeBtn.addEventListener("click", close);
+  // Same convention as the menu bar: an outside click or Escape closes it,
+  // so a player is never left with a popover pinned open over the panels.
+  document.addEventListener("click", (e) => {
+    if (!popover.hidden && !slot.contains(e.target as Node)) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !popover.hidden) close();
+  });
+
+  slot.append(btn, popover);
 }

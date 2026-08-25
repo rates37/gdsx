@@ -22,6 +22,8 @@ import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
 import { Guide, armAutostart } from "./guide/guide";
+import type { SubmitControl } from "./workspace/toolbar";
+import { verifySubmission, type Submission } from "./puzzles/answer-check";
 import { GUIDE_PUZZLE_ID } from "./guide/steps";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
@@ -110,6 +112,29 @@ async function main(): Promise<void> {
 
   let pyLine = "python: booting…";
   let dieApi: DieViewApi | null = null;
+
+  // Held unwrapped, same pattern as notebookPanel's own local `store`: the
+  // submit widget's "prefill from what's currently driven" needs a
+  // synchronous read, and `storeReady` is a promise.
+  let liveStore: SimStore | null = null;
+  void storeReady.then((s) => {
+    liveStore = s;
+  });
+
+  const submitControl: SubmitControl = {
+    checks: puzzle.checks,
+    trackPorts: driver.trackPorts,
+    currentBits: (port) =>
+      liveStore ? Array.from(liveStore.bitsOf(port), (b) => (b ? "1" : "0")).join("") : "",
+    submit: async (submission: Submission) => {
+      // A `digest` check observes nothing and needs no running design; every
+      // other kind drives `submission` into the live store and reads it back
+      // -- see answer-check.ts's `verifySubmission` for why the store is
+      // optional at all.
+      const store = puzzle.checks?.kind === "digest" ? undefined : await storeReady;
+      return verifySubmission(puzzle, submission, store);
+    },
+  };
 
   // ---- Python side. Analysis panels (netlist browser, cone walker) show
   // their own "analysis engine starting" state until this resolves, per the
@@ -219,6 +244,7 @@ async function main(): Promise<void> {
       answerKind: puzzle.answerKind,
       parMinutes: puzzle.parMinutes,
     },
+    submitControl,
   );
 
   if (isGuidePuzzle) {
