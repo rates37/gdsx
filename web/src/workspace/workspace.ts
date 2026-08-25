@@ -35,16 +35,27 @@ export interface PanelDef {
   render: (container: HTMLElement) => { dispose?: () => void };
 }
 
+/** One menu bar dropdown: a label and the panel ids it lists, in order.
+ *  The Notebook is deliberately never named in a group -- it has its own
+ *  toolbar button (§8 of web-ui-architecture.md). */
+export interface MenuGroup {
+  label: string;
+  items: string[];
+}
+
 export class Workspace {
   readonly api: DockviewApi;
   private readonly defs = new Map<string, PanelDef>();
   private readonly status: (text: string) => void;
+  private readonly order: string[];
 
   /**
-   * @param order Default layout: every named panel as a tab in one group,
-   *   left to right, with the first one active. Panels not named here are
-   *   still registered (so they can be added later) but are left out of the
-   *   default arrangement.
+   * @param menus The menu bar: each group's label and the panel ids it
+   *   lists. The default layout is derived from this table --
+   *   `menus.flatMap(m => m.items)`, filtered to panels this build actually
+   *   registers -- rather than from a separate order list, so there is one
+   *   place that says both "what panels exist" and "where they open by
+   *   default". A group may name a panel that does not exist yet.
    * @param levels The level picker's contents, if there is more than one
    *   puzzle to offer. The shell hands it straight to the toolbar; it does
    *   not itself know which puzzle is loaded.
@@ -56,12 +67,13 @@ export class Workspace {
   constructor(
     container: HTMLElement,
     panels: PanelDef[],
-    private readonly order: string[],
+    private readonly menus: MenuGroup[],
     levels?: LevelPicker,
     guide?: GuideControl,
     objective?: Objective,
   ) {
     for (const p of panels) this.defs.set(p.id, p);
+    this.order = menus.flatMap((m) => m.items).filter((id) => this.defs.has(id));
 
     const dockMount = document.createElement("div");
     dockMount.className = "gdsx-dock-mount";
@@ -101,7 +113,7 @@ export class Workspace {
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
 
-    this.status = attachToolbar(container, this, levels, guide, objective);
+    this.status = attachToolbar(container, this, this.menus, levels, guide, objective);
   }
 
   /** The toolbar's status readout -- the coverage percentage, per §3's title
@@ -110,11 +122,17 @@ export class Workspace {
     this.status(text);
   }
 
-  /** Every registered panel that is not currently open, title included --
-   *  what "reopen tab" offers. */
-  closedPanels(): { id: string; title: string }[] {
-    const open = new Set(this.api.panels.map((p) => p.id));
-    return [...this.defs.values()].filter((d) => !open.has(d.id)).map((d) => ({ id: d.id, title: d.title }));
+  /** A registered panel's title, or undefined if this build does not have
+   *  it -- the menu bar skips a group's item when its id names a panel that
+   *  does not exist yet. */
+  panelTitle(id: string): string | undefined {
+    return this.defs.get(id)?.title;
+  }
+
+  /** Whether a registered panel is currently open -- the menu bar's
+   *  checkmark and the notebook button's active state both track this. */
+  isOpen(id: string): boolean {
+    return this.api.panels.some((p) => p.id === id);
   }
 
   /** Reopens a closed panel as a tab next to whichever panel is active, so

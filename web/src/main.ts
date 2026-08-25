@@ -8,7 +8,7 @@
 import { wrap, type Remote } from "comlink";
 import type { GdsxWorker, Envelope } from "./worker";
 import { RenderBundle } from "./render/bundle";
-import { Workspace } from "./workspace/workspace";
+import { Workspace, type MenuGroup } from "./workspace/workspace";
 import type { DieViewApi, FrameStats } from "./panels/die-panel";
 import { dieViewPanel } from "./panels/die-view-panel";
 import { netlistPanel } from "./panels/netlist-host";
@@ -34,6 +34,18 @@ import {
   rememberPuzzle,
   requestedId,
 } from "./puzzles/catalog";
+
+// The toolbar's menu bar, macOS/Windows style. The Notebook is deliberately
+// absent -- it is the only scored surface in the game, so it stays a
+// first-class toolbar button next to `guide` rather than hiding in a menu
+// (docs/game/web-ui-architecture.md §8). This table is also where the
+// default tab order comes from: `Workspace` derives it as
+// `menus.flatMap(m => m.items)`, so there is one list, not two.
+const MENUS: MenuGroup[] = [
+  { label: "View", items: ["die-view", "netlist", "waveform"] },
+  { label: "Analyse", items: ["cone-walker", "register-inspector", "repl"] },
+  { label: "Experiment", items: ["sequence-editor", "experiments", "model-builder"] },
+];
 
 // Which puzzle is loaded, and its driver protocol, come from the catalog
 // (`/puzzles/index.json`, written by scripts/sync-assets.mjs from each baked
@@ -183,21 +195,7 @@ async function main(): Promise<void> {
       registerPanel({ designReady, puzzleId: puzzle.id, successNet }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
-    // One tabbed group, roughly in the order of game-plan.md §2's core loop:
-    // look at the die, read the netlist, walk a cone, write it down, then the
-    // measurement and solving panels.
-    [
-      "die-view",
-      "netlist",
-      "cone-walker",
-      "notebook",
-      "waveform",
-      "sequence-editor",
-      "experiments",
-      "model-builder",
-      "register-inspector",
-      "repl",
-    ],
+    MENUS,
     {
       puzzles: catalog.map((p) => ({
         id: p.id,

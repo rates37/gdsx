@@ -1,9 +1,11 @@
-// A slim strip above the dockview grid: reset the layout back to its
-// default arrangement, and reopen a tab that was closed. dockview's own tab
-// close button (×) has no undo, and the default layout is otherwise only
-// reachable by clearing localStorage by hand -- both are one click here.
+// A slim strip above the dockview grid: a macOS/Windows-style menu bar for
+// opening panels grouped by kind, the Notebook as its own button (it is the
+// only scored surface, so it does not hide in a menu), and reset the layout
+// back to its default arrangement. dockview's own tab close button (×) has
+// no undo, and the default layout is otherwise only reachable by clearing
+// localStorage by hand -- both are one click here.
 
-import type { Workspace } from "./workspace.ts";
+import type { MenuGroup, Workspace } from "./workspace.ts";
 
 /** The guided-walkthrough button's wiring. Supplied by main.ts, which owns
  *  the Guide; the toolbar only renders a button for it. Absent when the
@@ -62,6 +64,7 @@ const ANSWER_GOAL: Record<string, string> = {
 export function attachToolbar(
   host: HTMLElement,
   workspace: Workspace,
+  menus: MenuGroup[],
   levels?: LevelPicker,
   guide?: GuideControl,
   objective?: Objective,
@@ -70,17 +73,18 @@ export function attachToolbar(
   bar.className = "gdsx-toolbar";
   bar.innerHTML = `
     <span class="gdsx-toolbar-title">DIESHARK</span>
+    <nav class="gdsx-menubar"></nav>
     <span class="gdsx-level-wrap"></span>
     <span class="gdsx-objective"></span>
     <span class="gdsx-toolbar-status"></span>
     <div class="gdsx-toolbar-spacer"></div>
+    <button class="gdsx-notebook-btn" type="button" title="your notebook — the only scored surface in the game">
+      notebook
+    </button>
+    <span class="gdsx-submit-slot"></span>
     <button class="gdsx-guide-btn" type="button" title="a step-by-step walkthrough of every panel, on the tutorial puzzle">
       guide
     </button>
-    <div class="gdsx-reopen-wrap">
-      <button class="gdsx-reopen-btn" type="button">reopen tab ▾</button>
-      <div class="gdsx-reopen-menu" hidden></div>
-    </div>
     <button class="gdsx-reset-btn" type="button" title="restore the default panel arrangement">
       reset layout
     </button>
@@ -91,54 +95,25 @@ export function attachToolbar(
 
   attachObjective(bar.querySelector(".gdsx-objective") as HTMLSpanElement, objective);
 
+  const updateMenuChecks = attachMenuBar(bar.querySelector(".gdsx-menubar") as HTMLElement, workspace, menus);
+
+  const notebookBtn = bar.querySelector(".gdsx-notebook-btn") as HTMLButtonElement;
+  notebookBtn.addEventListener("click", () => workspace.focus("notebook"));
+  const updateNotebookState = (): void => {
+    notebookBtn.classList.toggle("on", workspace.isOpen("notebook"));
+  };
+
   attachGuideButton(bar.querySelector(".gdsx-guide-btn") as HTMLButtonElement, guide);
 
-  const reopenWrap = bar.querySelector(".gdsx-reopen-wrap") as HTMLDivElement;
-  const reopenBtn = bar.querySelector(".gdsx-reopen-btn") as HTMLButtonElement;
-  const reopenMenu = bar.querySelector(".gdsx-reopen-menu") as HTMLDivElement;
   const resetBtn = bar.querySelector(".gdsx-reset-btn") as HTMLButtonElement;
+  resetBtn.addEventListener("click", () => workspace.resetLayout());
 
-  function closeMenu(): void {
-    reopenMenu.hidden = true;
-  }
-
-  function renderMenu(): void {
-    const closed = workspace.closedPanels();
-    reopenMenu.replaceChildren();
-    for (const p of closed) {
-      const item = document.createElement("div");
-      item.className = "gdsx-reopen-item";
-      item.textContent = p.title;
-      item.addEventListener("click", () => {
-        workspace.reopen(p.id);
-        closeMenu();
-      });
-      reopenMenu.append(item);
-    }
-  }
-
-  function refresh(): void {
-    const count = workspace.closedPanels().length;
-    reopenBtn.disabled = count === 0;
-    reopenBtn.textContent = count > 0 ? `reopen tab (${count}) ▾` : "reopen tab ▾";
-    if (!reopenMenu.hidden) renderMenu();
-  }
-
-  reopenBtn.addEventListener("click", () => {
-    if (reopenBtn.disabled) return;
-    if (reopenMenu.hidden) renderMenu();
-    reopenMenu.hidden = !reopenMenu.hidden;
+  workspace.onChange(() => {
+    updateMenuChecks();
+    updateNotebookState();
   });
-  document.addEventListener("click", (e) => {
-    if (!reopenWrap.contains(e.target as Node)) closeMenu();
-  });
-  resetBtn.addEventListener("click", () => {
-    closeMenu();
-    workspace.resetLayout();
-  });
-
-  workspace.onChange(refresh);
-  refresh();
+  updateMenuChecks();
+  updateNotebookState();
 
   const statusEl = bar.querySelector(".gdsx-toolbar-status") as HTMLSpanElement;
   return (text: string) => {
@@ -147,9 +122,92 @@ export function attachToolbar(
 }
 
 /**
+ * The menu bar: one button per group, each opening a dropdown of its panels.
+ * macOS/Windows conventions: one menu open at a time, `pointerenter` on a
+ * sibling button swaps which one without a click, Escape and an outside
+ * click both close.
+ *
+ * Items are built once, at construction. `Workspace.onDidLayoutChange` (what
+ * `onChange` wraps) fires on every drag and resize, not just open/close, so
+ * the returned function only toggles a class on the checkmark already in the
+ * DOM -- rebuilding the menu on that cadence would rebind a click listener
+ * per pointer move across a drag.
+ */
+function attachMenuBar(host: HTMLElement, workspace: Workspace, menus: MenuGroup[]): () => void {
+  const checks: { id: string; el: HTMLElement }[] = [];
+  let openBtn: HTMLButtonElement | null = null;
+
+  function closeMenu(): void {
+    if (!openBtn) return;
+    openBtn.classList.remove("open");
+    (openBtn.nextElementSibling as HTMLElement).hidden = true;
+    openBtn = null;
+  }
+
+  function openMenu(btn: HTMLButtonElement): void {
+    if (openBtn === btn) return;
+    closeMenu();
+    btn.classList.add("open");
+    (btn.nextElementSibling as HTMLElement).hidden = false;
+    openBtn = btn;
+  }
+
+  for (const group of menus) {
+    const wrap = document.createElement("div");
+    wrap.className = "gdsx-menu-wrap";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "gdsx-menu-btn";
+    btn.textContent = `${group.label} ▾`;
+    btn.addEventListener("click", () => (openBtn === btn ? closeMenu() : openMenu(btn)));
+    btn.addEventListener("pointerenter", () => {
+      if (openBtn && openBtn !== btn) openMenu(btn);
+    });
+
+    const dropdown = document.createElement("div");
+    dropdown.className = "gdsx-menu-dropdown";
+    dropdown.hidden = true;
+
+    for (const id of group.items) {
+      const title = workspace.panelTitle(id);
+      if (title === undefined) continue; // named here, not registered yet
+      const item = document.createElement("div");
+      item.className = "gdsx-menu-item";
+      const check = document.createElement("span");
+      check.className = "gdsx-menu-check";
+      check.textContent = "✓";
+      const label = document.createElement("span");
+      label.textContent = title;
+      item.append(check, label);
+      item.addEventListener("click", () => {
+        workspace.focus(id);
+        closeMenu();
+      });
+      dropdown.append(item);
+      checks.push({ id, el: check });
+    }
+
+    wrap.append(btn, dropdown);
+    host.append(wrap);
+  }
+
+  document.addEventListener("click", (e) => {
+    if (openBtn && !openBtn.parentElement!.contains(e.target as Node)) closeMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+
+  return () => {
+    for (const { id, el } of checks) el.classList.toggle("checked", workspace.isOpen(id));
+  };
+}
+
+/**
  * The level dropdown, left of the status readout.
  *
- * A `<select>` rather than the custom menu the reopen button uses: this is a
+ * A `<select>` rather than a custom dropdown like the menu bar's: this is a
  * one-of-N choice with a current value to display, which is exactly what a
  * select is, and it gets keyboard handling and the native popup for free.
  * Hidden entirely when there is only one puzzle to offer -- a picker with
