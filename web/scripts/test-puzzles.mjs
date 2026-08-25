@@ -17,11 +17,12 @@
 //
 // Usage: node --experimental-strip-types web/scripts/test-puzzles.mjs
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, SPOILERS } from "./puzzle-index.mjs";
 import { choosePuzzle, FALLBACK, loadCatalog, urlFor } from "../src/puzzles/catalog.ts";
+import { TOOL_PANELS } from "../src/puzzles/tools.ts";
 
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const rootDir = path.dirname(webDir);
@@ -156,6 +157,25 @@ check(
   FALLBACK.assets.render.startsWith("/samples/"),
   "the fallback must point at the sample assets, which ship without a sync",
 );
+
+// ---- 6. every tools_enabled key a manifest actually declares maps to a
+//         panel -- a new key that TOOL_PANELS does not know about would
+//         otherwise silently do nothing (web/src/puzzles/tools.ts). --------
+
+const puzzlesDir = path.join(rootDir, "puzzles");
+for (const entry of readdirSync(puzzlesDir, { withFileTypes: true })) {
+  if (!entry.isDirectory()) continue;
+  const manifestPath = path.join(puzzlesDir, entry.name, "manifest.json");
+  if (!statSync(manifestPath, { throwIfNoEntry: false })?.isFile()) continue;
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const dir = entry.name;
+  for (const key of manifest.tools_enabled ?? []) {
+    check(
+      key in TOOL_PANELS,
+      `puzzles/${dir}/manifest.json: tools_enabled key "${key}" is not in TOOL_PANELS`,
+    );
+  }
+}
 
 if (failures.length) {
   console.error(`FAIL: ${failures.length} of ${checks} checks\n`);

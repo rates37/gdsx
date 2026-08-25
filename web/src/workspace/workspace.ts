@@ -51,11 +51,17 @@ export class Workspace {
 
   /**
    * @param menus The menu bar: each group's label and the panel ids it
-   *   lists. The default layout is derived from this table --
-   *   `menus.flatMap(m => m.items)`, filtered to panels this build actually
-   *   registers -- rather than from a separate order list, so there is one
-   *   place that says both "what panels exist" and "where they open by
-   *   default". A group may name a panel that does not exist yet.
+   *   lists. Every panel named here is reachable from a menu regardless of
+   *   `defaultPanelIds` -- gating only ever changes what opens by default,
+   *   never what is reachable. A group may name a panel that does not exist
+   *   yet.
+   * @param defaultPanelIds Default layout: every named panel as a tab in one
+   *   group, left to right, with the first one active. Deliberately a plain
+   *   id list rather than derived from `menus` -- the caller (main.ts) may
+   *   need to open a panel by default that no menu names, e.g. the
+   *   Notebook, or fewer than every panel a puzzle's `tools_enabled` does
+   *   not ask for (web/src/puzzles/tools.ts). Filtered to panels this build
+   *   actually registers.
    * @param levels The level picker's contents, if there is more than one
    *   puzzle to offer. The shell hands it straight to the toolbar; it does
    *   not itself know which puzzle is loaded.
@@ -68,12 +74,13 @@ export class Workspace {
     container: HTMLElement,
     panels: PanelDef[],
     private readonly menus: MenuGroup[],
+    defaultPanelIds: string[],
     levels?: LevelPicker,
     guide?: GuideControl,
     objective?: Objective,
   ) {
     for (const p of panels) this.defs.set(p.id, p);
-    this.order = menus.flatMap((m) => m.items).filter((id) => this.defs.has(id));
+    this.order = defaultPanelIds.filter((id) => this.defs.has(id));
 
     const dockMount = document.createElement("div");
     dockMount.className = "gdsx-dock-mount";

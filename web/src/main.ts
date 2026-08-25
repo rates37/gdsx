@@ -34,13 +34,15 @@ import {
   rememberPuzzle,
   requestedId,
 } from "./puzzles/catalog";
+import { panelsFor } from "./puzzles/tools";
 
 // The toolbar's menu bar, macOS/Windows style. The Notebook is deliberately
 // absent -- it is the only scored surface in the game, so it stays a
 // first-class toolbar button next to `guide` rather than hiding in a menu
-// (docs/game/web-ui-architecture.md §8). This table is also where the
-// default tab order comes from: `Workspace` derives it as
-// `menus.flatMap(m => m.items)`, so there is one list, not two.
+// (docs/game/web-ui-architecture.md §8). Every panel named here is always
+// reachable; which of them the *default* layout opens is a separate list
+// (`defaultPanelIds` below), gated by the loaded puzzle's `tools_enabled`
+// through `panelsFor`.
 const MENUS: MenuGroup[] = [
   { label: "View", items: ["die-view", "netlist", "waveform"] },
   { label: "Analyse", items: ["cone-walker", "register-inspector", "repl"] },
@@ -70,6 +72,8 @@ async function main(): Promise<void> {
   //: player called it. Per puzzle: `n96` means nothing in another design.
   labels.open(puzzle.id);
   document.title = `DIESHARK — ${puzzle.title}`;
+
+  const allowedPanels = new Set<string>(panelsFor(puzzle));
 
   const driver = puzzle.driver;
   //: One URL, because the sweep worker fetches its own copy of the tape (a
@@ -196,6 +200,9 @@ async function main(): Promise<void> {
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
     MENUS,
+    // The menu bar's own order, plus the Notebook (no menu names it) --
+    // filtered down to what this puzzle's tools_enabled actually asks for.
+    [...MENUS.flatMap((m) => m.items), "notebook"].filter((id) => allowedPanels.has(id)),
     {
       puzzles: catalog.map((p) => ({
         id: p.id,
