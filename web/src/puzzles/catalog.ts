@@ -30,6 +30,48 @@ export interface PuzzleDriver {
   successNet: string | null;
 }
 
+/** `sequence`: drive the key, then check the lock latches. */
+export interface LatchCheck {
+  kind: "latch";
+  net: string;
+  value: number;
+  /** The authored deadline, or null if the puzzle sets none. */
+  byCycle: number | null;
+  /** True when the net must stay high once high, rather than merely pulse. */
+  sticky: boolean;
+}
+
+/**
+ * `constant`, when the value the puzzle's predicate compares IS the answer.
+ * The shape without the value: simulate the shipped driver, read `bus` at
+ * the first cycle `when.net` reads `when.value`, compare that against the
+ * submission. The answer is not in the bundle to be found.
+ */
+export interface BusAtCheck {
+  kind: "bus-at";
+  /** Bit nets, most-significant first. `busValueAt` wants the reverse. */
+  bus: string[];
+  when: { net: string | null; value: number };
+  /** Never present. A `bus-at` check is the predicate's shape without its
+   *  value, and the type says so. */
+  value?: never;
+  /** Never present either, and for a sharper reason: one puzzle's answer is
+   *  8 and its bus is 8 bits wide, so a `width` copied from the authored
+   *  answer would leak it by coincidence. A widget wanting a bit count uses
+   *  `bus.length`. */
+  width?: never;
+}
+
+/** Everything that cannot be established by simulating: `parameter` always,
+ *  and `constant` whose predicate checks something other than the answer.
+ *  See puzzle-index.mjs for why this is a hash and what it is not. */
+export interface DigestCheck {
+  kind: "digest";
+  fields: { name: string; hash: string }[];
+}
+
+export type PuzzleChecks = LatchCheck | BusAtCheck | DigestCheck;
+
 export interface PuzzleDescriptor {
   id: string;
   dir: string;
@@ -41,6 +83,10 @@ export interface PuzzleDescriptor {
   toolsEnabled: string[];
   assets: { netlist: string; render: string; tape: string };
   driver: PuzzleDriver;
+  /** How to tell whether a submission is right. Null for a puzzle that
+   *  declares no verifiable answer -- the app says so rather than pretending
+   *  a submission was rejected. */
+  checks: PuzzleChecks | null;
 }
 
 const INDEX_URL = "/puzzles/index.json";
@@ -81,6 +127,10 @@ export const FALLBACK: PuzzleDescriptor = {
     trackPorts: ["I"],
     successNet: "success",
   },
+  // Like every other field here, the original puzzle's real value. A `null`
+  // would leave the offline shell unable to check an answer it is perfectly
+  // capable of checking -- nothing in a latch check is a spoiler.
+  checks: { kind: "latch", net: "success", value: 1, byCycle: 121, sticky: true },
 };
 
 interface CatalogFile {

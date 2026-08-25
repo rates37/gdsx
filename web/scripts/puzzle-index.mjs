@@ -5,12 +5,26 @@
 // The one rule here, and the reason this is its own module rather than a few
 // lines inside the copier: **solution.json never reaches the browser.** It
 // holds the key bits, the answer value and the author's hint, and a player
-// who opens devtools has then been handed the puzzle. What the app actually
-// needs from it is the *driver protocol* -- which port is the clock, what
-// the reset pulse looks like, how long the window is, which net is the lock
-// -- all of which the player can read off the design anyway. `describe()`
-// derives exactly that and copies nothing else, so adding a field to
-// solution.json can never leak it by default.
+// who opens devtools has then been handed the puzzle.
+//
+// Two things are derived from it. The *driver protocol* -- which port is the
+// clock, what the reset pulse looks like, how long the window is, which net
+// is the lock -- all of which the player can read off the design anyway. And
+// the *checks* block: the minimum needed to say whether a submission is
+// right, and no more (`describeChecks`, which documents the three shapes).
+//
+// Note the change in what that guarantee rests on. This module used to copy
+// nothing but the driver, so a new spoiling field in solution.json could not
+// leak by default. `describeChecks` deliberately *reads* `verify.predicate`
+// and `answer` -- it has to, to pick a check kind and to hash -- and emits
+// neither. That is a stronger claim needing a stronger check, so
+// scripts/test-puzzles.mjs asserts directly that the emitted block contains
+// no plaintext answer for any baked puzzle, rather than inferring it from
+// what was copied.
+
+import { createHash } from "node:crypto";
+
+import { answerDigestInput, normaliseAnswer } from "../src/puzzles/answer-normalise.mjs";
 
 /** Cycles of slack after the puzzle's own window, so a player can see what
  *  the design does once the deadline has passed rather than the waveform
@@ -19,7 +33,11 @@ const TAIL_CYCLES = 20;
 
 /** Every field of solution.json that would spoil the puzzle. Asserted
  *  against the emitted descriptor in the tests, so this list failing to
- *  keep up with the schema is a test failure and not a silent leak. */
+ *  keep up with the schema is a test failure and not a silent leak.
+ *
+ *  These names are also why no field of the `checks` block is called any of
+ *  them: the assertion is a substring match on `"<field>"`, and a check
+ *  named `answer` would trip it. */
 export const SPOILERS = ["key", "answer", "hint", "reveal", "verify"];
 
 function trackPorts(solution) {
@@ -96,6 +114,106 @@ function describeDriver(solution) {
   };
 }
 
+function sha256(text) {
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+function digest(id, fields) {
+  return {
+    kind: "digest",
+    fields: fields.map((f) => ({ name: f.name, hash: sha256(answerDigestInput(id, f.name, f.value)) })),
+  };
+}
+
+/**
+ * What the app needs to decide whether a submission is right -- and nothing
+ * beyond that. Null when the puzzle declares no verifiable answer; the
+ * caller reports "this puzzle cannot be checked" rather than crashing.
+ *
+ * Three shapes, one per way an answer can be established:
+ *
+ *   {kind: "latch", net, value, byCycle, sticky}
+ *     `sequence`. Needs nothing the descriptor did not already carry: the
+ *     player drives the key and the app checks the lock latches. `net` is
+ *     the same net as `driver.successNet`.
+ *
+ *   {kind: "bus-at", bus, when: {net, value}}
+ *     `constant`, when the predicate's compared value IS the answer. The
+ *     PREDICATE SHAPE only -- the bus nets and the port the observation is
+ *     conditioned on, never the value. The app simulates the shipped driver,
+ *     reads the bus at the conditioning cycle and compares that against what
+ *     the player typed, so the answer never enters the bundle at all. `bus`
+ *     is most-significant bit first, as authored.
+ *
+ *   {kind: "digest", fields: [{name, hash}]}
+ *     Everything that cannot be established by simulating. `parameter`
+ *     always: puzzles/2-polynomial's two fields are both `check.type:
+ *     "declared"` -- a tap mask is a property of the wiring and carried on
+ *     no bus, and 10**12 cycles will not be simulated -- so there is no
+ *     predicate to derive a shape from. And `constant` when the predicate
+ *     turns out to compare something other than the answer (see below).
+ *
+ * The hash is not an anti-cheat measure. game-plan.md §1 is explicit that
+ * anti-cheat is a non-goal with "zero engineering spent on this", and a
+ * SHA-256 of a 32-bit number falls to a few seconds of brute force. It buys
+ * exactly one thing: the answer is not sitting in plain sight in a file the
+ * player can open in a browser tab, for the cost of one digest call.
+ */
+function describeChecks(id, solution) {
+  const kind = solution.answer_kind;
+  const predicate = solution.verify?.predicate;
+  const answer = solution.answer;
+
+  if (kind === "sequence") {
+    if (predicate?.type !== "port_reaches_value_by_cycle") return null;
+    return {
+      kind: "latch",
+      net: predicate.port,
+      value: predicate.value ?? 1,
+      byCycle: predicate.by_cycle ?? null,
+      sticky: predicate.sticky ?? false,
+    };
+  }
+
+  if (kind === "constant") {
+    // Whether the predicate can verify the submission at all is decided
+    // here, by asking whether the value it compares IS the answer. It is not
+    // always: puzzles/5-magic-number's answer is the 32-bit constant buried
+    // in the comparator, while its predicate reads O[7:0] on the
+    // confirmation run, one shift past the match. Shipping that shape would
+    // have the app compare 0x0c against what the player typed and reject the
+    // right answer, so that puzzle falls back to a digest.
+    //
+    // A puzzle with no authored answer value cannot be told apart from
+    // either case, so it gets no check rather than a guess.
+    if (answer?.value === undefined) return null;
+    const verifiable =
+      predicate?.type === "bus_equals_when" &&
+      Array.isArray(predicate.bus) &&
+      normaliseAnswer(predicate.value) === normaliseAnswer(answer.value);
+    if (!verifiable) return digest(id, [{ name: "value", value: answer.value }]);
+    // No `width` field, though the submission widget wants a bit count and
+    // `answer.width` is right there. puzzles/1-warm-start's answer is 8 and
+    // its bus is 8 bits wide, so a width copied from the answer would put
+    // that puzzle's answer in the bundle by coincidence -- the test caught
+    // exactly this. A widget uses `bus.length`: the same number, not sourced
+    // from the answer.
+    return {
+      kind: "bus-at",
+      bus: [...predicate.bus],
+      when: { net: predicate.when?.port ?? null, value: predicate.when?.value ?? 1 },
+    };
+  }
+
+  if (kind === "parameter") {
+    const fields = answer?.fields;
+    if (!Array.isArray(fields) || fields.length === 0) return null;
+    return digest(id, fields);
+  }
+
+  return null;
+}
+
 function parMinutes(manifest) {
   if (typeof manifest.par_times?.minutes === "number") return manifest.par_times.minutes;
   if (typeof manifest.par_seconds === "number") return Math.round(manifest.par_seconds / 60);
@@ -110,8 +228,9 @@ function parMinutes(manifest) {
  * @param solution parsed solution.json -- read here and never copied
  */
 export function describe(dir, manifest, solution) {
+  const id = manifest.id ?? dir;
   return {
-    id: manifest.id ?? dir,
+    id,
     dir,
     title: manifest.title ?? dir,
     blurb: manifest.blurb ?? "",
@@ -125,6 +244,7 @@ export function describe(dir, manifest, solution) {
       tape: `/puzzles/${dir}/tape.bin`,
     },
     driver: describeDriver(solution),
+    checks: describeChecks(id, solution),
   };
 }
 
