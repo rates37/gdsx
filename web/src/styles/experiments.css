@@ -1,0 +1,164 @@
+/* ---- experiment runner ----------------------------------------------- */
+.xp-panel,
+.mb-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+.xp-toolbar,
+.mb-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1c2130;
+}
+.xp-params {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px 0;
+}
+.xp-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #9aa2b5;
+}
+.xp-num {
+  width: 64px;
+  background: #10131a;
+  border: 1px solid #262b36;
+  border-radius: 3px;
+  color: #cfd4de;
+  padding: 3px 4px;
+}
+.xp-watch-list {
+  flex: 1;
+  min-width: 200px;
+}
+.xp-blurb {
+  padding: 4px 8px 6px;
+  color: #6d7486;
+  font-size: 11px;
+}
+.xp-loading,
+.mb-loading {
+  padding: 16px;
+  color: #6d7486;
+}
+.xp-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 8px 8px;
+}
+.xp-status,
+.mb-status {
+  color: #9aa2b5;
+  font-size: 11px;
+}
+.xp-status.bad,
+.mb-status.bad {
+  color: #f08a90;
+}
+/* The two self-checks from the sensitivity map. Amber, above the matrix,
+   and never collapsed into a console log: a matrix with either problem
+   looks exactly as convincing as one without. */
+.xp-warning {
+  margin: 6px 0;
+  padding: 4px 8px;
+  border-left: 2px solid #97741f;
+  background: #1c1710;
+  color: #f2cc4d;
+  font-size: 11px;
+}
+.xp-baseline-note {
+  margin: 6px 0;
+  color: #6d7486;
+  font-size: 11px;
+}
+.xp-readout {
+  padding: 4px 0;
+  color: #cfd4de;
+  font-size: 11px;
+}
+.xp-canvas-wrap {
+  overflow: auto;
+  max-height: 45%;
+  border: 1px solid #1c2130;
+  background: #0d0f14;
+}
+.xp-canvas {
+  display: block;
+  cursor: crosshair;
+}
+.xp-summary {
+  margin-top: 8px;
+}
+.xp-summary-note {
+  color: #6d7486;
+  font-size: 11px;
+}
+.xp-table-row {
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+  font-size: 11px;
+}
+.xp-orient {
+  color: #7d8598;
+}
+.xp-to-constraints {
+  margin-left: auto;
+  flex: none;
+  padding: 0 6px;
+  font-size: 10px;
+  color: #7d8598;
+}
+.xp-to-constraints:disabled {
+  color: #6fbf73;
+  opacity: 1;
+}
+.xp-table-row .net-chip {
+  flex: none;
+  width: 120px;
+}
+.xp-hits {
+  color: #9aa2b5;
+  word-break: break-word;
+}
+.xp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.xp-evidence-note {
+  color: #6d7486;
+  font-size: 11px;
+}
+
+/* ---- constraints panel (§4.13) -------------------------------------- */
+.cs-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; overflow-y: auto; }
+.cs-toolbar { display: flex; align-items: center; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
+.cs-note { color: #6d7486; font-size: 11px; font-style: italic; }
+.cs-add { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
+.cs-name { width: 100px; }
+.cs-elements { flex: 1; }
+.cs-k { width: 60px; }
+.cs-rows { padding: 4px 8px; }
+.cs-row { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; padding: 2px 0; }
+.cs-row-name { color: #cfd4de; min-width: 90px; }
+.cs-row-source { color: #6d7486; }
+.cs-row-elements { color: #9aa2b5; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-row-exactly { color: #6d7486; }
+.cs-row-k { width: 50px; }
+.cs-summary { padding: 4px 8px; }
+.cs-summary-line { color: #9aa2b5; font-size: 11px; }
+.cs-warning { color: #e0b34d; font-size: 11px; margin-top: 4px; }
+.cs-solve-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
+.cs-solve-status { color: #9aa2b5; font-size: 11px; }
+.cs-solutions { padding: 0 8px 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #9aa2b5; }

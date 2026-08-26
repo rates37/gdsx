@@ -1,0 +1,220 @@
+/* ---- die view panel: 2D/3D toggle + debug switch ----------------- */
+.die-modebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  background: #10131a;
+  border-bottom: 1px solid #262b36;
+}
+.die-modebar-spacer {
+  flex: 1;
+}
+.die-mode-seg {
+  display: flex;
+}
+.die-mode-seg button {
+  border-radius: 0;
+  padding: 2px 12px;
+  color: #7d8598;
+}
+.die-mode-seg button:first-child {
+  border-radius: 3px 0 0 3px;
+}
+.die-mode-seg button:last-child {
+  border-radius: 0 3px 3px 0;
+  border-left: 0;
+}
+.die-mode-seg button.on {
+  background: #2a3346;
+  color: #cfd4de;
+}
+.die-debug-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #6d7486;
+  cursor: pointer;
+}
+.die-mode-host {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+/* Diagnostics are hidden unless the player asks for them. */
+.die-stats,
+.die3d-stats {
+  display: none;
+}
+.die-debug-on .die-stats,
+.die-debug-on .die3d-stats {
+  display: block;
+}
+
+/* ---- die view, 2D ------------------------------------------------ */
+.die-canvas-wrap {
+  position: absolute;
+  inset: 0;
+}
+.die-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.die-canvas:active {
+  cursor: grabbing;
+}
+.die-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6d7486;
+}
+.die-minimap {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 200px;
+  height: 140px;
+  border: 1px solid #262b36;
+  border-radius: 4px;
+  cursor: crosshair;
+}
+
+.panel-overlay {
+  position: absolute;
+  background: rgba(16, 19, 26, 0.88);
+  border: 1px solid #262b36;
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.die-layers {
+  top: 10px;
+  left: 10px;
+  min-width: 130px;
+}
+.die-stats {
+  top: 10px;
+  right: 10px;
+  white-space: pre;
+  line-height: 1.5;
+  margin: 0;
+}
+.die-layers label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+  cursor: pointer;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.panel-overlay h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7d8598;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.panel-overlay hr {
+  border: 0;
+  border-top: 1px solid #262b36;
+  margin: 8px 0 6px;
+}
+.panel-overlay select {
+  background: #10131a;
+  color: #cfd4de;
+  border: 1px solid #262b36;
+  font: inherit;
+  width: 100%;
+}
+.panel-overlay .hint {
+  color: #6d7486;
+}
+
+/* ---- die view, 3D (§4.2) ----------------------------------------- */
+.die3d-wrap {
+  position: absolute;
+  inset: 0;
+}
+.die3d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.die3d-canvas:active {
+  cursor: grabbing;
+}
+.die3d-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  text-align: center;
+  color: #6d7486;
+}
+.die3d-layers {
+  top: 10px;
+  left: 10px;
+  min-width: 150px;
+}
+.die3d-layers label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+  cursor: pointer;
+}
+.die3d-layers input[type="range"] {
+  width: 100%;
+}
+.die3d-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+.die3d-trace,
+.die3d-fit {
+  width: 100%;
+  margin-top: 6px;
+}
+.die3d-stats {
+  top: 10px;
+  right: 10px;
+  white-space: pre;
+  line-height: 1.5;
+  margin: 0;
+}
+.die3d-trace-status {
+  left: 10px;
+  bottom: 10px;
+  color: #f2cc4d;
+}

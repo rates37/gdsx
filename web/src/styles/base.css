@@ -1,0 +1,516 @@
+:root {
+  color-scheme: dark;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0d0f14;
+  color: #cfd4de;
+  overflow: hidden;
+}
+#workspace {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- app toolbar: reset layout, reopen closed tabs --------------- */
+.gdsx-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  background: #10131a;
+  border-bottom: 1px solid #262b36;
+  box-sizing: border-box;
+}
+.gdsx-toolbar-title {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #7d8598;
+  font-size: 11px;
+}
+.gdsx-toolbar-spacer {
+  flex: 1;
+}
+.gdsx-level-select {
+  background: #1a1f2b;
+  color: #cfd4de;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font: inherit;
+  max-width: 240px;
+  cursor: pointer;
+}
+.gdsx-level-select:hover:not(:disabled) {
+  border-color: #4a536b;
+}
+.gdsx-level-select:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+.gdsx-toolbar-status {
+  color: #9aa2b5;
+  font-size: 11px;
+  white-space: nowrap;
+  flex: none;
+}
+/* The objective. `min-width: 0` plus the blurb's own ellipsis is what
+   lets the sentence give up room first while the goal phrase -- the half
+   that actually says what ends the puzzle -- always survives. */
+.gdsx-objective {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  cursor: default;
+}
+.gdsx-objective-goal {
+  flex: none;
+  color: #f2cc4d;
+  border: 1px solid #5a4d1f;
+  border-radius: 3px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+.gdsx-objective-blurb {
+  color: #7d8598;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gdsx-toolbar button {
+  background: #1a1f2b;
+  color: #cfd4de;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font: inherit;
+  cursor: pointer;
+  /* The objective beside the level picker is elastic; these are not.
+     Without this the buttons wrap to two lines inside a 28px bar. */
+  flex: none;
+  white-space: nowrap;
+}
+.gdsx-toolbar button:hover:not(:disabled) {
+  border-color: #4a536b;
+}
+.gdsx-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* ---- menu bar: View / Analyse / Experiment, macOS/Windows style --- */
+.gdsx-menubar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.gdsx-menu-wrap {
+  position: relative;
+}
+.gdsx-menu-btn {
+  background: transparent;
+  color: #cfd4de;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font: inherit;
+  cursor: pointer;
+  flex: none;
+  white-space: nowrap;
+}
+.gdsx-menu-btn:hover,
+.gdsx-menu-btn.open {
+  background: #1a1f2b;
+  border-color: #2e3444;
+}
+.gdsx-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: #10131a;
+  border: 1px solid #2e3444;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 31;
+}
+.gdsx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gdsx-menu-item:hover {
+  background: #1c2130;
+  color: #f2cc4d;
+}
+/* Reserved so an item's label does not jog left/right depending on
+   whether its panel happens to be open. */
+.gdsx-menu-check {
+  flex: none;
+  width: 14px;
+  visibility: hidden;
+}
+.gdsx-menu-check.checked {
+  visibility: visible;
+}
+.gdsx-submit-slot {
+  position: relative;
+  flex: none;
+}
+.gdsx-notebook-btn.on {
+  border-color: #5a4d1f;
+  color: #f2cc4d;
+}
+/* ---- submit surface: value against the checks block (web-ui-architecture.md §8) --- */
+.gdsx-submit-btn.on {
+  border-color: #2b4a2b;
+  color: #9fe39f;
+}
+.gdsx-submit-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 32;
+  margin-top: 4px;
+  width: max-content;
+  max-width: min(420px, 70vw);
+  background: #0d0f14;
+  border: 1px solid #2e3444;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* The class rule above's `display: flex` outranks the browser's
+   default `[hidden] { display: none }` (an author rule beats a
+   user-agent one at equal specificity), so setting `.hidden = true`
+   flipped the DOM property but left the popover visibly on screen.
+   `[hidden]` as part of the selector raises this rule's specificity
+   past the base one and wins regardless of source order. */
+.gdsx-submit-popover[hidden] {
+  display: none;
+}
+.gdsx-submit-header {
+  display: flex;
+  justify-content: flex-end;
+}
+.gdsx-submit-close {
+  flex: none;
+  padding: 0 6px;
+  line-height: 1.4;
+}
+.gdsx-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gdsx-submit-label {
+  flex: none;
+  min-width: 90px;
+  color: #9aa2b5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gdsx-submit-input {
+  flex: 1;
+  min-width: 140px;
+  background: #1a1f2b;
+  color: #cfd4de;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font: inherit;
+}
+.gdsx-submit-radix {
+  flex: none;
+  background: #1a1f2b;
+  color: #cfd4de;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font: inherit;
+}
+.gdsx-submit-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+.gdsx-submit-verdict {
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.gdsx-submit-pending {
+  color: #9aa2b5;
+}
+.gdsx-submit-ok {
+  color: #9fe39f;
+}
+.gdsx-submit-bad {
+  color: #e08a8a;
+}
+.gdsx-dock-mount {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ---- dockview panel chrome ------------------------------------- */
+.gdsx-panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0f14;
+}
+
+/* ---- sub-tab host (panels/mounts.ts) ----------------------------- */
+/* One panel, several former panels beneath it. Visually quieter than
+   dockview's own tab strip on purpose: this is a division *within* a
+   tab, and making it look like a peer of the tab strip above would read
+   as two competing rows of tabs. */
+.pt-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.pt-tabs {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid #1c2130;
+}
+.pt-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  padding: 3px 12px;
+  color: #7d8598;
+  cursor: pointer;
+}
+.pt-tab:hover {
+  color: #cfd4de;
+}
+.pt-tab.on {
+  background: #0d0f14;
+  border-color: #262b36;
+  color: #f2cc4d;
+}
+.pt-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* One per section, so a kept-alive section can be hidden without the
+   next one having to clear up after it. */
+.pt-section {
+  position: absolute;
+  inset: 0;
+}
+.pt-section[hidden] {
+  display: none;
+}
+
+/* ---- collapsible drawer (panels/mounts.ts) ----------------------- */
+.pd-drawer {
+  flex: none;
+  border-top: 1px solid #262b36;
+  background: #0d0f14;
+}
+.pd-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 5px 8px;
+  text-align: left;
+  color: #7d8598;
+  cursor: pointer;
+}
+.pd-drawer-head:hover {
+  color: #cfd4de;
+  background: #121722;
+}
+.pd-drawer.on .pd-drawer-title {
+  color: #cfd4de;
+}
+.pd-drawer-caret {
+  width: 10px;
+  flex: none;
+}
+.pd-drawer-badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: #f2cc4d;
+  border: 1px solid #5a4d1f;
+  border-radius: 3px;
+  padding: 0 5px;
+}
+.pd-drawer-badge:empty {
+  display: none;
+}
+.pd-drawer-body {
+  max-height: 45vh;
+  overflow-y: auto;
+  border-top: 1px solid #1c2130;
+}
+
+/* ---- waveform + sequence editor: shared bits ----------------------- */
+.wave-panel,
+.seq-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+.wave-toolbar,
+.seq-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1c2130;
+  flex: none;
+}
+.wave-loading,
+.seq-loading {
+  padding: 16px;
+  color: #6d7486;
+}
+.wave-body,
+.seq-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ---- guided walkthrough (guide/guide.ts) -------------------------- */
+/* Floats over the workspace bottom-left: the die view keeps its layer
+   box top-left and its minimap bottom-right, so this is the one corner
+   nothing else claims. Collapsible, because a player who wants the
+   whole panel back should not have to close the guide to get it. */
+.guide-card {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 50;
+  width: 400px;
+  max-width: calc(100vw - 24px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: #10131a;
+  border: 1px solid #3a4258;
+  border-radius: 5px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+}
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #262b36;
+}
+.guide-collapsed .guide-head {
+  border-bottom: 0;
+}
+.guide-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #f2cc4d;
+}
+.guide-count {
+  color: #7d8598;
+  font-size: 11px;
+}
+.guide-collapse {
+  margin-left: auto;
+}
+.guide-head button {
+  padding: 0 6px;
+  color: #7d8598;
+}
+.guide-title {
+  margin: 10px 10px 0;
+  font-size: 13px;
+  color: #e6e9f0;
+}
+.guide-body {
+  overflow-y: auto;
+  padding: 0 10px;
+  margin: 6px 0;
+}
+.guide-body p {
+  margin: 8px 0;
+  line-height: 1.65;
+  color: #b6bdcc;
+}
+.guide-body code {
+  color: #8ecdf7;
+  background: #171b26;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.guide-goal {
+  margin: 0 10px 8px;
+  padding: 4px 8px;
+  border: 1px dashed #2e3444;
+  border-radius: 4px;
+  color: #7d8598;
+}
+.guide-goal-done {
+  color: #9fe39f;
+  border-style: solid;
+  border-color: #2b4a2b;
+  background: #131c13;
+}
+.guide-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid #262b36;
+}
+.guide-next {
+  font-weight: 600;
+  color: #e6e9f0;
+}
+.guide-jump {
+  margin-left: auto;
+  max-width: 170px;
+  background: #1a1f2b;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+.gdsx-guide-btn.on {
+  border-color: #5a4d1f;
+  color: #f2cc4d;
+}

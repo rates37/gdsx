@@ -1,0 +1,324 @@
+/* ---- shared bits: toolbar controls, net chips, { } button -------- */
+input[type="text"],
+select,
+button {
+  font: inherit;
+  color: #cfd4de;
+}
+button {
+  background: #1a1f2b;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: #4a536b;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button.active {
+  background: #2a3547;
+  border-color: #4d6a9e;
+  color: #cfe0ff;
+}
+input[type="text"] {
+  background: #10131a;
+  border: 1px solid #262b36;
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+select {
+  background: #10131a;
+  border: 1px solid #262b36;
+  border-radius: 3px;
+  padding: 3px 4px;
+}
+
+.net-chip {
+  color: #8ecdf7;
+  cursor: pointer;
+  border-bottom: 1px dotted transparent;
+}
+.net-chip:hover {
+  border-bottom-color: #8ecdf7;
+}
+/* A player-given name reads as one: italic and warmer than the
+   extracted names around it, so you can always tell at a glance which
+   names came out of the layout and which you made up. */
+.net-chip-labelled {
+  color: #f2cc4d;
+  font-style: italic;
+}
+.net-chip-labelled:hover {
+  border-bottom-color: #f2cc4d;
+}
+
+/* ---- the label editor popover (chips.ts) ------------------------- */
+.label-editor {
+  position: fixed;
+  z-index: 60;
+  width: 260px;
+  padding: 8px;
+  background: #10131a;
+  border: 1px solid #3a4258;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+.label-editor-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.label-editor-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7d8598;
+}
+.label-editor-name {
+  color: #8ecdf7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.label-editor-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0d0f14;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 4px 6px;
+}
+.label-editor-input:focus {
+  outline: none;
+  border-color: #4a536b;
+}
+.label-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.label-editor-hint {
+  margin-left: auto;
+  color: #6d7486;
+  font-size: 10px;
+}
+
+.py-call-slot {
+  position: relative;
+  margin-left: auto;
+}
+.py-call-btn {
+  font-weight: 600;
+}
+.py-call-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  margin-top: 4px;
+  width: min(480px, 60vw);
+  background: #0d0f14;
+  border: 1px solid #2e3444;
+  border-radius: 4px;
+  padding: 8px;
+}
+.py-call-popover pre {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #9fe39f;
+}
+
+/* ---- virtualised list --------------------------------------------- */
+.vlist {
+  position: relative;
+  overflow-y: auto;
+  height: 100%;
+}
+.vlist-sizer {
+  position: relative;
+}
+.vlist-rows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* ---- netlist browser ----------------------------------------------- */
+.netlist-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+.netlist-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1c2130;
+  flex-wrap: wrap;
+}
+.netlist-tabs {
+  display: flex;
+  gap: 4px;
+}
+.netlist-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #9aa2b5;
+}
+.netlist-count {
+  color: #6d7486;
+}
+.netlist-loading {
+  padding: 16px;
+  color: #6d7486;
+}
+.netlist-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.netlist-list-instances,
+.netlist-list-nets {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid #1c2130;
+}
+.netlist-detail {
+  width: 260px;
+  flex: none;
+  overflow-y: auto;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.netlist-detail-empty {
+  color: #6d7486;
+}
+.nrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.nrow:hover {
+  background: #171b26;
+}
+.nrow.active {
+  background: #202a3d;
+}
+.nrow-name {
+  color: #cfd4de;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nrow-label {
+  color: #f2cc4d;
+  font-style: italic;
+}
+/* The extracted name, kept beside the player's: a labelled row must
+   still be scannable for `n2951`. */
+.nrow-rawname {
+  color: #6d7486;
+  margin-left: 6px;
+}
+.nrow-badge {
+  color: #7d8598;
+  font-size: 11px;
+}
+.nrow-seq {
+  color: #f2cc4d;
+  font-size: 10px;
+  border: 1px solid #5a4d1f;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.nrow-port {
+  color: #66e6e6;
+  font-size: 10px;
+  border: 1px solid #245a5a;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.detail-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.detail-title h3 {
+  margin: 0;
+}
+.detail-rawname {
+  color: #6d7486;
+}
+.detail-label-btn {
+  margin-left: auto;
+  flex: none;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+.detail-box h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  word-break: break-all;
+}
+.detail-box h4 {
+  margin: 10px 0 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7d8598;
+}
+.detail-meta {
+  color: #9aa2b5;
+  line-height: 1.6;
+}
+.detail-fn {
+  color: #9fe39f;
+  word-break: break-all;
+}
+.detail-conn-row {
+  display: flex;
+  gap: 6px;
+  padding: 1px 0;
+}
+.detail-pin {
+  color: #7d8598;
+  min-width: 28px;
+}
+.detail-open-cone {
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* ---- labels: the glossary the player builds ----------------------- */
+.labels-panel { display: flex; flex-direction: column; height: 100%; }
+.labels-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
+.labels-filter { flex: 1; background: #10131a; color: #cfd4de; border: 1px solid #262b36; border-radius: 3px; padding: 3px 6px; }
+.labels-count { color: #7d8598; font-size: 11px; white-space: nowrap; }
+.labels-body { flex: 1; overflow-y: auto; }
+.labels-empty { padding: 12px; color: #6d7486; line-height: 1.6; max-width: 60ch; }
+.labels-row { display: flex; align-items: center; gap: 8px; padding: 3px 8px; }
+.labels-row:hover { background: #171b26; }
+.labels-kind { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid #2e3444; border-radius: 3px; padding: 0 4px; color: #7d8598; }
+.labels-kind-net { color: #8ecdf7; border-color: #274a63; }
+.labels-kind-instance { color: #9fe39f; border-color: #2b4a2b; }
+.labels-label { color: #f2cc4d; font-style: italic; }
+.labels-raw { color: #6d7486; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.labels-actions { display: flex; gap: 4px; margin-left: auto; }
+.labels-actions button { padding: 1px 6px; font-size: 11px; }
+.labels-drop { color: #a8707a; }

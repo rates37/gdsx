@@ -5,6 +5,8 @@
 // the measurements it reads, unchanged from the M0 shape so
 // `scripts/measure-m0.mjs` keeps working.
 
+import "./styles/index.css";
+
 import { wrap, type Remote } from "comlink";
 import type { GdsxWorker, Envelope } from "./worker";
 import { RenderBundle } from "./render/bundle";
