@@ -26,6 +26,15 @@
 import type { PuzzleDescriptor } from "./catalog.ts";
 import { PANEL_IDS, type PanelId } from "../panels/ids.ts";
 
+/** `checks.kind === "latch"` is the `sequence` answer kind (catalog.ts's
+ *  `LatchCheck`, describeChecks in puzzle-index.mjs) -- the player drives an
+ *  input track and the app watches a lock net latch. A puzzle checked this
+ *  way has nothing to submit without the Sequence Editor, so it belongs in
+ *  the default layout regardless of what `tools_enabled` says. */
+function needsSequenceEditor(descriptor: Pick<PuzzleDescriptor, "checks">): boolean {
+  return descriptor.checks?.kind === "latch";
+}
+
 /** Always open, whatever the manifest says. `notebook` is here even though
  *  most manifests predate it and never name it -- it is the game's only
  *  scored surface, so a puzzle that forgot to list it is an authoring
@@ -70,8 +79,15 @@ const warnedKeys = new Set<string>();
  * empty toolset would be a strange way to gate a puzzle down to CORE_PANELS.
  * A key `TOOL_PANELS` does not recognise is ignored, with a console.warn the
  * first time that key is seen.
+ *
+ * `checks.kind === "latch"` (the `sequence` answer kind) additionally forces
+ * `sequence-editor` into the set, after the `tools_enabled` union so the
+ * result never depends on where in that list a "sequence" key would have
+ * sorted -- see `needsSequenceEditor`.
  */
-export function panelsFor(descriptor: Pick<PuzzleDescriptor, "toolsEnabled">): PanelId[] {
+export function panelsFor(
+  descriptor: Pick<PuzzleDescriptor, "toolsEnabled" | "checks">,
+): PanelId[] {
   if (descriptor.toolsEnabled.length === 0) return [...PANEL_IDS];
 
   const panels = new Set<PanelId>(CORE_PANELS);
@@ -84,5 +100,6 @@ export function panelsFor(descriptor: Pick<PuzzleDescriptor, "toolsEnabled">): P
       console.warn(`gdsx: tools_enabled key "${key}" names no panel -- ignored`);
     }
   }
+  if (needsSequenceEditor(descriptor)) panels.add("sequence-editor");
   return [...panels];
 }

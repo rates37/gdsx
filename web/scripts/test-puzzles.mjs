@@ -28,7 +28,7 @@ import { describe, SPOILERS } from "./puzzle-index.mjs";
 import { answerDigestInput, normaliseAnswer } from "../src/puzzles/answer-normalise.mjs";
 import { hashAnswer, verifySubmission } from "../src/puzzles/answer-check.ts";
 import { choosePuzzle, FALLBACK, loadCatalog, urlFor } from "../src/puzzles/catalog.ts";
-import { TOOL_PANELS } from "../src/puzzles/tools.ts";
+import { panelsFor, TOOL_PANELS } from "../src/puzzles/tools.ts";
 import { SimStore } from "../src/sim/store.ts";
 import { parseTapeBundle } from "../src/sim/tape.ts";
 
@@ -291,6 +291,30 @@ for (const dir of bakedDirs) {
     check(
       key in TOOL_PANELS,
       `puzzles/${dir}/manifest.json: tools_enabled key "${key}" is not in TOOL_PANELS`,
+    );
+  }
+}
+
+// ---- 6b. a sequence answer always opens the Sequence Editor -------------
+//
+// checks.kind === "latch" is the `sequence` answer kind (catalog.ts's
+// LatchCheck) -- the player drives an input track and the app watches a
+// lock net latch. There is nothing to submit without that panel, so it must
+// be in the default layout regardless of what the manifest's tools_enabled
+// says (original-puzzle's manifest predates the panel and never names it).
+
+for (const dir of bakedDirs) {
+  const descriptor = descriptorFor(dir);
+  const panels = panelsFor(descriptor);
+  if (descriptor.checks?.kind === "latch") {
+    check(
+      panels.includes("sequence-editor"),
+      `${dir}: a sequence answer must open with the Sequence Editor in its default layout`,
+    );
+  } else {
+    check(
+      !panels.includes("sequence-editor"),
+      `${dir}: a non-sequence answer should not be forced open on the Sequence Editor`,
     );
   }
 }
