@@ -9,16 +9,22 @@
 // buttons the player presses, persisted locally, and nothing pre-selects
 // either one.
 //
-// Once `requirements()` (L32) has been run against `success`, this panel
-// cross-references: if a sticky flop's own polarity shows up as a forced
-// leaf of `success == 1`, that is evidence pointing one way or the other, and
-// it is shown as a **marked suggestion** chip next to the two buttons --
-// never written into the buttons themselves.
+// The panel cross-references the puzzle's win condition: if a sticky flop's
+// own polarity is the value the win condition needs from it, that is evidence
+// pointing one way or the other, and it is shown as a **marked suggestion**
+// chip next to the two buttons -- never written into the buttons themselves.
+//
+// Where that win condition comes from is `design/win-condition.ts`, shared
+// with the Experiments watch selector. It used to be a `requirements(success)`
+// call made here, which on a design whose lock is a latched flop says only
+// "the lock flop must be high" -- true, and one step short of the flop values
+// a player can act on.
 
 import { instanceChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { Mounted } from "./mounts.ts";
 import type { DesignClient } from "../design/client.ts";
+import type { WinConditionSource } from "../design/win-condition.ts";
 import type { StickyView } from "../gdsx-types.ts";
 
 function el(tag: string, className?: string, text?: string): HTMLElement {
@@ -67,6 +73,8 @@ export interface StickyFlopsPanelOptions {
   designReady: Promise<DesignClient>;
   puzzleId: string;
   successNet: string;
+  /** The flops the win condition names, shared with the Experiments panel. */
+  winCondition: WinConditionSource;
 }
 
 /**
@@ -84,7 +92,7 @@ export function mountStickyFlops(
     container.innerHTML = `
       <div class="sf-toolbar">
         <span class="sf-count"></span>
-        <button type="button" class="sf-suggest" disabled>suggest from requirements(${options.successNet})</button>
+        <button type="button" class="sf-suggest" disabled hidden>suggest from the win condition (${options.successNet})</button>
         <span class="sf-status"></span>
         <span class="py-call-slot"></span>
       </div>
@@ -119,7 +127,7 @@ export function mountStickyFlops(
         const suggestion = suggestions.get(s.flop) ?? null;
         if (suggestion) {
           const tag = el("span", "sf-suggestion-tag", `suggests: ${suggestion}`);
-          tag.title = "from requirements(success, 1): this flop's polarity appears among the forced leaves — a suggestion, not a decision";
+          tag.title = `the win condition needs this flop at ${suggestion === "checkpoint" ? "" : "the opposite of "}its latched value — a suggestion, not a decision`;
           row.append(tag);
         }
 
@@ -152,15 +160,18 @@ export function mountStickyFlops(
       statusEl.textContent = "deriving requirements…";
       statusEl.className = "sf-status";
       try {
-        const { data, call } = await design.requirements(options.successNet, 1);
-        lastCall = call;
-        const byInstance = new Map<string, number>();
-        for (const leaf of data.leaves) {
-          if (leaf.net.endsWith(".Q")) byInstance.set(leaf.net.slice(0, -2), leaf.value);
+        const win = await options.winCondition.get();
+        if (win === null) {
+          // Only reachable if the derivation stopped being possible between
+          // the button appearing and the click; it is offered on the strength
+          // of a resolved win condition.
+          statusEl.textContent = "no win condition to suggest from";
+          return;
         }
+        lastCall = win.call;
         suggestions = new Map();
         for (const s of sticky) {
-          const forced = byInstance.get(s.flop);
+          const forced = win.flops.get(s.flop);
           if (forced === undefined) continue;
           // Forced to its own latched value: success needs it reached ->
           // a checkpoint. Forced to the opposite: success needs it never
@@ -168,7 +179,7 @@ export function mountStickyFlops(
           // guess -- but it is still only a suggestion.
           suggestions.set(s.flop, forced === s.polarity ? "checkpoint" : "trap");
         }
-        statusEl.textContent = `${suggestions.size} of ${sticky.length} sticky flops appear in the forced leaves`;
+        statusEl.textContent = `${suggestions.size} of ${sticky.length} sticky flops are named by the win condition`;
         render();
       } catch (err) {
         statusEl.textContent = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
@@ -191,8 +202,14 @@ export function mountStickyFlops(
         countEl.textContent = `${sticky.length} sticky flops`;
         loadingEl.hidden = true;
         bodyEl.hidden = false;
-        suggestBtn.disabled = false;
         render();
+        // Offered only where there is something to suggest from: a puzzle
+        // whose lock does not reduce to a set of flop values gets no button
+        // rather than a button that reports nothing.
+        const win = await options.winCondition.get();
+        if (disposed || win === null) return;
+        suggestBtn.hidden = false;
+        suggestBtn.disabled = false;
       })
       .catch((err) => {
         loadingEl.textContent = `ERROR: ${err instanceof Error ? err.message : String(err)}`;

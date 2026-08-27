@@ -28,6 +28,7 @@ import type { SubmitControl } from "./workspace/toolbar";
 import { verifySubmission, type Submission } from "./puzzles/answer-check";
 import { GUIDE_PUZZLE_ID } from "./guide/steps";
 import { createDesignClient, type DesignClient } from "./design/client";
+import { winConditionSource } from "./design/win-condition";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
 import {
@@ -161,6 +162,13 @@ async function main(): Promise<void> {
     createDesignClient(api, puzzle.assets.netlist),
   );
 
+  // Which flops the puzzle's lock needs, derived once and shared by the panels
+  // that offer it (Experiments' watch selector, Sticky Flops' suggestions).
+  // `driver.successNet` rather than the defaulted `successNet` above: a puzzle
+  // that declares no lock must get "there is no win condition" and not a
+  // round trip asking about a net called `success`.
+  const winCondition = winConditionSource(designReady, driver.successNet);
+
   // The guide needs the workspace (it moves the player between panels) and
   // the workspace's toolbar needs the guide (it draws the button), so the
   // control is a thin indirection created first and pointed at the Guide the
@@ -226,9 +234,9 @@ async function main(): Promise<void> {
       // Both of M3's measurement panels run on the gate tape, so they are live
       // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
       // cracks a puzzle open is available before the analysis engine boots.
-      experimentPanel({ storeReady, designReady, puzzleId: puzzle.id, tapeUrl }),
+      experimentPanel({ storeReady, designReady, winCondition, puzzleId: puzzle.id, tapeUrl }),
       modelPanel({ storeReady, puzzleId: puzzle.id }),
-      registerPanel({ designReady, puzzleId: puzzle.id, successNet }),
+      registerPanel({ designReady, puzzleId: puzzle.id, successNet, winCondition }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
     MENUS,

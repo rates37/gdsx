@@ -17,6 +17,7 @@ import type { DesignClient } from "../design/client";
 import { registerInspectorPanel } from "./register-inspector-panel";
 import { mountStickyFlops } from "./sticky-flops-panel";
 import { subTabHost } from "./mounts";
+import type { WinConditionSource } from "../design/win-condition";
 import type { PanelDef } from "../workspace/workspace";
 
 export const REGISTER_SECTIONS = ["registers", "sticky"] as const;
@@ -25,6 +26,7 @@ export interface RegisterHostOptions {
   designReady: Promise<DesignClient>;
   puzzleId: string;
   successNet: string;
+  winCondition: WinConditionSource;
 }
 
 export function registerPanel(options: RegisterHostOptions): PanelDef {
@@ -54,6 +56,7 @@ export function registerPanel(options: RegisterHostOptions): PanelDef {
               designReady: options.designReady,
               puzzleId: options.puzzleId,
               successNet: options.successNet,
+              winCondition: options.winCondition,
             }),
         },
       ]);

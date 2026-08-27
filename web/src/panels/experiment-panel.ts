@@ -34,6 +34,7 @@ import type { SimStore } from "../sim/store.ts";
 import { cursorBus } from "../store/cursor.ts";
 import { constraintsInbox } from "../store/constraints-inbox.ts";
 import type { DesignClient } from "../design/client.ts";
+import type { WinConditionSource } from "../design/win-condition.ts";
 import { drawer } from "./mounts.ts";
 import { mountConstraints } from "./constraints-panel.ts";
 import { highlightBus } from "../store/highlight.ts";
@@ -84,6 +85,11 @@ export interface ExperimentPanelOptions {
    *  and the drawer does not mount until the player opens it, so this promise
    *  is not awaited anywhere on the path to a first result. */
   designReady: Promise<DesignClient>;
+  /** Which flops the puzzle's win condition names, for the third watch
+   *  option. Python-backed like the drawer, and on the same terms: it is
+   *  resolved in the background and the option appears when it lands, so
+   *  nothing on the path to a first sweep waits for it. */
+  winCondition: WinConditionSource;
   storeReady: Promise<SimStore>;
   /** Which notebook the evidence lands in. */
   puzzleId: string;
@@ -234,6 +240,22 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       watchInput.placeholder = "flop or net names, comma separated";
       watchInput.setAttribute("list", "xp-signals");
 
+      // The third watch option: the flops the win condition names. It is added
+      // only once the derivation has produced one -- a puzzle whose lock
+      // cannot be reduced to a set of flop values does not get an option that
+      // would come back empty. `every flop` on this design returns 43 reacting
+      // flops of which 20 are a free-running counter and an output decoder;
+      // intersecting that with the win condition by hand is the step this
+      // replaces.
+      let winList: string | null = null;
+      void options.winCondition.get().then((win) => {
+        if (disposed || win === null) return;
+        winList = win.names.join(", ");
+        const opt = option("win", `the win condition (${win.net})`);
+        opt.title = `the ${win.flops.size} flops that must hold a value for ${win.net} to go high`;
+        watchBox.append(opt);
+      });
+
       function numberField(label: string, value: number): HTMLInputElement {
         const input = document.createElement("input");
         input.type = "number";
@@ -262,7 +284,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           paramsEl.append(wrap(fromInput, "cycles"), wrap(toInput, "to"));
         }
         paramsEl.append(wrap(watchBox, "watch"));
-        if (watchBox.value === "custom") paramsEl.append(watchInput);
+        if (watchBox.value !== "flops") paramsEl.append(watchInput);
         blurbEl.textContent = RECIPES.find((r) => r.id === recipe)?.blurb ?? "";
         // The pulsed port is meaningless for a scan that perturbs nothing.
         portBox.parentElement!.hidden = recipe === "reset-scan";
@@ -304,9 +326,9 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
 
       function paramsOf(ctx: ExperimentContext): RecipeParams {
         const watch =
-          watchBox.value === "custom"
-            ? names(watchInput.value)
-            : [...ctx.tape.header.flop_names];
+          watchBox.value === "flops"
+            ? [...ctx.tape.header.flop_names]
+            : names(watchInput.value);
         return {
           from: Math.max(0, Math.round(Number(fromInput.value) || 0)),
           to: Math.min(ctx.cycles, Math.round(Number(toInput.value) || ctx.cycles)),
@@ -614,7 +636,13 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       });
 
       recipeBox.addEventListener("change", renderParams);
-      watchBox.addEventListener("change", renderParams);
+      watchBox.addEventListener("change", () => {
+        // The win-condition option fills the same box the custom one uses --
+        // the names stay visible and editable, and everything downstream (the
+        // matrix, the self-checks, the TSV) sees one watch list, not two.
+        if (watchBox.value === "win" && winList !== null) watchInput.value = winList;
+        renderParams();
+      });
       runBtn.addEventListener("click", () => void go());
 
       options.storeReady
