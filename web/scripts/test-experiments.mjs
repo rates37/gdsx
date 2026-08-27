@@ -66,7 +66,15 @@ async function checkSample(name) {
     baseline: new Map(),
   };
   const watch = [...golden.flop_names];
-  const window = { from: 0, to: golden.cycles, firstPulse: golden.first_pulse, minGap: 1, maxGap: 8, watch };
+  const window = {
+    from: 0,
+    to: golden.cycles,
+    firstFrom: golden.first_pulse,
+    firstTo: golden.first_pulse,
+    minGap: 1,
+    maxGap: 8,
+    watch,
+  };
 
   // ---- 1. single-pulse sweep == sensitivity.map --------------------------
 
@@ -107,6 +115,31 @@ async function checkSample(name) {
   golden.gaps.forEach((entry, i) => {
     same(marked(gaps, gaps.rows[i]), entry.changed, `${name}: gap ${entry.gap} differs from probe`);
   });
+
+  // ---- 2b. gap sweep over a range of `first` -- the (first x gap) matrix -
+
+  // A range must reproduce, first by first, exactly what the single-first
+  // sweep above produces -- the matrix is the same runs, just more of them,
+  // not a second code path with its own chance to drift.
+  const firstFrom = Math.max(0, golden.first_pulse - 1);
+  const firstTo = golden.first_pulse + 1;
+  const matrix = await run(base, "gap", { ...window, firstFrom, firstTo });
+  const gapsPerFirst = window.maxGap - window.minGap + 1;
+  check(
+    matrix.rows.length === (firstTo - firstFrom + 1) * gapsPerFirst,
+    `${name}: (first x gap) matrix row count is not firsts * gaps`,
+  );
+  for (let first = firstFrom; first <= firstTo; first++) {
+    const solo = await run(base, "gap", { ...window, firstFrom: first, firstTo: first });
+    const offset = (first - firstFrom) * gapsPerFirst;
+    for (let g = 0; g < gapsPerFirst; g++) {
+      same(
+        marked(matrix, matrix.rows[offset + g]),
+        marked(solo, solo.rows[g]),
+        `${name}: first=${first} row ${g} in the matrix differs from the single-first sweep`,
+      );
+    }
+  }
 
   // ---- 3. bit-flip sensitivity, against a key ----------------------------
 

@@ -159,8 +159,10 @@ export interface RecipeParams {
   /** Inclusive lower and exclusive upper cycle bound of the sweep. */
   from: number;
   to: number;
-  /** Gap recipe: where the first pulse of each pair goes. */
-  firstPulse: number;
+  /** Gap recipe: where the first pulse of each pair goes, inclusive range.
+   *  `firstFrom === firstTo` is the original single-first-cycle sweep. */
+  firstFrom: number;
+  firstTo: number;
   /** Gap recipe: the gaps tried, inclusive. */
   minGap: number;
   maxGap: number;
@@ -188,8 +190,9 @@ export const RECIPES: readonly Recipe[] = [
     id: "gap",
     label: "gap sweep",
     blurb:
-      "a pair of pulses at every spacing, against the baseline. " +
-      "Which separations the design distinguishes.",
+      "a pair of pulses at every starting cycle and every spacing, against " +
+      "the baseline. Which separations the design distinguishes, and whether " +
+      "that depends on where the pair starts.",
     cellKind: "changed",
   },
   {
@@ -226,19 +229,28 @@ function plan(ctx: ExperimentContext, recipe: RecipeId, params: RecipeParams): M
   }
 
   if (recipe === "gap") {
-    for (let gap = params.minGap; gap <= params.maxGap; gap++) {
-      const second = params.firstPulse + gap;
-      if (second >= ctx.cycles) break;
-      const perturbations = new Map(base);
-      for (const at of [params.firstPulse, second]) {
-        perturbations.set(at, { ...(base.get(at) ?? {}), [ctx.keyPort]: high });
+    // A single `first` reproduces the original one-row-per-gap sweep. A range
+    // makes each row one (first, gap) pair, so the matrix that falls out is
+    // the same one the walkthrough assembles by hand from 24 separate runs
+    // (docs/game/original-puzzle-walkthrough.md §7).
+    const single = params.firstFrom === params.firstTo;
+    for (let first = params.firstFrom; first <= params.firstTo; first++) {
+      for (let gap = params.minGap; gap <= params.maxGap; gap++) {
+        const second = first + gap;
+        if (second >= ctx.cycles) break;
+        const perturbations = new Map(base);
+        for (const at of [first, second]) {
+          perturbations.set(at, { ...(base.get(at) ?? {}), [ctx.keyPort]: high });
+        }
+        rows.push({
+          label: single
+            ? `gap ${gap} (${first}, ${second})`
+            : `first ${first}, gap ${gap} (${first}, ${second})`,
+          perturbations,
+          cells: new Uint8Array(0),
+          marked: 0,
+        });
       }
-      rows.push({
-        label: `gap ${gap} (${params.firstPulse}, ${second})`,
-        perturbations,
-        cells: new Uint8Array(0),
-        marked: 0,
-      });
     }
     return rows;
   }
@@ -483,29 +495,38 @@ export function callText(
       ? "base = {}"
       : `base = {c: {${key}: 1} for c in [${baselinePulses.join(", ")}]}`;
 
+  const singleFirst = params.firstFrom === params.firstTo;
   const perturbation =
     recipe === "gap"
-      ? `{**base, ${params.firstPulse}: {${key}: 1}, ${params.firstPulse} + gap: {${key}: 1}}`
+      ? singleFirst
+        ? `{**base, ${params.firstFrom}: {${key}: 1}, ${params.firstFrom} + gap: {${key}: 1}}`
+        : `{**base, first: {${key}: 1}, first + gap: {${key}: 1}}`
       : recipe === "bit-flip"
         ? `{**base, c: {${key}: 0 if c in base else 1}}`
         : `{**base, c: {${key}: 1}}`;
+  // The gap recipe's outer loop over `first` only appears once the field is a
+  // range; a single value keeps the original one-loop call unchanged.
   const loop =
     recipe === "gap"
-      ? `for gap in range(${params.minGap}, ${params.maxGap + 1}):`
+      ? singleFirst
+        ? `for gap in range(${params.minGap}, ${params.maxGap + 1}):`
+        : `for first in range(${params.firstFrom}, ${params.firstTo + 1}):\n` +
+          `    for gap in range(${params.minGap}, ${params.maxGap + 1}):`
       : `for c in range(${params.from}, ${params.to}):`;
+  const indent = recipe === "gap" && !singleFirst ? "        " : "    ";
 
   return (
     header +
     `${stimulus}\n` +
     `${loop}\n` +
-    `    result = sensitivity.probe(\n` +
-    `        tape,\n` +
-    `        ${pyDict(ctx.baseVector)},\n` +
-    `        ${perturbation},\n` +
-    `        watch=${watch},\n` +
-    `        cycles=${ctx.cycles}${reset},\n` +
-    `    )\n` +
-    `    print(result.changed)`
+    `${indent}result = sensitivity.probe(\n` +
+    `${indent}    tape,\n` +
+    `${indent}    ${pyDict(ctx.baseVector)},\n` +
+    `${indent}    ${perturbation},\n` +
+    `${indent}    watch=${watch},\n` +
+    `${indent}    cycles=${ctx.cycles}${reset},\n` +
+    `${indent})\n` +
+    `${indent}print(result.changed)`
   );
 }
 

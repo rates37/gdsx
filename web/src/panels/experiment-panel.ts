@@ -228,7 +228,8 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
 
       const fromInput = numberField("from cycle", 0);
       const toInput = numberField("to cycle", 0);
-      const firstInput = numberField("first pulse at", 0);
+      const firstFromInput = numberField("first from", 0);
+      const firstToInput = numberField("first to", 0);
       const minGapInput = numberField("min gap", 1);
       const maxGapInput = numberField("max gap", 12);
       const watchBox = document.createElement("select");
@@ -276,7 +277,8 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         paramsEl.replaceChildren();
         if (recipe === "gap") {
           paramsEl.append(
-            wrap(firstInput, "first pulse at"),
+            wrap(firstFromInput, "first from"),
+            wrap(firstToInput, "to"),
             wrap(minGapInput, "gaps from"),
             wrap(maxGapInput, "to"),
           );
@@ -329,10 +331,12 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           watchBox.value === "flops"
             ? [...ctx.tape.header.flop_names]
             : names(watchInput.value);
+        const firstFrom = Math.max(0, Math.round(Number(firstFromInput.value) || 0));
         return {
           from: Math.max(0, Math.round(Number(fromInput.value) || 0)),
           to: Math.min(ctx.cycles, Math.round(Number(toInput.value) || ctx.cycles)),
-          firstPulse: Math.max(0, Math.round(Number(firstInput.value) || 0)),
+          firstFrom,
+          firstTo: Math.max(firstFrom, Math.round(Number(firstToInput.value) || firstFrom)),
           minGap: Math.max(0, Math.round(Number(minGapInput.value) || 1)),
           maxGap: Math.max(1, Math.round(Number(maxGapInput.value) || 1)),
           watch,
