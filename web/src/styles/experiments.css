@@ -80,10 +80,27 @@
   color: #6d7486;
   font-size: 11px;
 }
+.xp-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .xp-readout {
   padding: 4px 0;
   color: #cfd4de;
   font-size: 11px;
+}
+.xp-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.xp-zoom button {
+  width: 22px;
+  padding: 2px 0;
+  text-align: center;
 }
 .xp-canvas-wrap {
   overflow: auto;

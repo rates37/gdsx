@@ -55,9 +55,13 @@ import {
 } from "../experiments/recipes.ts";
 import { SweepClient } from "../experiments/client.ts";
 
-const CELL_W = 9;
-const CELL_H = 11;
+const BASE_CELL_W = 9;
+const BASE_CELL_H = 11;
 const GUTTER_W = 96;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 4;
+const DEFAULT_ZOOM = 1;
+const ZOOM_STEP = 1.25;
 
 function el(tag: string, className?: string, text?: string): HTMLElement {
   const e = document.createElement(tag);
@@ -123,12 +127,20 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         <div class="xp-loading">waiting on the gate tape…</div>
         <div class="xp-body" hidden>
           <div class="xp-warnings"></div>
-          <div class="xp-readout">hover a cell</div>
+          <div class="xp-canvas-toolbar">
+            <div class="xp-readout">hover a cell</div>
+            <div class="xp-zoom">
+              <button class="xp-zoom-out" type="button" title="zoom out">−</button>
+              <button class="xp-zoom-reset" type="button" title="reset zoom">⟲</button>
+              <button class="xp-zoom-in" type="button" title="zoom in">+</button>
+            </div>
+          </div>
           <div class="xp-canvas-wrap"><canvas class="xp-canvas"></canvas></div>
           <div class="xp-summary"></div>
           <div class="xp-actions">
             <button class="xp-evidence" type="button" disabled>record as evidence</button>
             <button class="xp-copy" type="button" disabled>copy as TSV</button>
+            <button class="xp-download" type="button" disabled>download .tsv</button>
             <span class="xp-evidence-note"></span>
           </div>
         </div>
@@ -146,10 +158,15 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       const bodyEl = container.querySelector(".xp-body") as HTMLDivElement;
       const warnEl = container.querySelector(".xp-warnings") as HTMLDivElement;
       const readoutEl = container.querySelector(".xp-readout") as HTMLDivElement;
+      const canvasWrap = container.querySelector(".xp-canvas-wrap") as HTMLDivElement;
       const canvas = container.querySelector(".xp-canvas") as HTMLCanvasElement;
+      const zoomOutBtn = container.querySelector(".xp-zoom-out") as HTMLButtonElement;
+      const zoomInBtn = container.querySelector(".xp-zoom-in") as HTMLButtonElement;
+      const zoomResetBtn = container.querySelector(".xp-zoom-reset") as HTMLButtonElement;
       const summaryEl = container.querySelector(".xp-summary") as HTMLDivElement;
       const evidenceBtn = container.querySelector(".xp-evidence") as HTMLButtonElement;
       const copyBtn = container.querySelector(".xp-copy") as HTMLButtonElement;
+      const downloadBtn = container.querySelector(".xp-download") as HTMLButtonElement;
       const evidenceNote = container.querySelector(".xp-evidence-note") as HTMLSpanElement;
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
 
@@ -187,6 +204,29 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
       // makes the diagonal obvious. It is the *same* result either way -- this
       // never re-runs the sweep, it only swaps the indexing in draw().
       let transposed = false;
+      // The same −/⟲/+ idiom the Waveform uses (waveform-panel.ts). At the
+      // Original Puzzle's 141x92 a cell is ~3px and the matrix is unreadable;
+      // this is one multiplier over both cell dimensions rather than the
+      // Waveform's separate pixel-width state, because here both axes are
+      // equally likely to be the crowded one.
+      let zoom = DEFAULT_ZOOM;
+
+      function cellSize(): { w: number; h: number } {
+        return {
+          w: Math.max(2, Math.round(BASE_CELL_W * zoom)),
+          h: Math.max(3, Math.round(BASE_CELL_H * zoom)),
+        };
+      }
+
+      function setZoom(next: number): void {
+        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next));
+        // The hovered cell's canvas coordinates are a function of cell size;
+        // stale coordinates would highlight the wrong rectangle until the
+        // next pointermove.
+        hovered = null;
+        readoutEl.textContent = "hover a cell";
+        draw();
+      }
 
       /**
        * The matrix as drawn: what is down the side, what is across the top,
@@ -409,14 +449,16 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         renderSummary();
         evidenceBtn.disabled = false;
         copyBtn.disabled = false;
+        downloadBtn.disabled = false;
       }
 
       function draw(): void {
         if (!result) return;
         const dpr = window.devicePixelRatio || 1;
         const ax = axes();
-        const width = GUTTER_W + ax.colCount * CELL_W;
-        const height = ax.rowCount * CELL_H;
+        const { w: cellW, h: cellH } = cellSize();
+        const width = GUTTER_W + ax.colCount * cellW;
+        const height = ax.rowCount * cellH;
         canvas.width = Math.ceil(width * dpr);
         canvas.height = Math.ceil(height * dpr);
         canvas.style.width = `${width}px`;
@@ -425,15 +467,16 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         const ctx2d = canvas.getContext("2d")!;
         ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx2d.clearRect(0, 0, width, height);
-        ctx2d.font = "10px ui-monospace, Menlo, monospace";
+        const fontPx = Math.min(13, Math.max(8, Math.round(cellH * 0.8)));
+        ctx2d.font = `${fontPx}px ui-monospace, Menlo, monospace`;
         ctx2d.textBaseline = "middle";
 
         for (let r = 0; r < ax.rowCount; r++) {
-          const y = r * CELL_H;
+          const y = r * cellH;
           ctx2d.fillStyle = r % 2 ? "#10131a" : "#0d0f14";
-          ctx2d.fillRect(0, y, width, CELL_H);
+          ctx2d.fillRect(0, y, width, cellH);
           ctx2d.fillStyle = ax.rowMarked(r) ? "#9aa2b5" : "#4b5162";
-          ctx2d.fillText(ax.rowLabel(r), 4, y + CELL_H / 2);
+          ctx2d.fillText(ax.rowLabel(r), 4, y + cellH / 2);
 
           for (let c = 0; c < ax.colCount; c++) {
             const value = ax.cell(r, c);
@@ -441,7 +484,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             // "changed" is one colour because it is one bit. A value scan is
             // showing the value itself, and 1 and 0 are not "hit" and "miss".
             ctx2d.fillStyle = result.cellKind === "changed" ? "#4d9be0" : "#6fbf73";
-            ctx2d.fillRect(GUTTER_W + c * CELL_W + 1, y + 1, CELL_W - 2, CELL_H - 2);
+            ctx2d.fillRect(GUTTER_W + c * cellW + 1, y + 1, cellW - 2, cellH - 2);
           }
         }
 
@@ -449,10 +492,10 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           ctx2d.strokeStyle = "#f2cc4d";
           ctx2d.lineWidth = 1;
           ctx2d.strokeRect(
-            GUTTER_W + hovered.column * CELL_W + 0.5,
-            hovered.row * CELL_H + 0.5,
-            CELL_W - 1,
-            CELL_H - 1,
+            GUTTER_W + hovered.column * cellW + 0.5,
+            hovered.row * cellH + 0.5,
+            cellW - 1,
+            cellH - 1,
           );
         }
       }
@@ -630,8 +673,9 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left - GUTTER_W;
         const y = event.clientY - rect.top;
-        const column = Math.floor(x / CELL_W);
-        const row = Math.floor(y / CELL_H);
+        const { w: cellW, h: cellH } = cellSize();
+        const column = Math.floor(x / cellW);
+        const row = Math.floor(y / cellH);
         const ax = axes();
         if (column < 0 || row < 0) return null;
         if (column >= ax.colCount || row >= ax.rowCount) return null;
@@ -702,6 +746,21 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         draw();
       });
 
+      zoomOutBtn.addEventListener("click", () => setZoom(zoom / ZOOM_STEP));
+      zoomInBtn.addEventListener("click", () => setZoom(zoom * ZOOM_STEP));
+      zoomResetBtn.addEventListener("click", () => setZoom(DEFAULT_ZOOM));
+      // Same gesture as the Waveform: ctrl/cmd+wheel zooms, plain wheel keeps
+      // scrolling the (already scrollable) canvas wrapper.
+      canvasWrap.addEventListener(
+        "wheel",
+        (e) => {
+          if (!e.ctrlKey && !e.metaKey) return;
+          e.preventDefault();
+          setZoom(e.deltaY < 0 ? zoom * ZOOM_STEP : zoom / ZOOM_STEP);
+        },
+        { passive: false },
+      );
+
       evidenceBtn.addEventListener("click", () => {
         if (!result) return;
         const lines: string[] = [];
@@ -731,14 +790,40 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         evidenceNote.textContent = "recorded in the notebook";
       });
 
-      copyBtn.addEventListener("click", () => {
-        if (!result) return;
-        const header = ["run", ...result.columns].join("\t");
-        const body = result.rows
+      /** The one place the TSV bytes are built, so `copy` and `download`
+       *  cannot drift into two slightly different exports of the same run. */
+      function tsvText(r: ExperimentResult): string {
+        const header = ["run", ...r.columns].join("\t");
+        const body = r.rows
           .map((row) => [row.label, ...Array.from(row.cells)].join("\t"))
           .join("\n");
-        navigator.clipboard?.writeText(`${header}\n${body}`).catch(() => {});
+        return `${header}\n${body}`;
+      }
+
+      /** `<puzzle>-<recipe>.tsv`, with anything that is not filename-safe
+       *  folded to `-` -- puzzle ids are kebab-case already, so this is a
+       *  no-op there, but the recipe title has spaces ("gap sweep"). */
+      function tsvFilename(r: ExperimentResult): string {
+        const safe = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        return `${safe(options.puzzleId)}-${safe(r.recipe)}.tsv`;
+      }
+
+      copyBtn.addEventListener("click", () => {
+        if (!result) return;
+        navigator.clipboard?.writeText(tsvText(result)).catch(() => {});
         evidenceNote.textContent = "copied";
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        if (!result) return;
+        const blob = new Blob([tsvText(result)], { type: "text/tab-separated-values" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = tsvFilename(result);
+        a.click();
+        URL.revokeObjectURL(url);
+        evidenceNote.textContent = "downloaded";
       });
 
       recipeBox.addEventListener("change", renderParams);
