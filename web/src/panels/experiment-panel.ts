@@ -471,6 +471,108 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         return out;
       }
 
+      /** Collapse a strictly-increasing list of integers into "a" or "a–b"
+       *  run strings -- `[13,14,15,16,17]` becomes one entry, not five. */
+      function collapseRuns(nums: readonly number[]): string[] {
+        const out: string[] = [];
+        let i = 0;
+        while (i < nums.length) {
+          let j = i;
+          while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+          out.push(i === j ? String(nums[i]) : `${nums[i]}–${nums[j]}`);
+          i = j + 1;
+        }
+        return out;
+      }
+
+      /** The constant step of a >=3-point strictly increasing sequence, or
+       *  `null`. Step 1 is excluded -- `collapseRuns` already says "a run" for
+       *  that case, and "every 1st" is not a discovery. This is what turns a
+       *  residue class like `0, 11, 22, …` into six words instead of a wall of
+       *  numbers -- on this design, that structure is usually the point. */
+      function arithmeticStep(nums: readonly number[]): number | null {
+        if (nums.length < 3) return null;
+        const step = nums[1] - nums[0];
+        if (step <= 1) return null;
+        for (let i = 2; i < nums.length; i++) {
+          if (nums[i] - nums[i - 1] !== step) return null;
+        }
+        return step;
+      }
+
+      function ordinal(n: number): string {
+        const mod100 = n % 100;
+        if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+        switch (n % 10) {
+          case 1:
+            return `${n}st`;
+          case 2:
+            return `${n}nd`;
+          case 3:
+            return `${n}rd`;
+          default:
+            return `${n}th`;
+        }
+      }
+
+      const HITS_INLINE_LIMIT = 16;
+
+      /**
+       * One element's hit list, as a cell: count first, then the shape --
+       * an arithmetic progression named outright, otherwise the cycles
+       * collapsed into runs, truncated behind a "show all" toggle past
+       * `HITS_INLINE_LIMIT` entries. Only `single-pulse`/`bit-flip` rows
+       * parse as bare cycle numbers (`cycle N …`); anything else (`gap`'s
+       * `gap G (a, b)` rows) falls back to the run labels themselves, still
+       * counted and truncated the same way.
+       */
+      function hitsCell(labels: readonly string[]): HTMLElement {
+        const wrap = el("span", "xp-hits");
+        const cycles = labels.map((l) => {
+          const m = /^cycle (\d+)/.exec(l);
+          return m ? Number(m[1]) : null;
+        });
+        const asCycles = cycles.every((n): n is number => n !== null);
+        const noun = asCycles ? "cycle" : "run";
+        const count = `${labels.length} ${noun}${labels.length === 1 ? "" : "s"}`;
+
+        if (asCycles) {
+          const step = arithmeticStep(cycles as number[]);
+          if (step !== null) {
+            wrap.textContent = `${count}, every ${ordinal(step)} from ${cycles[0]}`;
+            return wrap;
+          }
+        }
+
+        const entries = asCycles ? collapseRuns(cycles as number[]) : [...labels];
+        const text = el("span", "xp-hits-text");
+        wrap.append(text);
+
+        let expanded = entries.length <= HITS_INLINE_LIMIT;
+        const render = () => {
+          text.textContent = expanded
+            ? `${count}: ${entries.join(", ")}`
+            : `${count}: ${entries.slice(0, HITS_INLINE_LIMIT).join(", ")}, …`;
+        };
+        render();
+
+        if (entries.length > HITS_INLINE_LIMIT) {
+          const toggle = el("button", "xp-hits-more") as HTMLButtonElement;
+          toggle.type = "button";
+          const setLabel = () => {
+            toggle.textContent = expanded ? "show fewer" : `show all ${entries.length}`;
+          };
+          setLabel();
+          toggle.addEventListener("click", () => {
+            expanded = !expanded;
+            render();
+            setLabel();
+          });
+          wrap.append(toggle);
+        }
+        return wrap;
+      }
+
       function renderSummary(): void {
         if (!result) return;
         summaryEl.replaceChildren();
@@ -500,7 +602,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             break;
           }
           const line = el("div", "xp-table-row");
-          line.append(columnChip(result.columns[c]), el("span", "xp-hits", hits.join(", ")));
+          line.append(columnChip(result.columns[c]), hitsCell(hits));
           // The canvas click is already spoken for ("load this run into the
           // waveform"), so the constraints hand-off lives here instead: a
           // labelled button, discoverable, and it survives the transpose.

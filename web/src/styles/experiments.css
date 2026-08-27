@@ -130,6 +130,18 @@
   color: #9aa2b5;
   word-break: break-word;
 }
+.xp-hits-more {
+  margin-left: 4px;
+  padding: 0 4px;
+  font-size: 10px;
+  color: #4d9be0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.xp-hits-more:hover {
+  text-decoration: underline;
+}
 .xp-actions {
   display: flex;
   align-items: center;
