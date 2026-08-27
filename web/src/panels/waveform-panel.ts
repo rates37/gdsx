@@ -4,6 +4,21 @@
 // place. Indexed nets (`O[0]`..`O[7]`) can be watched as one grouped bus row
 // instead of eight separate 0/1 traces, in a choice of radix.
 //
+// Two things about the cursor, because both were expensive to work without:
+//
+// - **The cycle field and the canvas click are two views of one cursor.** The
+//   cursor lives in `cursorBus` and nowhere else; the field is rendered from
+//   it on every change and never holds its own idea of the value. Clicking a
+//   trace, typing a number, arrowing left or right and another panel moving
+//   the cursor all take the same path, so there is nothing for the two to
+//   disagree about and no echo to break. The field also has to exist because
+//   the canvas is not always there: with every trace closed the panel used to
+//   have no way to move the cursor at all, while the Cone Walker's flatten
+//   drawer went on evaluating its ✓/✗ at whatever the cursor last was.
+// - **Every row prints its value at the cursor.** "What is this flop at this
+//   cycle" is the most repeated question in a solve, and the panel drew the
+//   answer as a waveform without ever stating it.
+//
 // Not built here: clicking a cycle driving a die-view heat overlay of every
 // high net (§4.6's third bullet). That needs the die view to highlight a
 // *set* of nets, not the single selection it supports today -- a real
@@ -72,10 +87,16 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
         <div class="wave-toolbar">
           <input class="wave-search" type="text" placeholder="add net or flop…" />
           <div class="wave-suggest" hidden></div>
-          <div class="wave-zoom">
-            <button class="wave-zoom-out" type="button" title="zoom out">−</button>
-            <button class="wave-zoom-reset" type="button" title="reset zoom">⟲</button>
-            <button class="wave-zoom-in" type="button" title="zoom in">+</button>
+          <div class="wave-toolbar-right">
+            <label class="wave-cursor" title="the shared cursor — ← and → step it, shift for ten">
+              cycle
+              <input class="wave-cycle" type="number" min="0" step="1" value="0" />
+            </label>
+            <div class="wave-zoom">
+              <button class="wave-zoom-out" type="button" title="zoom out">−</button>
+              <button class="wave-zoom-reset" type="button" title="reset zoom">⟲</button>
+              <button class="wave-zoom-in" type="button" title="zoom in">+</button>
+            </div>
           </div>
         </div>
         <div class="wave-loading">waiting on the gate tape…</div>
@@ -92,6 +113,7 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
       const zoomOutBtn = container.querySelector(".wave-zoom-out") as HTMLButtonElement;
       const zoomInBtn = container.querySelector(".wave-zoom-in") as HTMLButtonElement;
       const zoomResetBtn = container.querySelector(".wave-zoom-reset") as HTMLButtonElement;
+      const cycleInput = container.querySelector(".wave-cycle") as HTMLInputElement;
       const loadingEl = container.querySelector(".wave-loading") as HTMLDivElement;
       const bodyEl = container.querySelector(".wave-body") as HTMLDivElement;
       const rulerEl = container.querySelector(".wave-ruler") as HTMLDivElement;
@@ -103,11 +125,89 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
       let cellW = DEFAULT_CELL_W;
       let unsubStore: (() => void) | null = null;
       let unsubCursor: (() => void) | null = null;
+      /**
+       * Where the cursor LINE is painted, measured in cycles and fractional:
+       * dragging puts it wherever the pointer is, including mid-cycle.
+       *
+       * This is a paint position, not a second cursor. The cursor is the whole
+       * cycle the line sits inside, it lives in `cursorBus`, and it is what the
+       * field, the value column and every other panel read -- a run has one
+       * value per cycle, so there is nothing between 11 and 12 to report. Any
+       * move that does not come from this panel's own pointer snaps the line
+       * back onto the cycle it was given.
+       */
+      let cursorX = 0;
+      let movingSelf = false;
 
       function setZoom(next: number): void {
         cellW = Math.max(MIN_CELL_W, Math.min(MAX_CELL_W, next));
         redrawAll();
       }
+
+      /** The cycle a paint position falls in, clamped to the run: the history
+       *  arrays past its end read as 0 rather than as "no such cycle", and a
+       *  value column quietly showing zeroes off the end of the run is exactly
+       *  the kind of reading that costs an hour. */
+      function cycleAt(x: number): number {
+        const last = store ? store.cycles - 1 : 0;
+        return Math.max(0, Math.min(last, Math.floor(x)));
+      }
+
+      /** The one way this panel moves the cursor: put the line at `x` (in
+       *  cycles) and hand the cycle it lands in to the bus. */
+      function placeCursor(x: number): void {
+        const end = store ? store.cycles : 1;
+        cursorX = Math.max(0, Math.min(end, x));
+        const cycle = cycleAt(cursorX);
+        const moved = cursorBus.get() !== cycle;
+        movingSelf = true;
+        cursorBus.set(cycle);
+        movingSelf = false;
+        // `cursorBus.set` is a no-op when the cycle has not changed, so a drag
+        // within one cycle -- or a clamped edit -- still has to repaint the
+        // line and pull the field back into line with the cursor.
+        syncCursorField();
+        if (!moved) redrawAll();
+      }
+
+      /** Move to a whole cycle: the field, the arrow keys, a clamp. */
+      function setCursor(cycle: number): void {
+        const last = store ? store.cycles - 1 : 0;
+        placeCursor(Math.max(0, Math.min(last, Math.round(cycle))));
+      }
+
+      /** The field is a rendering of the cursor, never a second copy of it. */
+      function syncCursorField(): void {
+        const text = String(cursorBus.get());
+        if (cycleInput.value !== text) cycleInput.value = text;
+      }
+
+      cycleInput.addEventListener("input", () => {
+        // Mid-edit emptiness is not cycle 0: leave the cursor alone until
+        // there is a number to read.
+        if (cycleInput.value.trim() === "") return;
+        setCursor(Number(cycleInput.value));
+      });
+      cycleInput.addEventListener("blur", syncCursorField);
+
+      // Arrow stepping for the panel, not for the field: inside an input the
+      // arrows already mean "move the caret", and inside the number field the
+      // browser's own up/down stepping is the better behaviour.
+      container.tabIndex = 0;
+      container.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        const target = e.target as HTMLElement | null;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLSelectElement ||
+          target instanceof HTMLTextAreaElement
+        ) {
+          return;
+        }
+        e.preventDefault();
+        const step = (e.shiftKey ? 10 : 1) * (e.key === "ArrowRight" ? 1 : -1);
+        setCursor(cursorBus.get() + step);
+      });
 
       zoomOutBtn.addEventListener("click", () => setZoom(cellW - 2));
       zoomInBtn.addEventListener("click", () => setZoom(cellW + 2));
@@ -234,11 +334,12 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
           drawBit(ctx, item, cycles);
         }
 
-        const cursor = cursorBus.get();
+        // Painted where the pointer left it, not snapped to the cell edge.
+        const x = Math.round(cursorX * cellW) + 0.5;
         ctx.strokeStyle = "#f2cc4d";
         ctx.beginPath();
-        ctx.moveTo(cursor * cellW + 0.5, 0);
-        ctx.lineTo(cursor * cellW + 0.5, ROW_H);
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ROW_H);
         ctx.stroke();
       }
 
@@ -301,8 +402,13 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
 
       function buildRow(item: WatchItem, index: number): HTMLElement {
         const row = el("div", "wave-row");
-        row.draggable = true;
         const label = el("div", "wave-row-label");
+        // Only the label gutter is the reorder handle -- it is the part that
+        // shows `cursor: grab`, and it has to be the whole draggable, because
+        // a native HTML5 drag beginning anywhere in the row takes the pointer
+        // away from the canvas: scrubbing died after one pointermove when the
+        // row itself was draggable.
+        label.draggable = true;
         label.append(el("span", "wave-drag-handle", "⋮⋮"));
         // A watched net or flop is drawn as a chip, so the name in the
         // waveform is the same name (and the same rename affordance) as
@@ -329,9 +435,11 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
             item.radix = radixSel.value as Radix;
             const canvas = row.querySelector("canvas") as HTMLCanvasElement | null;
             if (canvas) drawTrace(canvas, item);
+            renderValues();
           });
           label.append(radixSel);
         }
+        label.append(el("span", "wave-row-value"));
         const removeBtn = el("button", "wave-row-remove", "×") as HTMLButtonElement;
         removeBtn.type = "button";
         removeBtn.addEventListener("click", () => {
@@ -342,10 +450,27 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
         row.append(label);
 
         const canvas = el("canvas", "wave-row-canvas") as HTMLCanvasElement;
+        // Press and drag scrubs: the line follows the pointer, and the cursor
+        // is whichever cycle it is over at the time. Pointer capture is what
+        // keeps a drag alive when the pointer leaves this row's canvas.
+        const atPointer = (e: PointerEvent): number =>
+          (e.clientX - canvas.getBoundingClientRect().left) / cellW;
         canvas.addEventListener("pointerdown", (e) => {
-          const rect = canvas.getBoundingClientRect();
-          cursorBus.set(Math.floor((e.clientX - rect.left) / cellW));
+          canvas.setPointerCapture(e.pointerId);
+          placeCursor(atPointer(e));
+          // So the arrows step from where the player just clicked, without
+          // scrolling the panel out from under them.
+          container.focus({ preventScroll: true });
         });
+        canvas.addEventListener("pointermove", (e) => {
+          if (!canvas.hasPointerCapture(e.pointerId)) return;
+          placeCursor(atPointer(e));
+        });
+        const endDrag = (e: PointerEvent): void => {
+          if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+        };
+        canvas.addEventListener("pointerup", endDrag);
+        canvas.addEventListener("pointercancel", endDrag);
         row.append(canvas);
         drawTrace(canvas, item);
 
@@ -375,17 +500,53 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
         }
       }
 
+      /** One row's value at the cursor, as text. A bus reads in its own radix;
+       *  everything else is one bit. */
+      function valueAt(item: WatchItem, cycle: number): string {
+        if (!store) return "";
+        if (item.kind === "bus") {
+          const bits = item.ref as string[];
+          return formatValue(busValueAt(store, cycle, bits), bits.length, item.radix);
+        }
+        const value =
+          item.kind === "flop"
+            ? store.flopValueAt(cycle, item.ref as string)
+            : store.netValueAt(cycle, item.ref as string);
+        return String(value);
+      }
+
+      function renderValues(): void {
+        const cycle = cursorBus.get();
+        Array.from(rowsEl.children).forEach((row, i) => {
+          const item = watch[i];
+          const cell = row.querySelector(".wave-row-value") as HTMLElement | null;
+          if (!item || !cell) return;
+          cell.textContent = valueAt(item, cycle);
+          cell.title = `${item.label} = ${cell.textContent} at cycle ${cycle}`;
+        });
+      }
+
       function renderRows(): void {
         rowsEl.replaceChildren();
         watch.forEach((item, i) => rowsEl.append(buildRow(item, i)));
+        renderValues();
       }
 
       function redrawAll(): void {
+        if (store) {
+          // A shorter run (the Sequence Editor can set one) can leave the
+          // cursor past the end, where every history read is a silent 0.
+          cycleInput.max = String(store.cycles - 1);
+          if (cursorX > store.cycles) cursorX = store.cycles;
+          if (cursorBus.get() > store.cycles - 1) setCursor(store.cycles - 1);
+        }
         renderRuler();
         Array.from(rowsEl.children).forEach((row, i) => {
           const canvas = row.querySelector("canvas") as HTMLCanvasElement | null;
           if (canvas && watch[i]) drawTrace(canvas, watch[i]);
         });
+        renderValues();
+        syncCursorField();
       }
 
       storeReady
@@ -394,6 +555,8 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
           store = s;
           loadingEl.hidden = true;
           bodyEl.hidden = false;
+          cycleInput.max = String(s.cycles - 1);
+          syncCursorField();
           // A useful default watch list: the input the player is driving,
           // the flag they are trying to raise, and the byte it reveals.
           for (const name of ["I", "success"]) {
@@ -404,7 +567,14 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
           addBus("O");
           renderRuler();
           unsubStore = s.subscribe(redrawAll);
-          unsubCursor = cursorBus.subscribe(redrawAll);
+          unsubCursor = cursorBus.subscribe(() => {
+            // A cycle handed to us by anyone else -- another panel, the field,
+            // the arrows -- is a whole cycle, so the line goes back on it. Our
+            // own drag has already put the line where the pointer is, and must
+            // not be snapped out from under it.
+            if (!movingSelf) cursorX = cursorBus.get();
+            redrawAll();
+          });
         })
         .catch((err) => {
           loadingEl.textContent = `ERROR: ${err instanceof Error ? err.message : String(err)}`;

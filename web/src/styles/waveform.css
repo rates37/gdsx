@@ -22,6 +22,17 @@
   background: #1c2130;
   color: #f2cc4d;
 }
+/* Both scrolling rows are as wide as their content, not as wide as the
+   viewport. A `sticky` child may only travel inside its containing block, so
+   while these were viewport-width the pinned label column stopped 230 px
+   short of the left edge and slid away with the traces. */
+.wave-ruler-row,
+.wave-rows,
+.wave-row {
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
 .wave-ruler-row {
   display: flex;
   position: sticky;
@@ -30,9 +41,21 @@
   z-index: 2;
   border-bottom: 1px solid #1c2130;
 }
+/* The label gutter and the ruler's spacer are one column: the ruler only
+   lines up with the traces while these two agree. Both are `sticky` to the
+   left edge, so scrolling out to cycle 120 still shows which signal each
+   trace is and what it reads at the cursor -- the column is the legend for
+   everything to the right of it, and scrolling it away made a wide run
+   unreadable. Opaque background, or the traces show through it. */
 .wave-label-spacer {
-  width: 180px;
+  width: 230px;
   flex: none;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #0d0f14;
+  border-right: 1px solid #1c2130;
+  box-sizing: border-box;
 }
 .wave-ruler {
   position: relative;
@@ -53,7 +76,7 @@
   border-bottom: 1px solid #171b26;
 }
 .wave-row-label {
-  width: 180px;
+  width: 230px;
   flex: none;
   display: flex;
   align-items: center;
@@ -61,6 +84,16 @@
   padding: 0 4px;
   cursor: grab;
   overflow: hidden;
+  /* Full row height, not just its content's: the trace canvas passes behind
+     this column, and a two-pixel sliver above and below let the cursor line
+     show through it. */
+  align-self: stretch;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #0d0f14;
+  border-right: 1px solid #1c2130;
+  box-sizing: border-box;
 }
 .wave-drag-handle {
   color: #4a536b;
@@ -74,6 +107,20 @@
 }
 .wave-row-name:hover {
   color: #f2cc4d;
+}
+/* The row's value at the cursor. Fixed width and right-aligned so a column of
+   them reads as a column, and monospace so a bus does not jitter as it
+   changes width. */
+.wave-row-value {
+  flex: none;
+  min-width: 46px;
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #f2cc4d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .wave-row-remove {
   padding: 0 5px;
@@ -94,11 +141,32 @@
   font-size: 10px;
   padding: 0 2px;
 }
+.wave-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.wave-cursor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #8b93a7;
+}
+.wave-cycle {
+  width: 58px;
+  background: #10131a;
+  color: #f2cc4d;
+  border: 1px solid #262b36;
+  border-radius: 3px;
+  font: inherit;
+  font-family: ui-monospace, monospace;
+  padding: 2px 4px;
+}
 .wave-zoom {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-left: auto;
 }
 .wave-zoom button {
   width: 22px;
