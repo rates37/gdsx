@@ -9,12 +9,28 @@
 // buttons the player presses, persisted locally, and nothing pre-selects
 // either one.
 //
-// The panel cross-references the puzzle's win condition: if a sticky flop's
-// own polarity is the value the win condition needs from it, that is evidence
-// pointing one way or the other, and it is shown as a **marked suggestion**
-// chip next to the two buttons -- never written into the buttons themselves.
+// The panel cross-references the puzzle's win condition two ways:
 //
-// Where that win condition comes from is `design/win-condition.ts`, shared
+// - a **required** column shows the value the win condition needs this
+//   flop's Q to hold, for every sticky flop that is *on* the win condition --
+//   blank for the rest. This is the raw fact, read straight out of the
+//   accessor: it saves the cross-reference against the Cone Walker's flatten
+//   drawer, nothing more.
+// - if a sticky flop's own polarity is that required value, that is evidence
+//   pointing toward checkpoint or trap, and it is shown as a **marked
+//   suggestion** chip next to the two buttons -- never written into the
+//   buttons themselves.
+//
+// The distinction matters: the required column is a fact about the design,
+// the same fact the flatten drawer already shows. The suggestion is this
+// panel's own inference from that fact (required value vs. latched
+// polarity), and inference is the player's job -- stickiness alone does not
+// say whether a flop is a checkpoint or a trap, and the honest-attempt
+// document records that mistake being made once already. So checkpoint/trap
+// are never computed here; they are two buttons the player presses,
+// persisted locally, and nothing pre-selects either one.
+//
+// Where the win condition comes from is `design/win-condition.ts`, shared
 // with the Experiments watch selector. It used to be a `requirements(success)`
 // call made here, which on a design whose lock is a latched flop says only
 // "the lock flop must be high" -- true, and one step short of the flop values
@@ -24,7 +40,7 @@ import { instanceChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { Mounted } from "./mounts.ts";
 import type { DesignClient } from "../design/client.ts";
-import type { WinConditionSource } from "../design/win-condition.ts";
+import type { WinCondition, WinConditionSource } from "../design/win-condition.ts";
 import type { StickyView } from "../gdsx-types.ts";
 
 function el(tag: string, className?: string, text?: string): HTMLElement {
@@ -97,12 +113,14 @@ export function mountStickyFlops(
         <span class="py-call-slot"></span>
       </div>
       <div class="sf-loading">waiting on the analysis engine…</div>
+      <div class="sf-caption" hidden></div>
       <div class="sf-body" hidden></div>`;
 
     const countEl = container.querySelector(".sf-count") as HTMLSpanElement;
     const suggestBtn = container.querySelector(".sf-suggest") as HTMLButtonElement;
     const statusEl = container.querySelector(".sf-status") as HTMLSpanElement;
     const loadingEl = container.querySelector(".sf-loading") as HTMLDivElement;
+    const captionEl = container.querySelector(".sf-caption") as HTMLDivElement;
     const bodyEl = container.querySelector(".sf-body") as HTMLDivElement;
     const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
 
@@ -111,6 +129,11 @@ export function mountStickyFlops(
     let sticky: StickyView[] = [];
     let lastCall: string | null = null;
     let suggestions: Map<string, Classification> = new Map();
+    // The required column's source: the win condition itself, not the
+    // suggestion this panel derives from it. Fetched once on mount (the
+    // accessor memoises), independent of whether the player ever presses
+    // `suggest`.
+    let win: WinCondition | null = null;
     const classifications = new StickyClassifications(options.puzzleId);
 
     attachPythonCallButton(callSlot, () => lastCall);
@@ -122,6 +145,20 @@ export function mountStickyFlops(
         row.append(instanceChip(s.flop, { className: "sf-flop" }));
         row.append(el("span", "sf-polarity", `latches ${s.polarity ? "high" : "low"}`));
         row.append(el("span", "sf-condition", `D = ${s.condition} | Q`));
+
+        // Blank, not a placeholder dash, for a sticky flop the win condition
+        // does not name -- most of them: the original puzzle's win condition
+        // touches 36 of its 62 sticky flops.
+        const required = win?.flops.get(s.flop);
+        const requiredEl = el(
+          "span",
+          "sf-required",
+          required === undefined ? "" : String(required),
+        );
+        if (required !== undefined) {
+          requiredEl.title = `the win condition needs ${s.flop}.Q == ${required}`;
+        }
+        row.append(requiredEl);
 
         const current = classifications.get(s.flop);
         const suggestion = suggestions.get(s.flop) ?? null;
@@ -160,7 +197,10 @@ export function mountStickyFlops(
       statusEl.textContent = "deriving requirements…";
       statusEl.className = "sf-status";
       try {
-        const win = await options.winCondition.get();
+        // Already resolved by the time the button exists (mount hides it
+        // until `win` is non-null), so this is the memoised value, not a
+        // fresh round trip.
+        win = await options.winCondition.get();
         if (win === null) {
           // Only reachable if the derivation stopped being possible between
           // the button appearing and the click; it is offered on the strength
@@ -203,11 +243,18 @@ export function mountStickyFlops(
         loadingEl.hidden = true;
         bodyEl.hidden = false;
         render();
-        // Offered only where there is something to suggest from: a puzzle
-        // whose lock does not reduce to a set of flop values gets no button
-        // rather than a button that reports nothing.
-        const win = await options.winCondition.get();
+        // The required column and the `suggest` button both depend on the
+        // win condition; a puzzle whose lock does not reduce to a set of flop
+        // values gets neither -- no column full of blanks, no button that
+        // would report nothing.
+        win = await options.winCondition.get();
         if (disposed || win === null) return;
+        const named = sticky.filter((s) => win!.flops.has(s.flop)).length;
+        captionEl.textContent =
+          `required = what the win condition (${win.net}) needs this flop's Q to hold — ` +
+          `named for ${named} of ${sticky.length} sticky flops, blank for the rest`;
+        captionEl.hidden = false;
+        render();
         suggestBtn.hidden = false;
         suggestBtn.disabled = false;
       })
