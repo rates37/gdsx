@@ -162,3 +162,20 @@
 .cw-flatten-close {
   padding: 0 6px;
 }
+.cw-flatten-caption {
+  color: #6d7486;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+.cw-flatten-cycle-link {
+  color: #6d7486;
+  font-size: 11px;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.cw-flatten-cycle-link:hover {
+  color: #f2cc4d;
+}

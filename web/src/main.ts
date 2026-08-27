@@ -207,7 +207,12 @@ async function main(): Promise<void> {
         },
       }),
       netlistPanel(designReady),
-      coneWalkerPanel({ designReady, storeReady, puzzleId: puzzle.id }),
+      coneWalkerPanel({
+        designReady,
+        storeReady,
+        puzzleId: puzzle.id,
+        onFocusWaveform: () => workspace.focus("waveform"),
+      }),
       waveformPanel(storeReady),
       sequenceEditorPanel(storeReady),
       notebookPanel({

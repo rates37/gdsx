@@ -81,6 +81,8 @@ export interface ConeWalkerPanelOptions {
   storeReady: Promise<SimStore>;
   /** For the `pin` button on a forced flop leaf. */
   puzzleId: string;
+  /** Focuses the Waveform panel, for the flatten caption's cycle link. */
+  onFocusWaveform: () => void;
 }
 
 export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
@@ -117,6 +119,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
               <span class="cw-flatten-title"></span>
               <button class="cw-flatten-close" type="button">×</button>
             </div>
+            <div class="cw-flatten-caption"></div>
             <div class="cw-flatten-body"></div>
           </div>
         </div>`;
@@ -138,6 +141,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
       const treeEl = container.querySelector(".cw-tree") as HTMLDivElement;
       const flattenPanel = container.querySelector(".cw-flatten-panel") as HTMLDivElement;
       const flattenTitle = container.querySelector(".cw-flatten-title") as HTMLSpanElement;
+      const flattenCaption = container.querySelector(".cw-flatten-caption") as HTMLDivElement;
       const flattenBody = container.querySelector(".cw-flatten-body") as HTMLDivElement;
       const flattenClose = container.querySelector(".cw-flatten-close") as HTMLButtonElement;
 
@@ -301,9 +305,34 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
         }
       }
 
+      function renderCaption(): void {
+        flattenCaption.replaceChildren();
+        if (!store) {
+          flattenCaption.append(el("span", "cw-flatten-caption-text", "waiting on the simulator…"));
+          return;
+        }
+        if (!store.hasStimulus()) {
+          flattenCaption.append(
+            el(
+              "span",
+              "cw-flatten-caption-text",
+              "no stimulus has been driven — every ✓/✗ below is against idle (every input held at 0)",
+            ),
+          );
+          return;
+        }
+        flattenCaption.append(el("span", "cw-flatten-caption-text", "✓/✗ against the current sequence at cycle "));
+        const cycleLink = el("button", "cw-flatten-cycle-link", String(cursorBus.get()));
+        (cycleLink as HTMLButtonElement).type = "button";
+        cycleLink.title = "jump to this cycle in the Waveform panel";
+        cycleLink.addEventListener("click", () => options.onFocusWaveform());
+        flattenCaption.append(cycleLink);
+      }
+
       function renderFlatten(r: RequirementsView): void {
         lastFlatten = r;
         flattenTitle.textContent = `${labels.display("net", r.net)} == ${r.value}`;
+        renderCaption();
         // One renderer, shared with what used to be the Requirements panel:
         // the ✓/✗ column against the waveform cursor and the `pin` button come
         // with it, so flattening here is now the whole derivation rather than

@@ -38,6 +38,12 @@ export class SimStore {
   readonly resetVector: Readonly<Record<string, number>>;
 
   private dirty = false;
+  /** True once the player has edited a track through the Sequence Editor.
+   *  Separate from bit content: a puzzle can start a port at a nonzero
+   *  `initialLevels` value, which reads identically to a driven stimulus if
+   *  you only look at the bits. Anything reporting "against the current
+   *  stimulus" needs this, not a bit scan. */
+  private edited = false;
   private readonly tracks = new Map<string, Uint8Array>();
   private valueHistory: Int32Array[] = [];
   private stateHistory: Int32Array[] = [];
@@ -88,6 +94,7 @@ export class SimStore {
     const bits = this.tracks.get(port);
     if (!bits || cycle < 0 || cycle >= bits.length || bits[cycle] === value) return;
     bits[cycle] = value;
+    this.edited = true;
     this.requestRun();
   }
 
@@ -103,7 +110,10 @@ export class SimStore {
         changed = true;
       }
     }
-    if (changed) this.requestRun();
+    if (changed) {
+      this.edited = true;
+      this.requestRun();
+    }
   }
 
   /** Replace a whole track from a bit string ("0101...") or array of 0/1, for import. */
@@ -115,6 +125,7 @@ export class SimStore {
       const v = i < src.length ? Number(src[i]) : 0;
       arr[i] = v ? 1 : 0;
     }
+    this.edited = true;
     this.requestRun();
   }
 
@@ -135,6 +146,13 @@ export class SimStore {
   /** Run now regardless of `autoRun` -- the Sequence Editor's Run button. */
   recompute(): void {
     this.run();
+  }
+
+  /** True once the player has driven a stimulus through the Sequence Editor
+   *  (paint, drag-range, or import) -- as opposed to every track still
+   *  sitting at the puzzle's starting `initialLevels`. */
+  hasStimulus(): boolean {
+    return this.edited;
   }
 
   private requestRun(): void {
