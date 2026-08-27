@@ -7,9 +7,11 @@
 // bus listeners, and "hidden but still running" is how a tab you are not
 // looking at ends up costing you a core.
 //
-// Deliberately *not* modelled on `netlist-panel.ts`'s `.tab-btn`s: those
-// switch a filter mode over one shared toolbar and one shared data set, which
-// is a different thing from mounting and tearing down independent views.
+// `subTabHost` nests: a section's `mount` can itself call `subTabHost` on the
+// element it is given, as long as it passes a `panelId` distinct from its
+// parent's (storage keys and route-bus addressing are both keyed on that
+// string). The Netlist panel's Instances/Nets strip is the example -- it
+// lives inside the "browser" section of the Browser/Labels strip.
 //
 // A child is a `Mount`: the body of what used to be `PanelDef.render`, taking
 // the element it should fill and returning something disposable. Converting a
@@ -43,6 +45,17 @@ export interface SubTab {
    * to hold should opt in here.
    */
   keepAlive?: boolean;
+  /**
+   * Called every time this tab becomes the visible one -- on first
+   * activation (right after `mount`) and on every later flip back to it,
+   * including when `keepAlive` meant there was nothing to (re)mount.
+   *
+   * For a section that owns real, independent content, `mount` is enough.
+   * This exists for the host's *shared* chrome -- a filter box, a count, a
+   * "last call" readout -- that lives outside any one section's element but
+   * still needs to know which section is now current.
+   */
+  onShow?: () => void;
 }
 
 export interface Drawer extends Mounted {
@@ -148,6 +161,7 @@ export function subTabHost(
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pt-tab";
+    button.dataset.subtab = tab.id;
     button.textContent = tab.title;
     button.addEventListener("click", () => show(tab.id, true));
     buttons.set(tab.id, button);
@@ -199,6 +213,8 @@ export function subTabHost(
     current = id;
     for (const [tabId, button] of buttons) button.classList.toggle("on", tabId === id);
 
+    const tabDef = tabs.find((t) => t.id === id)!;
+
     // Each section gets its own element, so a kept-alive one can be hidden
     // without the next section having to clean up after it.
     let entry = live.get(id);
@@ -206,10 +222,11 @@ export function subTabHost(
       const element = document.createElement("div");
       element.className = "pt-section";
       host.append(element);
-      entry = { element, mounted: tabs.find((t) => t.id === id)!.mount(element) };
+      entry = { element, mounted: tabDef.mount(element) };
       live.set(id, entry);
     }
     entry.element.hidden = false;
+    tabDef.onShow?.();
 
     if (remember) {
       try {

@@ -166,14 +166,11 @@ select {
   border-bottom: 1px solid #1c2130;
   flex-wrap: wrap;
 }
-.netlist-tabs {
-  display: flex;
-  gap: 4px;
-}
 .netlist-check {
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 8px;
   color: #9aa2b5;
 }
 .netlist-count {
@@ -188,11 +185,25 @@ select {
   display: flex;
   min-height: 0;
 }
-.netlist-list-instances,
-.netlist-list-nets {
+/* Instances/Nets: a nested `subTabHost` (panels/mounts.ts), sitting where
+   the two lists used to sit directly. Its `.pt-panel` gives it a column
+   layout on its own; this just sizes it as the body's left-hand flex item
+   and keeps the divider that used to sit on the lists themselves. */
+.netlist-tabhost {
   flex: 1;
   min-width: 0;
   border-right: 1px solid #1c2130;
+}
+.netlist-tab-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.netlist-list-instances,
+.netlist-list-nets {
+  flex: 1;
+  min-height: 0;
 }
 .netlist-detail {
   width: 260px;

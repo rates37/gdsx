@@ -12,7 +12,7 @@ import { labels, type LabelKind } from "../store/labels";
 import { instanceChip, netChip, openLabelEditor } from "./chips";
 import { attachPythonCallButton } from "./python-call";
 import { VirtualList } from "./virtual-list";
-import type { Mounted } from "./mounts";
+import { subTabHost, type Mounted } from "./mounts";
 
 const ROW_H = 24;
 
@@ -74,47 +74,24 @@ export function mountNetlistBrowser(
     container.classList.add("netlist-panel");
     container.innerHTML = `
       <div class="netlist-toolbar">
-        <div class="netlist-tabs">
-          <button class="tab-btn active" data-tab="instances">Instances</button>
-          <button class="tab-btn" data-tab="nets">Nets</button>
-        </div>
         <input class="netlist-filter" type="text" placeholder="filter…" />
-        <label class="netlist-check inst-only"><input type="checkbox" class="seq-only" /> sequential</label>
-        <label class="netlist-check net-only" hidden><input type="checkbox" class="ports-only" /> ports only</label>
-        <select class="kind-select net-only" hidden>
-          <option value="">any kind</option>
-          <option value="primary_in">primary input</option>
-          <option value="const0">constant 0</option>
-          <option value="const1">constant 1</option>
-          <option value="flop_q">flop output</option>
-          <option value="undriven">undriven</option>
-          <option value="combinational">combinational</option>
-        </select>
         <span class="netlist-count"></span>
         <span class="py-call-slot"></span>
       </div>
       <div class="netlist-loading">waiting on the analysis engine…</div>
       <div class="netlist-body" hidden>
-        <div class="netlist-list-instances"></div>
-        <div class="netlist-list-nets" hidden></div>
+        <div class="netlist-tabhost"></div>
         <div class="netlist-detail">
           <div class="netlist-detail-empty">select a row for detail</div>
         </div>
       </div>`;
 
-    const tabBtns = Array.from(
-      container.querySelectorAll<HTMLButtonElement>(".tab-btn"),
-    );
     const filterEl = container.querySelector(".netlist-filter") as HTMLInputElement;
-    const seqOnlyEl = container.querySelector(".seq-only") as HTMLInputElement;
-    const portsOnlyEl = container.querySelector(".ports-only") as HTMLInputElement;
-    const kindSelectEl = container.querySelector(".kind-select") as HTMLSelectElement;
     const countEl = container.querySelector(".netlist-count") as HTMLSpanElement;
     const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
     const loadingEl = container.querySelector(".netlist-loading") as HTMLDivElement;
     const bodyEl = container.querySelector(".netlist-body") as HTMLDivElement;
-    const instListEl = container.querySelector(".netlist-list-instances") as HTMLDivElement;
-    const netListEl = container.querySelector(".netlist-list-nets") as HTMLDivElement;
+    const tabHostEl = container.querySelector(".netlist-tabhost") as HTMLDivElement;
     const detailEl = container.querySelector(".netlist-detail") as HTMLDivElement;
 
     let lastCall: string | null = null;
@@ -124,6 +101,11 @@ export function mountNetlistBrowser(
     let allInstances: InstanceView[] = [];
     let allNets: NetView[] = [];
     let selectedName: string | null = null;
+    let instList: VirtualList<InstanceView> | null = null;
+    let netList: VirtualList<NetView> | null = null;
+    let seqOnlyEl: HTMLInputElement | null = null;
+    let portsOnlyEl: HTMLInputElement | null = null;
+    let kindSelectEl: HTMLSelectElement | null = null;
 
     function showInstanceDetail(inst: InstanceView): void {
       const box = el("div", "detail-box");
@@ -196,41 +178,10 @@ export function mountNetlistBrowser(
       return cell;
     }
 
-    const instList = new VirtualList<InstanceView>(instListEl, ROW_H, (inst) => {
-      const row = el("div", "nrow" + (inst.name === selectedName ? " active" : ""));
-      row.append(nameCell("instance", inst.name));
-      row.append(el("span", "nrow-badge", inst.generic));
-      if (inst.is_sequential) row.append(el("span", "nrow-seq", "seq"));
-      row.addEventListener("click", () => {
-        selectedName = inst.name;
-        showInstanceDetail(inst);
-        instList.refresh();
-      });
-      return row;
-    });
-
-    const netList = new VirtualList<NetView>(netListEl, ROW_H, (net) => {
-      const row = el("div", "nrow" + (net.name === selectedName ? " active" : ""));
-      row.append(nameCell("net", net.name));
-      row.append(el("span", "nrow-badge", driverText(net)));
-      if (net.is_port) row.append(el("span", "nrow-port", net.is_port));
-      row.addEventListener("pointerenter", () =>
-        highlightBus.set({ name: net.name }),
-      );
-      row.addEventListener("pointerleave", () => highlightBus.set(null));
-      row.addEventListener("click", () => {
-        selectedName = net.name;
-        showNetDetail(net);
-        coneRootBus.open(net.name);
-        netList.refresh();
-      });
-      return row;
-    });
-
     function applyFilter(): void {
       const q = filterEl.value.trim().toLowerCase();
-      if (tab === "instances") {
-        const seqOnly = seqOnlyEl.checked;
+      if (tab === "instances" && instList) {
+        const seqOnly = seqOnlyEl?.checked ?? false;
         const filtered = allInstances.filter((i) => {
           if (seqOnly && !i.is_sequential) return false;
           if (!q) return true;
@@ -245,9 +196,9 @@ export function mountNetlistBrowser(
         });
         countEl.textContent = `${filtered.length} / ${allInstances.length} instances`;
         instList.setItems(filtered);
-      } else {
-        const portsOnly = portsOnlyEl.checked;
-        const kind = kindSelectEl.value;
+      } else if (tab === "nets" && netList) {
+        const portsOnly = portsOnlyEl?.checked ?? false;
+        const kind = kindSelectEl?.value ?? "";
         const filtered = allNets.filter((n) => {
           if (portsOnly && !n.is_port) return false;
           if (kind === "combinational" && n.leaf !== null) return false;
@@ -260,31 +211,79 @@ export function mountNetlistBrowser(
       }
     }
 
-    function switchTab(next: "instances" | "nets"): void {
-      tab = next;
-      for (const b of tabBtns) b.classList.toggle("active", b.dataset.tab === tab);
-      instListEl.hidden = tab !== "instances";
-      netListEl.hidden = tab !== "nets";
-      for (const e of Array.from(container.querySelectorAll<HTMLElement>(".inst-only"))) {
-        e.hidden = tab !== "instances";
-      }
-      for (const e of Array.from(container.querySelectorAll<HTMLElement>(".net-only"))) {
-        e.hidden = tab !== "nets";
-      }
-      lastCall =
-        tab === "instances" ? "gdsx.api.instances(handle)" : "gdsx.api.nets(handle)";
-      applyFilter();
+    /** The Instances sub-tab: its own "sequential only" checkbox above its
+     *  own virtualised list. Filter text, count and detail pane are the
+     *  host's shared chrome (see `applyFilter` and the `onShow` hooks below). */
+    function mountInstancesTab(host: HTMLElement): Mounted {
+      host.innerHTML = `
+        <div class="netlist-tab-body">
+          <label class="netlist-check"><input type="checkbox" class="seq-only" /> sequential</label>
+          <div class="netlist-list-instances"></div>
+        </div>`;
+      seqOnlyEl = host.querySelector(".seq-only") as HTMLInputElement;
+      const listEl = host.querySelector(".netlist-list-instances") as HTMLDivElement;
+      seqOnlyEl.addEventListener("change", applyFilter);
+      instList = new VirtualList<InstanceView>(listEl, ROW_H, (inst) => {
+        const row = el("div", "nrow" + (inst.name === selectedName ? " active" : ""));
+        row.append(nameCell("instance", inst.name));
+        row.append(el("span", "nrow-badge", inst.generic));
+        if (inst.is_sequential) row.append(el("span", "nrow-seq", "seq"));
+        row.addEventListener("click", () => {
+          selectedName = inst.name;
+          showInstanceDetail(inst);
+          instList!.refresh();
+        });
+        return row;
+      });
+      return {};
     }
 
-    for (const b of tabBtns) {
-      b.addEventListener("click", () => switchTab(b.dataset.tab as "instances" | "nets"));
+    /** The Nets sub-tab: its own "ports only" checkbox and kind filter above
+     *  its own virtualised list. */
+    function mountNetsTab(host: HTMLElement): Mounted {
+      host.innerHTML = `
+        <div class="netlist-tab-body">
+          <label class="netlist-check"><input type="checkbox" class="ports-only" /> ports only</label>
+          <select class="kind-select">
+            <option value="">any kind</option>
+            <option value="primary_in">primary input</option>
+            <option value="const0">constant 0</option>
+            <option value="const1">constant 1</option>
+            <option value="flop_q">flop output</option>
+            <option value="undriven">undriven</option>
+            <option value="combinational">combinational</option>
+          </select>
+          <div class="netlist-list-nets"></div>
+        </div>`;
+      portsOnlyEl = host.querySelector(".ports-only") as HTMLInputElement;
+      kindSelectEl = host.querySelector(".kind-select") as HTMLSelectElement;
+      const listEl = host.querySelector(".netlist-list-nets") as HTMLDivElement;
+      portsOnlyEl.addEventListener("change", applyFilter);
+      kindSelectEl.addEventListener("change", applyFilter);
+      netList = new VirtualList<NetView>(listEl, ROW_H, (net) => {
+        const row = el("div", "nrow" + (net.name === selectedName ? " active" : ""));
+        row.append(nameCell("net", net.name));
+        row.append(el("span", "nrow-badge", driverText(net)));
+        if (net.is_port) row.append(el("span", "nrow-port", net.is_port));
+        row.addEventListener("pointerenter", () =>
+          highlightBus.set({ name: net.name }),
+        );
+        row.addEventListener("pointerleave", () => highlightBus.set(null));
+        row.addEventListener("click", () => {
+          selectedName = net.name;
+          showNetDetail(net);
+          coneRootBus.open(net.name);
+          netList!.refresh();
+        });
+        return row;
+      });
+      return {};
     }
+
     filterEl.addEventListener("input", applyFilter);
-    seqOnlyEl.addEventListener("change", applyFilter);
-    portsOnlyEl.addEventListener("change", applyFilter);
-    kindSelectEl.addEventListener("change", applyFilter);
 
     let disposed = false;
+    let tabs: Mounted | null = null;
     designReady
       .then(async (design) => {
         if (disposed) return;
@@ -294,15 +293,38 @@ export function mountNetlistBrowser(
         allNets = nets.data;
         loadingEl.hidden = true;
         bodyEl.hidden = false;
-        switchTab("instances");
+        tabs = subTabHost(tabHostEl, "netlist-browser", [
+          {
+            id: "instances",
+            title: "Instances",
+            keepAlive: true,
+            mount: mountInstancesTab,
+            onShow: () => {
+              tab = "instances";
+              lastCall = "gdsx.api.instances(handle)";
+              applyFilter();
+            },
+          },
+          {
+            id: "nets",
+            title: "Nets",
+            keepAlive: true,
+            mount: mountNetsTab,
+            onShow: () => {
+              tab = "nets";
+              lastCall = "gdsx.api.nets(handle)";
+              applyFilter();
+            },
+          },
+        ]);
       })
       .catch((err) => {
         loadingEl.textContent = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
       });
 
     const unsub = highlightBus.subscribe(() => {
-      instList.refresh();
-      netList.refresh();
+      instList?.refresh();
+      netList?.refresh();
     });
 
     // A rename has to re-run the filter, not just repaint: it can change
@@ -323,6 +345,7 @@ export function mountNetlistBrowser(
         disposed = true;
         unsub();
         unsubLabels();
+        tabs?.dispose?.();
       },
     };
 }
