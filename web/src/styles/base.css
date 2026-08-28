@@ -209,7 +209,12 @@ body {
 }
 .gdsx-submit-header {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 6px;
+}
+.gdsx-submit-use-current {
+  font-size: 11px;
 }
 .gdsx-submit-close {
   flex: none;

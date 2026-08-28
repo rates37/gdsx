@@ -346,14 +346,34 @@ function submitRow(label: string, ...controls: HTMLElement[]): HTMLElement {
 }
 
 /** A bit-string field for one `sequence` track. Plain text -- not a number,
- *  so it gets no radix control. */
-function bitField(port: string, initial: string): { row: HTMLElement; get: () => string } {
+ *  so it gets no radix control. `edited()` tracks whether the player has
+ *  typed into it since the last programmatic `set` -- an empty *initial*
+ *  value is not the same signal, because `currentBits` can legitimately
+ *  return a non-empty string (a zero-filled track) the first time the store
+ *  is ready, which would otherwise permanently look "already filled in" and
+ *  block every later prefill. */
+function bitField(
+  port: string,
+  initial: string,
+): { row: HTMLElement; get: () => string; set: (value: string) => void; edited: () => boolean } {
   const input = document.createElement("input");
   input.type = "text";
   input.className = "gdsx-submit-input";
   input.placeholder = "0101…";
   input.value = initial;
-  return { row: submitRow(port, input), get: () => input.value.trim() };
+  let dirty = false;
+  input.addEventListener("input", () => {
+    dirty = true;
+  });
+  return {
+    row: submitRow(port, input),
+    get: () => input.value.trim(),
+    set: (value) => {
+      input.value = value;
+      dirty = false;
+    },
+    edited: () => dirty,
+  };
 }
 
 /**
@@ -424,6 +444,11 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
 
   const header = document.createElement("div");
   header.className = "gdsx-submit-header";
+  const useCurrentBtn = document.createElement("button");
+  useCurrentBtn.type = "button";
+  useCurrentBtn.className = "gdsx-submit-use-current";
+  useCurrentBtn.textContent = "use current sequence";
+  useCurrentBtn.title = "refill every field from what the design is driving right now";
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "gdsx-submit-close";
@@ -434,11 +459,17 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
   const body = document.createElement("div");
   body.className = "gdsx-submit-body";
 
+  // Latch fields keep `set`/`edited` around (not just `get`) so `open()` and
+  // `useCurrentBtn` can refill them directly, by reference, rather than
+  // re-finding the right input in the DOM by position.
+  const latchFields: { name: string; set: (value: string) => void; edited: () => boolean }[] = [];
+
   const getters: { name: string; get: () => string }[] =
     checks.kind === "latch"
       ? submit.trackPorts.map((port) => {
           const f = bitField(port, "");
           body.append(f.row);
+          latchFields.push({ name: port, set: f.set, edited: f.edited });
           return { name: port, get: f.get };
         })
       : checks.kind === "bus-at"
@@ -467,6 +498,8 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
   footer.className = "gdsx-submit-footer";
   footer.append(checkBtn);
 
+  if (checks.kind === "latch") header.prepend(useCurrentBtn);
+
   popover.append(header, body, footer, verdictEl);
 
   checkBtn.addEventListener("click", () => {
@@ -492,7 +525,14 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
       .then((verdict) => {
         const parts = [verdict.accepted ? "✓ accepted" : `✗ ${verdict.reason}`];
         if (verdict.observed) parts.push(`observed: ${verdict.observed}`);
-        verdictEl.textContent = parts.join(" — ");
+        let text = parts.join(" — ");
+        if (verdict.accepted) {
+          // This scores the answer, not the Notebook's claims -- "coverage 0%"
+          // next to an accepted verdict is correct, not a bug, but reads like
+          // one without this line.
+          text += "\nthis checks your answer only, not the Notebook's coverage -- see the Notebook for that score.";
+        }
+        verdictEl.textContent = text;
         verdictEl.className = `gdsx-submit-verdict ${verdict.accepted ? "gdsx-submit-ok" : "gdsx-submit-bad"}`;
         if (verdict.accepted) btn.classList.add("on");
       })
@@ -511,16 +551,22 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
 
   function open(): void {
     popover.hidden = false;
-    // Prefilled once, on open, and only into fields nobody has typed into
-    // yet -- so reopening the popover never clobbers an edit.
+    // Prefilled on every open, into every field the player has not typed
+    // into -- `edited()`, not "value is empty": `currentBits` legitimately
+    // returns a non-empty (all-zero) string as soon as the store exists,
+    // before the player has driven anything, so an emptiness check would
+    // treat that first prefill as an edit and never refresh again.
     if (checks.kind === "latch") {
-      for (const g of getters) {
-        const input = body.querySelector<HTMLInputElement>(
-          `.gdsx-submit-row:nth-child(${control.trackPorts.indexOf(g.name) + 1}) .gdsx-submit-input`,
-        );
-        if (input && input.value === "") input.value = control.currentBits(g.name);
+      for (const f of latchFields) {
+        if (!f.edited()) f.set(control.currentBits(f.name));
       }
     }
+  }
+
+  if (checks.kind === "latch") {
+    useCurrentBtn.addEventListener("click", () => {
+      for (const f of latchFields) f.set(control.currentBits(f.name));
+    });
   }
 
   btn.addEventListener("click", () => (popover.hidden ? open() : close()));
