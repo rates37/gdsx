@@ -20,7 +20,8 @@
     "test:puzzles": "node --experimental-strip-types scripts/test-puzzles.mjs",
     "test:guide": "node --experimental-strip-types scripts/test-guide.mjs",
     "test:register-inspector": "node --experimental-strip-types scripts/test-register-inspector.mjs",
-    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:puzzles && npm run test:guide"
+    "test:progress": "node --experimental-strip-types scripts/test-progress.mjs",
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:puzzles && npm run test:guide && npm run test:progress"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

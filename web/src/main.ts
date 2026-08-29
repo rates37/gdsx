@@ -23,6 +23,7 @@ import { modelPanel } from "./panels/model-panel";
 import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
+import { recordSolved } from "./store/progress";
 import { Guide, armAutostart } from "./guide/guide";
 import type { SubmitControl } from "./workspace/toolbar";
 import { verifySubmission, type Submission } from "./puzzles/answer-check";
@@ -135,7 +136,9 @@ async function main(): Promise<void> {
       // -- see answer-check.ts's `verifySubmission` for why the store is
       // optional at all.
       const store = puzzle.checks?.kind === "digest" ? undefined : await storeReady;
-      return verifySubmission(puzzle, submission, store);
+      const verdict = await verifySubmission(puzzle, submission, store);
+      recordSolved(puzzle.id, verdict);
+      return verdict;
     },
   };
 
