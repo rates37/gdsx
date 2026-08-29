@@ -108,7 +108,23 @@ export function solvedState(puzzleId: string): ProgressRecord | null {
   }
 }
 
-/** Every puzzle with a progress record, for the level menu (19.2). */
+/**
+ * The day a solve happened, `YYYY-MM-DD`, or null when there is none or the
+ * saved timestamp cannot be read -- saved state is player-writable and may be
+ * anything.
+ *
+ * Here rather than in either caller because both the menu's cards and the
+ * workspace's solved marker show the same fact, and this file owns the format
+ * it is stored in.
+ */
+export function solvedDay(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return null;
+  return at.toISOString().slice(0, 10);
+}
+
+/** Every puzzle with a progress record, for the level menu. */
 export function allProgress(): ProgressRecord[] {
   const records: ProgressRecord[] = [];
   for (const key of gdsxKeys()) {

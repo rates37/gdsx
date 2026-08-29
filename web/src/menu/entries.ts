@@ -9,7 +9,7 @@
 
 import type { PuzzleDescriptor } from "../puzzles/catalog.ts";
 import { goalFor } from "../puzzles/goals.ts";
-import type { ProgressRecord } from "../store/progress.ts";
+import { solvedDay, type ProgressRecord } from "../store/progress.ts";
 
 export interface MenuEntry {
   id: string;
@@ -34,15 +34,6 @@ export interface MenuEntry {
   solvedOn: string | null;
   /** Every submit attempt, accepted or not. 0 for an untouched puzzle. */
   attempts: number;
-}
-
-/** `2026-08-29` from an ISO timestamp, or null if it cannot be read -- a
- *  saved record is player-writable state and may be anything. */
-function dayOf(iso: string | undefined): string | null {
-  if (!iso) return null;
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return null;
-  return at.toISOString().slice(0, 10);
 }
 
 function difficultyLabel(value: number | string | null): string | null {
@@ -73,7 +64,7 @@ export function menuEntries(
       par: puzzle.parMinutes ? `par ${puzzle.parMinutes}m` : null,
       goal: goalFor(puzzle.answerKind),
       solved: Boolean(record?.solvedAt),
-      solvedOn: dayOf(record?.solvedAt),
+      solvedOn: solvedDay(record?.solvedAt),
       attempts: record?.attempts ?? 0,
     };
   });

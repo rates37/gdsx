@@ -28,7 +28,15 @@ import { fileURLToPath } from "node:url";
 import { describe, SPOILERS } from "./puzzle-index.mjs";
 import { answerDigestInput, normaliseAnswer } from "../src/puzzles/answer-normalise.mjs";
 import { hashAnswer, verifySubmission } from "../src/puzzles/answer-check.ts";
-import { chooseRoute, FALLBACK, findPuzzle, loadCatalog, urlFor } from "../src/puzzles/catalog.ts";
+import {
+  chooseRoute,
+  FALLBACK,
+  findPuzzle,
+  loadCatalog,
+  menuUrl,
+  requestedId,
+  urlFor,
+} from "../src/puzzles/catalog.ts";
 import { panelsFor, TOOL_PANELS } from "../src/puzzles/tools.ts";
 import { SimStore } from "../src/sim/store.ts";
 import { parseTapeBundle } from "../src/sim/tape.ts";
@@ -265,6 +273,19 @@ eq(
 
 eq(findPuzzle(catalog, "1-warm-start")?.id, "1-warm-start", "findPuzzle matches on id");
 eq(findPuzzle(catalog, "no-such-puzzle"), undefined, "…and reports a miss rather than guessing");
+
+// The toolbar's way back to the menu is the inverse of urlFor: drop the
+// selection, keep everything else the player is carrying.
+eq(
+  menuUrl("https://example.test/?debug=1&puzzle=original-puzzle"),
+  "https://example.test/?debug=1",
+  "the route back to the menu drops the puzzle and keeps the rest of the query",
+);
+eq(
+  chooseRoute(catalog, { requested: requestedId(new URL(menuUrl("https://example.test/?puzzle=1-warm-start")).search) }).kind,
+  "menu",
+  "…and the URL it produces routes to the menu, by the same rule",
+);
 
 eq(
   urlFor("1-warm-start", "https://example.test/?debug=1"),

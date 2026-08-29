@@ -217,6 +217,15 @@ export function urlFor(id: string, href: string = location.href): string {
   return url.toString();
 }
 
+/** The URL that opens the level menu: this one with the puzzle selection
+ *  dropped, so `?debug=1` and anything else a player is carrying survives the
+ *  trip back. The inverse of `urlFor`, and the toolbar's way out. */
+export function menuUrl(href: string = location.href): string {
+  const url = new URL(href);
+  url.searchParams.delete(PARAM);
+  return url.toString();
+}
+
 /**
  * Switch levels by navigating.
  *

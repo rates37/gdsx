@@ -76,24 +76,70 @@ export interface Objective {
   parMinutes?: number | null;
 }
 
+/** Whether this puzzle is already solved, as `store/progress.ts` records it.
+ *  Null when it is not -- the bar then says nothing rather than saying "not
+ *  solved", which is the state of most puzzles most of the time. */
+export interface SolvedState {
+  /** `YYYY-MM-DD`, or null if the saved timestamp could not be read. */
+  solvedOn: string | null;
+  attempts: number;
+}
+
+/** The way back to the level menu. A plain href rather than a callback: it is
+ *  a navigation to a URL the routing rule already defines (`menuUrl`), so
+ *  middle-click and open-in-new-tab work without the toolbar handling them. */
+export interface HomeLink {
+  href: string;
+}
+
+/** What the readiness pill shows. `detail` is the line boot.ts already keeps
+ *  ("python: ready in 1140 ms") and becomes the pill's tooltip. */
+export interface Readiness {
+  phase: "booting" | "ready" | "failed";
+  detail?: string;
+}
+
+/** The handles the shell keeps after the toolbar is built. Each is a setter
+ *  rather than an exposed element: the toolbar owns its own markup. */
+export interface ToolbarHandle {
+  status: (text: string) => void;
+  readiness: (state: Readiness) => void;
+  solved: (state: SolvedState) => void;
+}
+
+/** Everything the toolbar draws beyond the panel menus. Grouped into one
+ *  object rather than trailing positional parameters -- there are seven of
+ *  them now, and `attachToolbar(host, ws, menus, levels, undefined, obj,
+ *  undefined, submit)` is not a call anyone can read. */
+export interface ToolbarOptions {
+  levels?: LevelPicker;
+  guide?: GuideControl;
+  objective?: Objective;
+  submit?: SubmitControl;
+  home?: HomeLink;
+  /** Absent for a puzzle that has never been solved. */
+  solved?: SolvedState;
+}
+
 export function attachToolbar(
   host: HTMLElement,
   workspace: Workspace,
   menus: MenuGroup[],
-  levels?: LevelPicker,
-  guide?: GuideControl,
-  objective?: Objective,
-  submit?: SubmitControl,
-): (text: string) => void {
+  opts: ToolbarOptions = {},
+): ToolbarHandle {
+  const { levels, guide, objective, submit, home } = opts;
   const bar = document.createElement("div");
   bar.className = "gdsx-toolbar";
   bar.innerHTML = `
     <span class="gdsx-toolbar-title">DIESHARK</span>
+    <span class="gdsx-home-wrap"></span>
     <nav class="gdsx-menubar"></nav>
     <span class="gdsx-level-wrap"></span>
+    <span class="gdsx-solved"></span>
     <span class="gdsx-objective"></span>
     <span class="gdsx-toolbar-status"></span>
     <div class="gdsx-toolbar-spacer"></div>
+    <span class="gdsx-ready-wrap"></span>
     <button class="gdsx-notebook-btn" type="button" title="your notebook — the only scored surface in the game">
       notebook
     </button>
@@ -107,9 +153,16 @@ export function attachToolbar(
   `;
   host.prepend(bar);
 
+  attachHomeLink(bar.querySelector(".gdsx-home-wrap") as HTMLSpanElement, home);
+
   attachLevelPicker(bar.querySelector(".gdsx-level-wrap") as HTMLSpanElement, levels);
 
+  const setSolved = attachSolvedChip(bar.querySelector(".gdsx-solved") as HTMLSpanElement);
+  if (opts.solved) setSolved(opts.solved);
+
   attachObjective(bar.querySelector(".gdsx-objective") as HTMLSpanElement, objective);
+
+  const setReadiness = attachReadinessPill(bar.querySelector(".gdsx-ready-wrap") as HTMLSpanElement);
 
   const updateMenuChecks = attachMenuBar(bar.querySelector(".gdsx-menubar") as HTMLElement, workspace, menus);
 
@@ -134,8 +187,90 @@ export function attachToolbar(
   updateNotebookState();
 
   const statusEl = bar.querySelector(".gdsx-toolbar-status") as HTMLSpanElement;
-  return (text: string) => {
-    statusEl.textContent = text;
+  return {
+    status: (text: string) => {
+      statusEl.textContent = text;
+    },
+    readiness: setReadiness,
+    solved: setSolved,
+  };
+}
+
+/**
+ * The way out of a puzzle, first thing in the bar.
+ *
+ * Until this existed the only route back to the menu was editing the URL. A
+ * real `<a>` rather than a button calling `location.assign`, for the same
+ * reason the menu's cards are links: the route is a URL, so the browser's own
+ * affordances (middle click, open in a new tab, the status bar preview) come
+ * for free.
+ */
+function attachHomeLink(host: HTMLSpanElement, home?: HomeLink): void {
+  if (!home) {
+    host.remove();
+    return;
+  }
+  const link = document.createElement("a");
+  link.className = "gdsx-home";
+  link.href = home.href;
+  link.textContent = "‹ levels";
+  link.title = "back to the level menu";
+  host.append(link);
+}
+
+/**
+ * "You have solved this one", beside the objective.
+ *
+ * Drawn only when it is true: a puzzle nobody has solved says nothing rather
+ * than carrying a permanent "not solved", which would be the state of most
+ * puzzles most of the time and would crowd out the objective it sits next to.
+ * The date and attempt count go in the tooltip -- the top bar has room for the
+ * fact, not the history.
+ */
+function attachSolvedChip(host: HTMLSpanElement): (state: SolvedState) => void {
+  host.hidden = true;
+  return (state: SolvedState) => {
+    host.hidden = false;
+    host.textContent = "✓ solved";
+    const plural = state.attempts === 1 ? "attempt" : "attempts";
+    host.title = [
+      state.solvedOn ? `first solved ${state.solvedOn}` : "solved",
+      `${state.attempts} ${plural}`,
+    ].join(" · ");
+  };
+}
+
+/**
+ * The readiness pill, at the right-hand end of the bar.
+ *
+ * Boot takes 20-30 seconds and until this existed the only readiness
+ * indicator anywhere in the app was a line inside the Die View's collapsed
+ * `debug info` disclosure; every other panel showed a bare "loading…", which
+ * does not distinguish "still starting" from "stuck".
+ *
+ * It shows `booting…`, then `ready` with the timing in its tooltip, then gets
+ * out of the way -- a permanent green light is noise, and the state it
+ * reports (the design handle exists) does not come back. A failure stays put,
+ * because that one the player needs to keep seeing.
+ */
+function attachReadinessPill(host: HTMLSpanElement): (state: Readiness) => void {
+  const pill = document.createElement("span");
+  pill.className = "gdsx-ready gdsx-ready-booting";
+  pill.textContent = "booting…";
+  host.append(pill);
+
+  let hideTimer: ReturnType<typeof setTimeout> | undefined;
+  return (state: Readiness) => {
+    clearTimeout(hideTimer);
+    pill.className = `gdsx-ready gdsx-ready-${state.phase}`;
+    pill.textContent =
+      state.phase === "booting" ? "booting…" : state.phase === "ready" ? "ready" : "boot failed";
+    pill.title = state.detail ?? "";
+    if (state.phase === "ready") {
+      hideTimer = setTimeout(() => {
+        pill.classList.add("gdsx-ready-done");
+      }, 4000);
+    }
   };
 }
 

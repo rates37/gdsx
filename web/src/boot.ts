@@ -27,16 +27,16 @@ import { modelPanel } from "./panels/model-panel";
 import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
-import { onCleared, recordSolved } from "./store/progress";
+import { onCleared, recordSolved, solvedDay, solvedState } from "./store/progress";
 import { Guide, armAutostart } from "./guide/guide";
-import type { SubmitControl } from "./workspace/toolbar";
+import type { SolvedState, SubmitControl } from "./workspace/toolbar";
 import { verifySubmission, type Submission } from "./puzzles/answer-check";
 import { GUIDE_PUZZLE_ID } from "./guide/steps";
 import { createDesignClient, type DesignClient } from "./design/client";
 import { winConditionSource } from "./design/win-condition";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
-import { openPuzzle, rememberPuzzle, type PuzzleDescriptor } from "./puzzles/catalog";
+import { menuUrl, openPuzzle, rememberPuzzle, type PuzzleDescriptor } from "./puzzles/catalog";
 import { panelsFor } from "./puzzles/tools";
 
 // The toolbar's menu bar, macOS/Windows style. The Notebook is deliberately
@@ -67,6 +67,12 @@ export async function bootWorkspace(
 ): Promise<void> {
   const t0 = performance.now();
   let tBundle = t0;
+
+  // Set before anything else so the attribute always exists: a driver can
+  // then wait on `body[data-ready="true"]` and tell "still starting" from "a
+  // build with no readiness signal at all". It flips once the design handle
+  // exists, below.
+  document.body.dataset.ready = "false";
 
   //: Set here rather than by whatever navigated here: the menu links straight
   //: to a URL, and a deep link has nothing that could have set it.
@@ -132,6 +138,15 @@ export async function bootWorkspace(
     liveStore = s;
   });
 
+  /** This puzzle's solved marker as the toolbar wants it, or undefined while
+   *  it is unsolved. Re-read rather than cached: a submission accepted during
+   *  the session should light the marker up without a reload. */
+  const solvedNow = (): SolvedState | undefined => {
+    const record = solvedState(puzzle.id);
+    if (!record?.solvedAt) return undefined;
+    return { solvedOn: solvedDay(record.solvedAt), attempts: record.attempts };
+  };
+
   const submitControl: SubmitControl = {
     checks: puzzle.checks,
     trackPorts: driver.trackPorts,
@@ -145,6 +160,8 @@ export async function bootWorkspace(
       const store = puzzle.checks?.kind === "digest" ? undefined : await storeReady;
       const verdict = await verifySubmission(puzzle, submission, store);
       recordSolved(puzzle.id, verdict);
+      const solved = solvedNow();
+      if (solved) workspace.setSolved(solved);
       return verdict;
     },
   };
@@ -249,27 +266,35 @@ export async function bootWorkspace(
       registerPanel({ designReady, puzzleId: puzzle.id, successNet, winCondition }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
-    MENUS,
-    // The menu bar's own order, plus the Notebook (no menu names it) --
-    // filtered down to what this puzzle's tools_enabled actually asks for.
-    [...MENUS.flatMap((m) => m.items), "notebook"].filter((id) => allowedPanels.has(id)),
     {
-      puzzles: catalog.map((p) => ({
-        id: p.id,
-        title: p.title,
-        blurb: p.blurb,
-        parMinutes: p.parMinutes,
-      })),
-      currentId: puzzle.id,
-      onSelect: openPuzzle,
+      menus: MENUS,
+      // The menu bar's own order, plus the Notebook (no menu names it) --
+      // filtered down to what this puzzle's tools_enabled actually asks for.
+      defaultPanelIds: [...MENUS.flatMap((m) => m.items), "notebook"].filter((id) =>
+        allowedPanels.has(id),
+      ),
+      levels: {
+        puzzles: catalog.map((p) => ({
+          id: p.id,
+          title: p.title,
+          blurb: p.blurb,
+          parMinutes: p.parMinutes,
+        })),
+        currentId: puzzle.id,
+        onSelect: openPuzzle,
+      },
+      guide: guideControl,
+      objective: {
+        blurb: puzzle.blurb,
+        answerKind: puzzle.answerKind,
+        parMinutes: puzzle.parMinutes,
+      },
+      submit: submitControl,
+      // The way out. Everything else in the query survives the trip, so a
+      // player who arrived with `?debug=1` keeps it.
+      home: { href: menuUrl() },
+      solved: solvedNow(),
     },
-    guideControl,
-    {
-      blurb: puzzle.blurb,
-      answerKind: puzzle.answerKind,
-      parMinutes: puzzle.parMinutes,
-    },
-    submitControl,
   );
 
   if (isGuidePuzzle) {
@@ -277,6 +302,27 @@ export async function bootWorkspace(
     guide.subscribe(notifyGuideChange);
     notifyGuideChange();
   }
+
+  // Ready means the design handle exists, not merely that Pyodide answered:
+  // that is the point at which the analysis panels stop saying "loading…",
+  // and it is the thing a script waiting to drive the app actually needs.
+  // `pyLine` is the detail boot already tracked ("python: ready in 1140 ms"),
+  // which until now was only visible inside the Die View's collapsed debug
+  // disclosure.
+  void designReady.then(
+    () => {
+      document.body.dataset.ready = "true";
+      workspace.setReadiness({ phase: "ready", detail: pyLine });
+    },
+    (err: unknown) => {
+      // Left on screen rather than fading: a boot that failed is the one
+      // state the player has to keep seeing.
+      workspace.setReadiness({
+        phase: "failed",
+        detail: err instanceof Error ? err.message : String(err),
+      });
+    },
+  );
 
   /** Time api.analyse() on the loaded puzzle's baked netlist -- what the
    *  game does at load. */

@@ -17,10 +17,10 @@ import {
 import "./dockview.css";
 import {
   attachToolbar,
-  type GuideControl,
-  type LevelPicker,
-  type Objective,
-  type SubmitControl,
+  type Readiness,
+  type SolvedState,
+  type ToolbarHandle,
+  type ToolbarOptions,
 } from "./toolbar.ts";
 
 // v2: the default arrangement changed from a four-row grid to a single
@@ -44,47 +44,41 @@ export interface MenuGroup {
   items: string[];
 }
 
+/** Everything the shell needs beyond its panels. `menus` and
+ *  `defaultPanelIds` are the two the workspace itself reads; the rest it
+ *  hands straight to the toolbar. */
+export interface WorkspaceOptions extends ToolbarOptions {
+  /** The menu bar: each group's label and the panel ids it lists. Every panel
+   *  named here is reachable from a menu regardless of `defaultPanelIds` --
+   *  gating only ever changes what opens by default, never what is reachable.
+   *  A group may name a panel that does not exist yet. */
+  menus: MenuGroup[];
+  /** Default layout: every named panel as a tab in one group, left to right,
+   *  with the first one active. Deliberately a plain id list rather than
+   *  derived from `menus` -- the caller (boot.ts) may need to open a panel by
+   *  default that no menu names, e.g. the Notebook, or fewer than every panel
+   *  a puzzle's `tools_enabled` does not ask for (web/src/puzzles/tools.ts).
+   *  Filtered to panels this build actually registers. */
+  defaultPanelIds: string[];
+}
+
 export class Workspace {
   readonly api: DockviewApi;
   private readonly defs = new Map<string, PanelDef>();
-  private readonly status: (text: string) => void;
+  private readonly toolbar: ToolbarHandle;
+  private readonly menus: MenuGroup[];
   private readonly order: string[];
 
   /**
-   * @param menus The menu bar: each group's label and the panel ids it
-   *   lists. Every panel named here is reachable from a menu regardless of
-   *   `defaultPanelIds` -- gating only ever changes what opens by default,
-   *   never what is reachable. A group may name a panel that does not exist
-   *   yet.
-   * @param defaultPanelIds Default layout: every named panel as a tab in one
-   *   group, left to right, with the first one active. Deliberately a plain
-   *   id list rather than derived from `menus` -- the caller (main.ts) may
-   *   need to open a panel by default that no menu names, e.g. the
-   *   Notebook, or fewer than every panel a puzzle's `tools_enabled` does
-   *   not ask for (web/src/puzzles/tools.ts). Filtered to panels this build
-   *   actually registers.
-   * @param levels The level picker's contents, if there is more than one
-   *   puzzle to offer. The shell hands it straight to the toolbar; it does
-   *   not itself know which puzzle is loaded.
-   * @param guide The guided walkthrough's button wiring, if this build has a
-   *   tutorial puzzle. Also handed straight to the toolbar.
-   * @param objective What the loaded puzzle is asking for, shown beside the
-   *   level picker. Also handed straight to the toolbar.
-   * @param submit The submit surface's wiring, if the loaded puzzle has a
-   *   checkable answer. Also handed straight to the toolbar.
+   * Everything in `opts` beyond `menus` and `defaultPanelIds` is handed
+   * straight to the toolbar -- the level picker, the guide button, the
+   * objective, the submit surface, the way back to the menu and the solved
+   * marker. The shell does not itself know which puzzle is loaded.
    */
-  constructor(
-    container: HTMLElement,
-    panels: PanelDef[],
-    private readonly menus: MenuGroup[],
-    defaultPanelIds: string[],
-    levels?: LevelPicker,
-    guide?: GuideControl,
-    objective?: Objective,
-    submit?: SubmitControl,
-  ) {
+  constructor(container: HTMLElement, panels: PanelDef[], opts: WorkspaceOptions) {
     for (const p of panels) this.defs.set(p.id, p);
-    this.order = defaultPanelIds.filter((id) => this.defs.has(id));
+    this.menus = opts.menus;
+    this.order = opts.defaultPanelIds.filter((id) => this.defs.has(id));
 
     const dockMount = document.createElement("div");
     dockMount.className = "gdsx-dock-mount";
@@ -124,13 +118,28 @@ export class Workspace {
     this.api.onDidLayoutChange(() => this.persist());
     window.addEventListener("beforeunload", () => this.persist());
 
-    this.status = attachToolbar(container, this, this.menus, levels, guide, objective, submit);
+    this.toolbar = attachToolbar(container, this, this.menus, opts);
   }
 
   /** The toolbar's status readout -- the coverage percentage, per §3's title
    *  bar. A panel calls this; nothing reads it back. */
   setStatus(text: string): void {
-    this.status(text);
+    this.toolbar.status(text);
+  }
+
+  /** The readiness pill: `booting`, then `ready`, then out of the way. Driven
+   *  by boot.ts, which is the only thing that knows when the design handle
+   *  exists. */
+  setReadiness(state: Readiness): void {
+    this.toolbar.readiness(state);
+  }
+
+  /** Show the solved marker beside the objective. Called at load for a puzzle
+   *  already solved, and again the moment a submission is accepted -- the bar
+   *  should not still be claiming an unsolved puzzle while the popover says
+   *  "✓ accepted". */
+  setSolved(state: SolvedState): void {
+    this.toolbar.solved(state);
   }
 
   /** A registered panel's title, or undefined if this build does not have

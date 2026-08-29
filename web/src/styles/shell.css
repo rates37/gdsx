@@ -41,6 +41,65 @@ body {
 .gdsx-toolbar-spacer {
   flex: 1;
 }
+/* The way back to the level menu. Styled as a link rather than a button --
+   it navigates, and the browser should say so on hover. */
+.gdsx-home {
+  flex: none;
+  color: #9aa2b5;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+.gdsx-home:hover {
+  color: #e6e9f0;
+  background: #1a1f2b;
+  border-color: #2e3444;
+}
+/* "You have solved this one", beside the objective. Absent, not greyed, when
+   the puzzle is unsolved -- which is most puzzles most of the time. */
+.gdsx-solved {
+  flex: none;
+  color: #9fe39f;
+  border: 1px solid #2b4a2b;
+  background: #131c13;
+  border-radius: 3px;
+  padding: 0 5px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: default;
+}
+/* ---- readiness pill ---------------------------------------------------- */
+.gdsx-ready {
+  flex: none;
+  font-size: 11px;
+  border-radius: 3px;
+  padding: 0 6px;
+  white-space: nowrap;
+  cursor: default;
+  transition: opacity 0.6s ease;
+}
+.gdsx-ready-booting {
+  color: #f2cc4d;
+  border: 1px solid #5a4d1f;
+}
+.gdsx-ready-ready {
+  color: #9fe39f;
+  border: 1px solid #2b4a2b;
+}
+.gdsx-ready-failed {
+  color: #e39f9f;
+  border: 1px solid #7a3d3d;
+  background: #1c1417;
+}
+/* Out of the way once it has been read: a permanent green light is noise,
+   and the state it reports does not come back. Opacity rather than `display`
+   so the bar does not reflow four seconds after boot. */
+.gdsx-ready-done {
+  opacity: 0;
+  pointer-events: none;
+}
 .gdsx-level-select {
   background: #1a1f2b;
   color: #cfd4de;
