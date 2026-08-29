@@ -8,6 +8,7 @@
 import type { MenuGroup, Workspace } from "./workspace.ts";
 import type { PuzzleChecks } from "../puzzles/catalog.ts";
 import type { Submission, Verdict } from "../puzzles/answer-check.ts";
+import { goalFor } from "../puzzles/goals.ts";
 
 /** The guided-walkthrough button's wiring. Supplied by main.ts, which owns
  *  the Guide; the toolbar only renders a button for it. Absent when the
@@ -74,20 +75,6 @@ export interface Objective {
   answerKind: string | null;
   parMinutes?: number | null;
 }
-
-/** The answer kinds of game-plan.md §6b, said in the imperative. The point is
- *  to tell the player what *shape* of answer ends the puzzle: "find the input
- *  sequence" and "recover a value" are very different sessions. */
-const ANSWER_GOAL: Record<string, string> = {
-  sequence: "find the input sequence",
-  constant: "recover a value",
-  parameter: "recover the parameters",
-  model: "build a working model",
-  function: "recover the function",
-  location: "find the cells",
-  patch: "repair the design",
-  state: "find the register state",
-};
 
 export function attachToolbar(
   host: HTMLElement,
@@ -289,7 +276,7 @@ function attachObjective(host: HTMLSpanElement, objective?: Objective): void {
     return;
   }
 
-  const goal = objective.answerKind ? ANSWER_GOAL[objective.answerKind] : null;
+  const goal = goalFor(objective.answerKind);
   if (goal) {
     const goalEl = document.createElement("span");
     goalEl.className = "gdsx-objective-goal";

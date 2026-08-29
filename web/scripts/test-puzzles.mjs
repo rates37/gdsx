@@ -15,8 +15,9 @@
 //      allowed to quietly change how that design is clocked;
 //   3. a puzzle with no data input derives no key port rather than a wrong
 //      one, and one with a bus track derives every port of the bus;
-//   4. selection prefers the URL, then the last played, then the first, and
-//      an unknown id opens something rather than nothing.
+//   4. routing: `?puzzle=<id>` opens that puzzle's workspace and every other
+//      URL -- no parameter, an empty one, an id the catalog does not have --
+//      opens the menu.
 //
 // Usage: node --experimental-strip-types web/scripts/test-puzzles.mjs
 
@@ -27,7 +28,7 @@ import { fileURLToPath } from "node:url";
 import { describe, SPOILERS } from "./puzzle-index.mjs";
 import { answerDigestInput, normaliseAnswer } from "../src/puzzles/answer-normalise.mjs";
 import { hashAnswer, verifySubmission } from "../src/puzzles/answer-check.ts";
-import { choosePuzzle, FALLBACK, loadCatalog, urlFor } from "../src/puzzles/catalog.ts";
+import { chooseRoute, FALLBACK, findPuzzle, loadCatalog, urlFor } from "../src/puzzles/catalog.ts";
 import { panelsFor, TOOL_PANELS } from "../src/puzzles/tools.ts";
 import { SimStore } from "../src/sim/store.ts";
 import { parseTapeBundle } from "../src/sim/tape.ts";
@@ -236,26 +237,34 @@ eq(
 eq(busPuzzle.driver.keyPort, "I[1]", "the key port is the first track's first bit");
 eq(busPuzzle.driver.successNet, "done", "the success net comes from the predicate");
 
-// ---- 4. which puzzle opens ----------------------------------------------
+// ---- 4. which screen a URL opens ----------------------------------------
+//
+// The whole routing rule: a puzzle the catalog has opens the workspace, and
+// everything else opens the menu. The deep links matter -- web/scripts/solve/
+// and docs/game/original-puzzle-walkthrough.md both drive
+// `?puzzle=original-puzzle` and expect the workspace, not a menu.
 
 const catalog = [warmStart, original];
+
+const deepLink = chooseRoute(catalog, { requested: "original-puzzle" });
+eq(deepLink.kind, "puzzle", "?puzzle=<id> opens the workspace");
+eq(deepLink.puzzle?.id, "original-puzzle", "…on the puzzle the URL names");
 eq(
-  choosePuzzle(catalog, { requested: "original-puzzle" }).id,
-  "original-puzzle",
-  "the URL wins",
+  chooseRoute(catalog, { requested: "original-puzzle" }).puzzle?.dir,
+  original.dir,
+  "a puzzle's directory name is a legal ?puzzle= value too",
 );
+eq(chooseRoute(catalog, {}).kind, "menu", "a bare URL opens the menu");
+eq(chooseRoute(catalog, { requested: null }).kind, "menu", "…as does an absent parameter");
+eq(chooseRoute(catalog, { requested: "" }).kind, "menu", "…and an empty one");
 eq(
-  choosePuzzle(catalog, { requested: null, lastPlayed: "original-puzzle" }).id,
-  "original-puzzle",
-  "the last played wins when the URL says nothing",
+  chooseRoute(catalog, { requested: "no-such-puzzle" }).kind,
+  "menu",
+  "an id the catalog does not have opens the menu rather than a different puzzle",
 );
-eq(choosePuzzle(catalog, {}).id, "1-warm-start", "the first puzzle is the default");
-eq(
-  choosePuzzle(catalog, { requested: "no-such-puzzle", lastPlayed: "original-puzzle" }).id,
-  "original-puzzle",
-  "an unknown id falls through rather than failing",
-);
-eq(choosePuzzle(catalog, { requested: "no-such-puzzle" }).id, "1-warm-start", "…all the way down");
+
+eq(findPuzzle(catalog, "1-warm-start")?.id, "1-warm-start", "findPuzzle matches on id");
+eq(findPuzzle(catalog, "no-such-puzzle"), undefined, "…and reports a miss rather than guessing");
 
 eq(
   urlFor("1-warm-start", "https://example.test/?debug=1"),

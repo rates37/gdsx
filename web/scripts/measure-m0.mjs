@@ -1,6 +1,6 @@
 // M0 gate measurements, driven through a real browser.
 //
-//   node scripts/measure-m0.mjs [--headless] [--url http://localhost:4173/]
+//   node scripts/measure-m0.mjs [--headless] [--url http://localhost:4173/?puzzle=…]
 //
 //   1. total transfer for Pyodide + the gdsx wheel (raw and brotli),
 //   2. wall-clock api.analyse() on puzzle.gds inside Pyodide,
@@ -19,7 +19,12 @@ const distDir = path.join(webDir, "dist");
 const args = process.argv.slice(2);
 const headless = args.includes("--headless");
 const urlArg = args.indexOf("--url");
-const url = urlArg >= 0 ? args[urlArg + 1] : "http://localhost:4173/";
+// The `?puzzle=` is required, not decoration: a bare URL opens the level menu,
+// which loads no render bundle and defines no `globalThis.spike` for the frame
+// measurements below to read. Pinned to the original puzzle for the same
+// reason `analyseFromGds` is -- comparing a measurement across runs only means
+// anything if it is the same design every time.
+const url = urlArg >= 0 ? args[urlArg + 1] : "http://localhost:4173/?puzzle=original-puzzle";
 
 const MB = (n) => `${(n / 1e6).toFixed(2)} MB`;
 

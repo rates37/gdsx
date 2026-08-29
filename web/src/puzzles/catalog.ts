@@ -7,8 +7,9 @@
 // and re-running the sync, not editing this file.
 //
 // Selection is in the URL (`?puzzle=<id>`), so a level is linkable and the
-// back button moves between levels. The last choice is also remembered, so
-// reopening the app lands where the player left off.
+// back button moves between levels. The last choice is also remembered -- not
+// to reopen it by itself (see `chooseRoute`), but so the menu can offer it as
+// Continue.
 
 export interface PuzzleDriver {
   clockPort: string;
@@ -153,21 +154,39 @@ export async function loadCatalog(fetchImpl: typeof fetch = fetch): Promise<Puzz
   }
 }
 
-/**
- * The puzzle to load: the one named in `?puzzle=`, else the one last played,
- * else the first in the catalog.
- *
- * An id that is not in the catalog falls through to the same chain rather
- * than erroring -- a stale bookmark or a renamed puzzle directory should
- * open *something*, and the picker then shows what it actually opened.
- */
-export function choosePuzzle(
+/** The catalog entry with this id, matching a puzzle's directory name as well
+ *  as its id -- both spellings appear in saved links. */
+export function findPuzzle(
   catalog: PuzzleDescriptor[],
-  opts: { requested?: string | null; lastPlayed?: string | null } = {},
-): PuzzleDescriptor {
-  const find = (id: string | null | undefined): PuzzleDescriptor | undefined =>
-    id ? catalog.find((p) => p.id === id || p.dir === id) : undefined;
-  return find(opts.requested) ?? find(opts.lastPlayed) ?? catalog[0];
+  id: string | null | undefined,
+): PuzzleDescriptor | undefined {
+  return id ? catalog.find((p) => p.id === id || p.dir === id) : undefined;
+}
+
+/** Which of the app's two screens a URL asks for. */
+export type Route = { kind: "menu" } | { kind: "puzzle"; puzzle: PuzzleDescriptor };
+
+/**
+ * The routing rule, entire: `?puzzle=<id>` opens that puzzle's workspace, and
+ * anything else opens the menu.
+ *
+ * The menu is what a bare URL gets, which is a change -- it used to reopen
+ * the last-played puzzle. That convenience moves to the menu's Continue entry
+ * rather than disappearing: a player mid-solve is one click from where they
+ * were, and a player who has never played is no longer dropped into a
+ * 728-instance design with no idea what the other six are.
+ *
+ * An id the catalog does not have also opens the menu. It used to fall
+ * through to the last-played puzzle and then to `catalog[0]`, which meant a
+ * stale bookmark silently opened a *different* level and nothing said so; the
+ * menu at least shows which levels exist.
+ */
+export function chooseRoute(
+  catalog: PuzzleDescriptor[],
+  opts: { requested?: string | null } = {},
+): Route {
+  const puzzle = findPuzzle(catalog, opts.requested);
+  return puzzle ? { kind: "puzzle", puzzle } : { kind: "menu" };
 }
 
 export function requestedId(search: string = location.search): string | null {

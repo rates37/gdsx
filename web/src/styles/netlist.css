@@ -203,7 +203,12 @@ select {
 .netlist-list-instances,
 .netlist-list-nets {
   flex: 1;
+  /* Both axes: a flex item's default `min-width: auto` is its content's
+     width, so a long instance name would push the list wider than its column
+     instead of ellipsising inside it. */
   min-height: 0;
+  min-width: 0;
+  border-right: 1px solid #1c2130;
 }
 .netlist-detail {
   width: 260px;

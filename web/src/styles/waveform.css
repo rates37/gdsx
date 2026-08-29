@@ -167,6 +167,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  /* Pinned to the right end of the waveform's control row. */
+  margin-left: auto;
 }
 .wave-zoom button {
   width: 22px;

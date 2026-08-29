@@ -1,0 +1,211 @@
+/* ---- the level menu: the screen a bare URL lands on ----------------- */
+/*
+   The menu is a screen, not a panel -- it never sits inside dockview, so it
+   owns the whole viewport and does its own scrolling (`html, body` is
+   `overflow: hidden` for the workspace's sake, which would otherwise cut the
+   grid off at the fold).
+
+   The marker classes below are the ones a test or a driver script may select
+   on; they are listed in docs/game/web-ui-architecture.md alongside the panel
+   ids for the same reason.
+*/
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  background: #0d0f14;
+}
+.menu-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+
+/* ---- head ----------------------------------------------------------- */
+.menu-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #262b36;
+}
+.menu-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #e6e9f0;
+}
+.menu-tagline {
+  margin: 0 0 3px;
+  color: #7d8598;
+  font-size: 12px;
+  line-height: 1.5;
+}
+/* 19.3's settings affordance lands here. */
+.menu-head-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+/* ---- continue ------------------------------------------------------- */
+/*
+   The one entry that has to be findable without reading: a bare URL used to
+   reopen the last-played puzzle by itself, and this is what replaces that.
+*/
+.menu-continue {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  background: #171b26;
+  border: 1px solid #5a4d1f;
+  border-left-width: 3px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #cfd4de;
+}
+.menu-continue:hover {
+  border-color: #f2cc4d;
+  background: #1a1f2b;
+}
+.menu-continue-label {
+  flex: none;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  color: #f2cc4d;
+}
+.menu-continue-title {
+  font-size: 14px;
+  color: #e6e9f0;
+}
+.menu-continue-meta {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: #7d8598;
+}
+
+/* ---- the grid ------------------------------------------------------- */
+.menu-section-label {
+  margin: 28px 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: #7d8598;
+}
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.menu-card {
+  display: flex;
+  flex-direction: column;
+  background: #10131a;
+  border: 1px solid #262b36;
+  border-radius: 4px;
+}
+.menu-card:hover {
+  border-color: #4a536b;
+}
+/* The whole card body is one link, so open-in-new-tab and middle-click work
+   -- the href is the route, not a decoration on a click handler. */
+.menu-card-link {
+  display: block;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+}
+.menu-card-link:focus-visible {
+  outline: 1px solid #8ecdf7;
+  outline-offset: -2px;
+}
+.menu-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.menu-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6e9f0;
+}
+.menu-card-tick {
+  margin-left: auto;
+  flex: none;
+  color: #9fe39f;
+}
+.menu-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.menu-chip {
+  font-size: 11px;
+  color: #7d8598;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+/* Same yellow as the toolbar's objective: it is the same sentence, and a
+   player moving between the two screens should recognise it. */
+.menu-chip-goal {
+  color: #f2cc4d;
+  border-color: #5a4d1f;
+}
+.menu-card-blurb {
+  margin: 10px 0 0;
+  line-height: 1.65;
+  color: #b6bdcc;
+}
+.menu-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 14px;
+  border-top: 1px solid #1c212c;
+}
+.menu-card-solved {
+  color: #9fe39f;
+  font-size: 11px;
+}
+.menu-card-attempts {
+  color: #7d8598;
+  font-size: 11px;
+}
+/* 19.3's per-card clear button lands here. */
+.menu-card-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---- foot ----------------------------------------------------------- */
+.menu-foot {
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid #1c212c;
+  color: #5b6274;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.menu-foot code {
+  color: #8ecdf7;
+  background: #171b26;
+  border-radius: 3px;
+  padding: 0 3px;
+}
