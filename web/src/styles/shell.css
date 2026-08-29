@@ -330,6 +330,81 @@ body {
 .gdsx-submit-bad {
   color: #e08a8a;
 }
+/* ---- hints: tiered, revealed one at a time, always available (20.1) ---- */
+.gdsx-hints-slot {
+  position: relative;
+  flex: none;
+}
+.gdsx-hints-btn.on {
+  border-color: #5a4d1f;
+  color: #f2cc4d;
+}
+.gdsx-hints-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 32;
+  margin-top: 4px;
+  width: max-content;
+  /* Wider than the submit popover's cap: the survey across all seven baked
+     puzzles found tier text up to 442 characters, and a narrower box would
+     wrap that into an unreadable column of one word per line. */
+  max-width: min(480px, 85vw);
+  background: #0d0f14;
+  border: 1px solid #2e3444;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gdsx-hints-popover[hidden] {
+  display: none;
+}
+.gdsx-hints-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: #9aa2b5;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.gdsx-hints-close {
+  flex: none;
+  padding: 0 6px;
+  line-height: 1.4;
+}
+.gdsx-hints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* No fixed height: tier counts run 4-5 and any one tier can be a single
+     short line or a multi-sentence paragraph, so the popover grows with its
+     content rather than clipping or reserving space for the longest case. */
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.gdsx-hints-tier {
+  margin: 0;
+  padding: 6px 8px;
+  background: #1a1f2b;
+  border: 1px solid #2e3444;
+  border-radius: 3px;
+  color: #cfd4de;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.gdsx-hints-empty {
+  margin: 0;
+  color: #6d7486;
+  font-size: 11px;
+}
+.gdsx-hints-reveal {
+  align-self: flex-end;
+  font-size: 11px;
+}
 .gdsx-dock-mount {
   position: absolute;
   top: 28px;

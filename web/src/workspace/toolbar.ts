@@ -6,7 +6,7 @@
 // localStorage by hand -- both are one click here.
 
 import type { MenuGroup, Workspace } from "./workspace.ts";
-import type { PuzzleChecks } from "../puzzles/catalog.ts";
+import type { HintTier, PuzzleChecks } from "../puzzles/catalog.ts";
 import type { Submission, Verdict } from "../puzzles/answer-check.ts";
 import { goalFor } from "../puzzles/goals.ts";
 
@@ -85,6 +85,30 @@ export interface SolvedState {
   attempts: number;
 }
 
+/**
+ * The hints button's wiring. Supplied by main.ts, which owns the puzzle's
+ * `hints` tiers and the progress store; the toolbar only draws the button
+ * and popover. Absent entirely for a puzzle baked before hints.json existed
+ * (empty `tiers`), same convention as `submit`'s `checks: null`.
+ *
+ * game-plan.md §8 is explicit that hints are always available and never
+ * gated behind progress -- there is deliberately no "unlock" state here, only
+ * "not yet revealed" and "revealed". A revealed tier stays revealed: taking a
+ * hint is a decision the player made, so `revealedCount` is backed by
+ * store/progress.ts and survives a reload.
+ */
+export interface HintsControl {
+  tiers: readonly HintTier[];
+  /** How many tiers (from the front) are currently revealed. Re-read on
+   *  every popover open/reveal rather than cached, same reason `checks`'s
+   *  `currentBits` is a function and not a value. */
+  revealedCount: () => number;
+  /** Reveal the next tier and persist it. The caller (this file) never calls
+   *  this past the last tier -- the "reveal" control is hidden once
+   *  `revealedCount() >= tiers.length`. */
+  revealNext: () => void;
+}
+
 /** The way back to the level menu. A plain href rather than a callback: it is
  *  a navigation to a URL the routing rule already defines (`menuUrl`), so
  *  middle-click and open-in-new-tab work without the toolbar handling them. */
@@ -119,6 +143,7 @@ export interface ToolbarOptions {
   home?: HomeLink;
   /** Absent for a puzzle that has never been solved. */
   solved?: SolvedState;
+  hints?: HintsControl;
 }
 
 export function attachToolbar(
@@ -144,6 +169,7 @@ export function attachToolbar(
       notebook
     </button>
     <span class="gdsx-submit-slot"></span>
+    <span class="gdsx-hints-slot"></span>
     <button class="gdsx-guide-btn" type="button" title="a step-by-step walkthrough of every panel, on the tutorial puzzle">
       guide
     </button>
@@ -173,6 +199,8 @@ export function attachToolbar(
   };
 
   attachSubmitButton(bar.querySelector(".gdsx-submit-slot") as HTMLSpanElement, submit);
+
+  attachHintsButton(bar.querySelector(".gdsx-hints-slot") as HTMLSpanElement, opts.hints);
 
   attachGuideButton(bar.querySelector(".gdsx-guide-btn") as HTMLButtonElement, guide);
 
@@ -454,6 +482,108 @@ function attachGuideButton(button: HTMLButtonElement, guide?: GuideControl): voi
   });
   guide.subscribe(refresh);
   refresh();
+}
+
+/**
+ * The hints button and its popover, beside the submit button.
+ *
+ * Every tier ships different amounts of text -- the survey across all seven
+ * puzzles found 4-5 tiers each and tier text from a short one-line summary up
+ * to a multi-sentence paragraph (4-nine-lives' tier 4 is 442 characters) -- so
+ * the list is plain stacked paragraphs with no fixed height assumption,
+ * rather than a layout sized for four short lines.
+ *
+ * Always rendered when the puzzle has any tiers at all: no solved-state or
+ * attempt-count gate, per game-plan.md §8. Removed entirely for a puzzle with
+ * none, same convention as `attachSubmitButton`'s `checks: null`.
+ */
+function attachHintsButton(slot: HTMLSpanElement, hints?: HintsControl): void {
+  if (!hints || hints.tiers.length === 0) {
+    slot.remove();
+    return;
+  }
+  const control = hints;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "gdsx-hints-btn";
+  btn.title =
+    "tiered hints -- each is an analysis you could have run yourself. Revealing one costs points and never blocks you.";
+
+  const popover = document.createElement("div");
+  popover.className = "gdsx-hints-popover";
+  popover.hidden = true;
+
+  const header = document.createElement("div");
+  header.className = "gdsx-hints-header";
+  const headerLabel = document.createElement("span");
+  headerLabel.textContent = "hints";
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "gdsx-hints-close";
+  closeBtn.textContent = "×";
+  closeBtn.title = "close";
+  header.append(headerLabel, closeBtn);
+
+  const list = document.createElement("div");
+  list.className = "gdsx-hints-list";
+
+  const revealBtn = document.createElement("button");
+  revealBtn.type = "button";
+  revealBtn.className = "gdsx-hints-reveal";
+
+  popover.append(header, list, revealBtn);
+
+  function refresh(): void {
+    const revealed = Math.min(control.revealedCount(), control.tiers.length);
+    btn.textContent = `hints (${revealed}/${control.tiers.length})`;
+    btn.classList.toggle("on", revealed > 0);
+    list.replaceChildren(
+      ...control.tiers.slice(0, revealed).map((tier) => {
+        const item = document.createElement("p");
+        item.className = "gdsx-hints-tier";
+        item.textContent = tier.text;
+        return item;
+      }),
+    );
+    if (revealed === 0) {
+      const empty = document.createElement("p");
+      empty.className = "gdsx-hints-empty";
+      empty.textContent = "no hints revealed yet";
+      list.prepend(empty);
+    }
+    if (revealed >= control.tiers.length) {
+      revealBtn.hidden = true;
+    } else {
+      revealBtn.hidden = false;
+      revealBtn.textContent = `reveal hint ${revealed + 1} of ${control.tiers.length} — costs points`;
+    }
+  }
+
+  revealBtn.addEventListener("click", () => {
+    control.revealNext();
+    refresh();
+  });
+
+  function close(): void {
+    popover.hidden = true;
+  }
+  function open(): void {
+    popover.hidden = false;
+    refresh();
+  }
+
+  btn.addEventListener("click", () => (popover.hidden ? open() : close()));
+  closeBtn.addEventListener("click", close);
+  document.addEventListener("click", (e) => {
+    if (!popover.hidden && !slot.contains(e.target as Node)) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !popover.hidden) close();
+  });
+
+  refresh();
+  slot.append(btn, popover);
 }
 
 /** One text field, with a label, in a submit popover. */

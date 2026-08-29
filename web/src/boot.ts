@@ -27,9 +27,9 @@ import { modelPanel } from "./panels/model-panel";
 import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
-import { onCleared, recordSolved, solvedDay, solvedState } from "./store/progress";
+import { onCleared, recordHintTaken, recordSolved, solvedDay, solvedState } from "./store/progress";
 import { Guide, armAutostart } from "./guide/guide";
-import type { SolvedState, SubmitControl } from "./workspace/toolbar";
+import type { HintsControl, SolvedState, SubmitControl } from "./workspace/toolbar";
 import { verifySubmission, type Submission } from "./puzzles/answer-check";
 import { GUIDE_PUZZLE_ID } from "./guide/steps";
 import { createDesignClient, type DesignClient } from "./design/client";
@@ -145,6 +145,21 @@ export async function bootWorkspace(
     const record = solvedState(puzzle.id);
     if (!record?.solvedAt) return undefined;
     return { solvedOn: solvedDay(record.solvedAt), attempts: record.attempts };
+  };
+
+  // Always available, never gated behind progress (game-plan.md §8): the
+  // control just exposes the puzzle's tiers and reads/writes the same
+  // per-puzzle progress record `submitControl` below writes attempts into.
+  // Recording a hint taken is this step's job; weighting it into a score is
+  // 20.2's.
+  const hintsControl: HintsControl = {
+    tiers: puzzle.hints,
+    revealedCount: () => solvedState(puzzle.id)?.hintsTaken ?? 0,
+    revealNext: () => {
+      const revealed = solvedState(puzzle.id)?.hintsTaken ?? 0;
+      if (revealed >= puzzle.hints.length) return;
+      recordHintTaken(puzzle.id, revealed);
+    },
   };
 
   const submitControl: SubmitControl = {
@@ -290,6 +305,7 @@ export async function bootWorkspace(
         parMinutes: puzzle.parMinutes,
       },
       submit: submitControl,
+      hints: hintsControl,
       // The way out. Everything else in the query survives the trip, so a
       // player who arrived with `?debug=1` keeps it.
       home: { href: menuUrl() },

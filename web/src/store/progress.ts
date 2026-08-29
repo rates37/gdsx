@@ -45,6 +45,12 @@ export interface ProgressRecord {
    *  check kind never observes anything (a `digest` check, by design) or no
    *  attempt has carried one yet. */
   lastObserved?: string;
+  /** How many hint tiers have been revealed, highest tier taken plus one.
+   *  Tiers are revealed in order (workspace/toolbar.ts's `HintsControl`), so
+   *  this single count is the whole history -- there is no "took tier 2 but
+   *  not tier 1" to represent. 0 if none have been taken. Scoring (game-plan
+   *  §8's "hints taken" penalty) reads this; this file only records it. */
+  hintsTaken: number;
 }
 
 interface Saved {
@@ -52,6 +58,7 @@ interface Saved {
   attempts: number;
   solvedAt?: string;
   lastObserved?: string;
+  hintsTaken?: number;
 }
 
 function progressKey(puzzleId: string): string {
@@ -70,11 +77,35 @@ export function recordSolved(puzzleId: string, verdict: Verdict): void {
     attempts: (existing?.attempts ?? 0) + 1,
     solvedAt: existing?.solvedAt ?? (verdict.accepted ? new Date().toISOString() : undefined),
     lastObserved: verdict.observed ?? existing?.lastObserved,
+    hintsTaken: existing?.hintsTaken,
   };
   try {
     localStorage.setItem(progressKey(puzzleId), JSON.stringify(next));
   } catch (err) {
     console.warn("gdsx: could not save progress", err);
+  }
+}
+
+/**
+ * Record that `tier` (0-based) has been revealed for `puzzleId`. Tiers are
+ * always revealed in order from the toolbar's hints popover, so the saved
+ * count only ever grows -- `Math.max` guards against an out-of-order call
+ * ever moving it backwards, which would silently un-charge a hint already
+ * taken.
+ */
+export function recordHintTaken(puzzleId: string, tier: number): void {
+  const existing = solvedState(puzzleId);
+  const next: Saved = {
+    version: VERSION,
+    attempts: existing?.attempts ?? 0,
+    solvedAt: existing?.solvedAt,
+    lastObserved: existing?.lastObserved,
+    hintsTaken: Math.max(existing?.hintsTaken ?? 0, tier + 1),
+  };
+  try {
+    localStorage.setItem(progressKey(puzzleId), JSON.stringify(next));
+  } catch (err) {
+    console.warn("gdsx: could not save hint progress", err);
   }
 }
 
@@ -96,6 +127,7 @@ export function solvedState(puzzleId: string): ProgressRecord | null {
       solvedAt: saved.solvedAt,
       attempts: saved.attempts,
       lastObserved: saved.lastObserved,
+      hintsTaken: saved.hintsTaken ?? 0,
     };
   } catch (err) {
     console.warn("gdsx: discarding unreadable progress", err);

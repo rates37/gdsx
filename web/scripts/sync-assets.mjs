@@ -92,7 +92,9 @@ for (const name of [
 // M0 numbers comparable to every earlier run.
 //
 // solution.json is NOT copied. Only the driver protocol derived from it goes
-// into index.json -- see puzzle-index.mjs for why.
+// into index.json -- see puzzle-index.mjs for why. hints.json is also not
+// copied as a file, but unlike solution.json it is meant to reach the
+// player, so its tiers go into index.json verbatim rather than nothing.
 const puzzlesDir = path.join(repoDir, "puzzles");
 const puzzlesOut = path.join(publicDir, "puzzles");
 rmSync(puzzlesOut, { recursive: true, force: true });
@@ -116,7 +118,7 @@ for (const dir of entries) {
   for (const name of ["netlist.json", "render.bin", "tape.bin"]) {
     copy(path.join(src, name), path.join(puzzlesOut, dir, name));
   }
-  index.push(describe(dir, read("manifest.json"), read("solution.json")));
+  index.push(describe(dir, read("manifest.json"), read("solution.json"), read("hints.json")));
 }
 
 writeFileSync(

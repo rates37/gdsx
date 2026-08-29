@@ -73,6 +73,15 @@ export interface DigestCheck {
 
 export type PuzzleChecks = LatchCheck | BusAtCheck | DigestCheck;
 
+/** One tier of `gdsx puzzle bake`'s auto-generated hints.json, carried onto
+ *  the descriptor verbatim -- see puzzle-index.mjs's `describeHints`. Unlike
+ *  `checks`, this is not derived from anything that needs filtering: an
+ *  authored hint is meant to reach the player. */
+export interface HintTier {
+  tier: number;
+  text: string;
+}
+
 export interface PuzzleDescriptor {
   id: string;
   dir: string;
@@ -88,6 +97,10 @@ export interface PuzzleDescriptor {
    *  declares no verifiable answer -- the app says so rather than pretending
    *  a submission was rejected. */
   checks: PuzzleChecks | null;
+  /** In order, tier 0 first. Empty for a puzzle baked before hints.json
+   *  existed. Revealing one is the toolbar's job (workspace/toolbar.ts's
+   *  `HintsControl`); this is just the content. */
+  hints: HintTier[];
 }
 
 const INDEX_URL = "/puzzles/index.json";
@@ -132,6 +145,14 @@ export const FALLBACK: PuzzleDescriptor = {
   // would leave the offline shell unable to check an answer it is perfectly
   // capable of checking -- nothing in a latch check is a spoiler.
   checks: { kind: "latch", net: "success", value: 1, byCycle: 121, sticky: true },
+  // The real tiers from puzzles/original-puzzle/hints.json, not a spoiler --
+  // the fallback shell should offer the same hints the synced catalog would.
+  hints: [
+    { tier: 0, text: "728 instances, 92 sequential" },
+    { tier: 1, text: "17 of 92 registers have no recovered freeze condition" },
+    { tier: 2, text: "the flops form 3 register groups; the largest is reg_dfrtp_2_40 (84 members)" },
+    { tier: 3, text: "success is driven by one flop (dfrtp_2_83); its D cone has 57 leaves" },
+  ],
 };
 
 interface CatalogFile {

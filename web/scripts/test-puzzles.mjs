@@ -64,7 +64,7 @@ function read(dir, name) {
 }
 
 function descriptorFor(dir) {
-  return describe(dir, read(dir, "manifest.json"), read(dir, "solution.json"));
+  return describe(dir, read(dir, "manifest.json"), read(dir, "solution.json"), read(dir, "hints.json"));
 }
 
 const puzzlesDir = path.join(rootDir, "puzzles");
@@ -84,7 +84,13 @@ check(bakedDirs.length >= 7, "every authored puzzle should have a solution to ch
 
 for (const dir of bakedDirs) {
   const solution = read(dir, "solution.json");
-  const serialised = JSON.stringify(descriptorFor(dir));
+  // `hints` is excluded from this scan: it is authored independently in
+  // hints.json, not derived from solution.json, so its free-text analysis is
+  // allowed to mention any number it likes -- a short numeric answer (e.g.
+  // "8") coincidentally appearing inside an instance name or an unrelated
+  // count ("reg_dfrtp_2_8", "80 instances") is not a leak of the answer.
+  const { hints: _hints, ...withoutHints } = descriptorFor(dir);
+  const serialised = JSON.stringify(withoutHints);
   for (const field of SPOILERS) {
     check(
       !serialised.includes(`"${field}"`),
@@ -347,6 +353,40 @@ for (const dir of bakedDirs) {
       `${dir}: a non-sequence answer should not be forced open on the Sequence Editor`,
     );
   }
+}
+
+// ---- 6c. every baked puzzle ships readable hints (20.1) -----------------
+//
+// hints.json is authored and baked but was never wired into REQUIRED or the
+// descriptor -- a complete feature no player could reach. This asserts the
+// fix stays true: every puzzle a player can actually load also ships a
+// non-empty, well-formed set of hint tiers.
+
+for (const dir of bakedDirs) {
+  const hintsPath = path.join(puzzlesDir, dir, "hints.json");
+  const hasHints = statSync(hintsPath, { throwIfNoEntry: false })?.isFile() ?? false;
+  check(hasHints, `puzzles/${dir}/hints.json is missing`);
+  if (!hasHints) continue;
+  const descriptor = descriptorFor(dir);
+  check(descriptor.hints.length > 0, `${dir}: the descriptor must carry at least one hint tier`);
+  descriptor.hints.forEach((tier, i) => {
+    check(typeof tier.tier === "number", `${dir}: hint ${i} needs a numeric tier index`);
+    check(
+      typeof tier.text === "string" && tier.text.trim().length > 0,
+      `${dir}: hint ${i} needs non-empty text`,
+    );
+  });
+  // Tiers are revealed front-to-back by position, not by the `tier` number
+  // itself (workspace/toolbar.ts's HintsControl indexes `hints[revealed]`) --
+  // the authored numbering is not always contiguous (three of the seven
+  // puzzles number their four tiers 0, 1, 2, 4, skipping 3), so this only
+  // requires the numbers to be strictly increasing, which is what "revealed
+  // in order" actually depends on.
+  const tierNumbers = descriptor.hints.map((t) => t.tier);
+  check(
+    tierNumbers.every((t, i) => i === 0 || t > tierNumbers[i - 1]),
+    `${dir}: hint tiers must be strictly increasing (got ${JSON.stringify(tierNumbers)})`,
+  );
 }
 
 // ---- 7. the block is actually enough to verify with ---------------------

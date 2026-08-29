@@ -214,6 +214,16 @@ function describeChecks(id, solution) {
   return null;
 }
 
+/** hints.json's tiers, carried onto the descriptor unchanged -- an authored
+ *  hint is not a spoiler (game-plan.md §8: hints are always available, they
+ *  just cost), so unlike solution.json this file's content is meant to reach
+ *  the player and needs no filtering. */
+function describeHints(hints) {
+  const tiers = hints.tiers;
+  if (!Array.isArray(tiers)) return [];
+  return tiers.map((t) => ({ tier: t.tier, text: t.text }));
+}
+
 function parMinutes(manifest) {
   if (typeof manifest.par_times?.minutes === "number") return manifest.par_times.minutes;
   if (typeof manifest.par_seconds === "number") return Math.round(manifest.par_seconds / 60);
@@ -226,8 +236,11 @@ function parMinutes(manifest) {
  * @param dir      the puzzle directory's name, which is also its URL segment
  * @param manifest parsed manifest.json
  * @param solution parsed solution.json -- read here and never copied
+ * @param hints    parsed hints.json. Defaults to no tiers, so call sites that
+ *                 predate this parameter (and the inline test fixture in
+ *                 test-puzzles.mjs) still work.
  */
-export function describe(dir, manifest, solution) {
+export function describe(dir, manifest, solution, hints = {}) {
   const id = manifest.id ?? dir;
   return {
     id,
@@ -245,10 +258,18 @@ export function describe(dir, manifest, solution) {
     },
     driver: describeDriver(solution),
     checks: describeChecks(id, solution),
+    hints: describeHints(hints),
   };
 }
 
 /** The files a puzzle directory must have before it can be offered as a
  *  level. A directory that is authored but not yet baked is skipped rather
  *  than shipped half-loadable. */
-export const REQUIRED = ["manifest.json", "solution.json", "netlist.json", "render.bin", "tape.bin"];
+export const REQUIRED = [
+  "manifest.json",
+  "solution.json",
+  "netlist.json",
+  "render.bin",
+  "tape.bin",
+  "hints.json",
+];
