@@ -730,7 +730,11 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         {
           id: "experiments.constraints",
           title: "Constraints",
-          mount: (host) => mountConstraints(host, { designReady: options.designReady }),
+          mount: (host) =>
+            mountConstraints(host, {
+              designReady: options.designReady,
+              storeReady: options.storeReady,
+            }),
         },
       );
       const unsubInbox = constraintsInbox.subscribe((items) => {

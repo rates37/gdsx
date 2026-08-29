@@ -462,6 +462,39 @@ def test_truth_table_needs_no_handle():
     )
 
 
+#! constraints
+
+
+def test_constraints_system_carries_bounds_the_hits_form_cannot():
+    """`constraints_build` can only say "exactly k of these"; a spacing rule
+    is `0 <= a + b <= 1` per forbidden pair. Both bounds must survive the
+    round trip, and `variables` is the union of every row's elements.
+    """
+    rows = [
+        {"name": "epoch 0", "elements": [0, 1, 2, 3], "lb": 2, "ub": 2},
+        {"name": "spacing 0,1", "elements": [0, 1], "lb": 0, "ub": 1},
+    ]
+    data = unwrap(api.constraints_system(json.dumps(rows), json.dumps(["epoch 0"])))
+    assert data["variables"] == [0, 1, 2, 3]
+    assert [(c["lb"], c["ub"]) for c in data["constraints"]] == [(2, 2), (0, 1)]
+    assert data["unconstrained"] == []
+
+    solutions = unwrap(api.constraints_solve(json.dumps(data), "dfs", 50))
+    assert solutions["capped"] is False
+    assert sorted(map(tuple, solutions["solutions"])) == [(0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+
+
+def test_constraints_system_names_a_watched_element_with_no_row():
+    rows = [{"name": "epoch 0", "elements": [0, 1], "lb": 1, "ub": 1}]
+    watched = ["epoch 0", "the trap nobody wrote a row for"]
+    data = unwrap(api.constraints_system(json.dumps(rows), json.dumps(watched)))
+    assert data["unconstrained"] == ["the trap nobody wrote a row for"]
+
+
+def test_constraints_system_rejects_rubbish():
+    assert failure(api.constraints_system("not json", "[]"))["code"] == "bad_json"
+
+
 #! simulation
 
 

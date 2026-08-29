@@ -1123,6 +1123,28 @@ def constraints_build(hits_json: str, watched_json: str, targets_json: str) -> d
 
 
 @_endpoint
+def constraints_system(rows_json: str, watched_json: str) -> dict:
+    """A `System` from an explicit list of `{name, elements, lb, ub}` rows (L38)
+
+    `constraints_build` only mints `exact` rows from a hits map, and
+    `constraints_add` takes one row per call. A spacing rule is one `lb=0,
+    ub=1` row per forbidden pair -- hundreds of them, arriving together --
+    and neither of those shapes can carry it. This is the general form: the
+    caller states every row, `variables` is the union of their elements, and
+    the whole set crosses the boundary once.
+    """
+    from .analysis import constraints as constraints_
+
+    rows = tuple(_constraint_of(r) for r in _parse(rows_json, "rows_json"))
+    watched = _parse(watched_json, "watched_json")
+    variables = tuple(sorted({e for r in rows for e in r.elements}))
+    system = constraints_.System(
+        variables=variables, watched=tuple(watched), constraints=rows
+    )
+    return _system_view(system)
+
+
+@_endpoint
 def constraints_add(system_json: str, constraint_json: str) -> dict:
     """`System.with_constraint`, from JSON in to JSON out (L38)"""
     system = _system_of(_parse(system_json, "system_json"))

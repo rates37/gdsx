@@ -174,10 +174,158 @@ def test_dimacs_matches_dfs_solutions_with_an_at_most_row():
     _check_dimacs(system)
 
 
+def test_dfs_matches_brute_force_over_many_small_systems():
+    """`_solve_dfs` prunes with a feasibility check narrowed to the rows the
+    variable just decided appears in. That is only sound if it never loses a
+    solution, so pin it against enumerating every subset directly, over a
+    spread of row shapes (`exact` and `at_most`, overlapping and disjoint,
+    feasible and not) rather than one lucky system.
+    """
+    shapes = [
+        ((0, 1, 2), 1, 1),
+        ((0, 1, 2, 3), 2, 2),
+        ((2, 3, 4), 0, 1),
+        ((0, 4), 1, 2),
+        ((1, 3), 0, 1),
+        ((0, 1, 2, 3, 4), 3, 3),
+        ((), 0, 0),
+        ((0,), 1, 1),
+    ]
+    variables = tuple(range(5))
+    for size in (1, 2, 3):
+        for rows in itertools.combinations(shapes, size):
+            system = System(
+                variables=variables,
+                watched=(),
+                constraints=tuple(
+                    Constraint(f"r{i}", elements, lb, ub)
+                    for i, (elements, lb, ub) in enumerate(rows)
+                ),
+            )
+            expected = set()
+            for take in itertools.product((0, 1), repeat=len(variables)):
+                subset = {v for v, t in zip(variables, take) if t}
+                if all(
+                    lb <= len(subset & set(elements)) <= ub for elements, lb, ub in rows
+                ):
+                    expected.add(tuple(sorted(subset)))
+            assert set(system.solve(method="dfs", limit=10_000)) == expected
+
+
+def test_dfs_rejects_a_row_no_variable_can_satisfy():
+    # `lb` above the row's own element count: unsatisfiable before the search
+    # starts, and the narrowed check must still say so rather than walking
+    # every leaf to find out.
+    system = System(
+        variables=tuple(range(4)),
+        watched=(),
+        constraints=(Constraint.exact("impossible", (), 1),),
+    )
+    assert system.solve(method="dfs", limit=100) == []
+
+
 def test_solve_rejects_an_unknown_method():
     system = System(variables=(0,), watched=(), constraints=())
     with pytest.raises(ValueError):
         system.solve(method="bogus")
+
+
+# The eleven irregular cycle groups a single-pulse sweep of the reference
+# puzzle reads out of one bank of tally flops -- measured, not derived, and
+# the only part of the system below that could not be written down from the
+# rules alone. Together they partition cycles 0..120 exactly once.
+MEASURED_GROUPS = [
+    [10, 21, 32, 40, 43, 49, 50, 51, 52, 53, 54, 62, 73, 84, 92, 93, 94, 95,
+     104, 105, 106, 114, 115, 116, 117, 118, 119, 120],
+    [5, 6, 16, 25, 26, 27, 28, 36, 47, 58, 66, 67, 68, 69, 70, 71, 77, 88,
+     99, 100, 110],
+    [0, 1, 2, 3, 4, 11, 12, 14, 15, 22, 23, 33, 34, 45],
+    [37, 38, 39, 48, 59, 60, 61, 72, 81, 82, 83],
+    [63, 64, 65, 74, 85, 96, 107, 108, 109],
+    [13, 24, 35, 44, 46, 55, 56, 57],
+    [78, 79, 80, 89, 90, 101, 111, 112],
+    [7, 17, 18, 29, 30, 41, 42],
+    [75, 76, 86, 87, 97, 98],
+    [8, 9, 19, 20, 31],
+    [91, 102, 103, 113],
+]
+
+WINDOW = 121
+EPOCH = 11
+
+
+def _reference_puzzle_system() -> System:
+    """The reference puzzle's four rules, as one `System`.
+
+    Choose 22 of the 121 cycles, writing `e = cycle // 11` and
+    `p = cycle % 11`: exactly two per epoch, exactly two per position,
+    exactly two per measured group, and no two with `|dp| <= 1` and
+    `|de| <= 1`. The first three are `exact` rows over a partition of the
+    window; the fourth is one `at_most` bound per forbidden pair.
+    """
+    rows = [
+        Constraint.exact(
+            f"epoch {e}", [e * EPOCH + p for p in range(EPOCH)], 2
+        )
+        for e in range(EPOCH)
+    ]
+    rows += [
+        Constraint.exact(
+            f"position {p}", [e * EPOCH + p for e in range(EPOCH)], 2
+        )
+        for p in range(EPOCH)
+    ]
+    rows += [
+        Constraint.exact(f"group {i}", cycles, 2)
+        for i, cycles in enumerate(MEASURED_GROUPS)
+    ]
+    rows += [
+        Constraint.at_most(f"spacing {a},{b}", (a, b), 1)
+        for a in range(WINDOW)
+        for b in range(a + 1, WINDOW)
+        if abs(a % EPOCH - b % EPOCH) <= 1 and abs(a // EPOCH - b // EPOCH) <= 1
+    ]
+    return System(
+        variables=tuple(range(WINDOW)),
+        watched=tuple(c.name for c in rows),
+        constraints=tuple(rows),
+    )
+
+
+def test_the_measured_groups_partition_the_window():
+    seen = [c for group in MEASURED_GROUPS for c in group]
+    assert sorted(seen) == list(range(WINDOW))
+
+
+def test_the_reference_puzzle_system_has_exactly_one_solution():
+    """The whole point of the constraint system: four rules, one answer.
+
+    Every row here is something an investigator measures. Solving them
+    together is the last step, and the system is worth stating only if it
+    pins the answer down completely -- so assert not just that a solution
+    exists but that the search, run to exhaustion, finds no second one.
+    """
+    system = _reference_puzzle_system()
+    solutions = system.solve(method="dfs", limit=50)
+    assert len(solutions) == 1, "the four rules should admit exactly one key"
+    pulses = solutions[0]
+    assert len(pulses) == 22
+    assert pulses == (
+        7, 9, 11, 16, 29, 31, 33, 35, 48, 50, 57,
+        63, 70, 76, 78, 83, 91, 98, 104, 107, 111, 113,
+    )
+
+    # Independently of the search: the answer really does satisfy all four.
+    for e in range(EPOCH):
+        assert sum(1 for c in pulses if c // EPOCH == e) == 2
+    for p in range(EPOCH):
+        assert sum(1 for c in pulses if c % EPOCH == p) == 2
+    for group in MEASURED_GROUPS:
+        assert sum(1 for c in pulses if c in group) == 2
+    for a, b in itertools.combinations(pulses, 2):
+        assert not (
+            abs(a % EPOCH - b % EPOCH) <= 1 and abs(a // EPOCH - b // EPOCH) <= 1
+        )
 
 
 @pytest.mark.slow

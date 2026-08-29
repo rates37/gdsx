@@ -22,6 +22,7 @@ import type {
   WeightView,
   OrbitView,
   SystemView,
+  ConstraintView,
   SliceView,
 } from "../gdsx-types";
 
@@ -238,6 +239,20 @@ export class DesignClient {
       `gdsx.api.constraints_build(${pyStr(hitsJson)}, ${pyStr(watchedJson)}, ` +
       `${pyStr(targetsJson)})`;
     return this.run("constraints_build", [hitsJson, watchedJson, targetsJson], call);
+  }
+
+  /** Build a `System` from an explicit list of rows (L38). The general form
+   *  of `constraintsBuild`: rows carry their own `lb`/`ub`, so a spacing
+   *  rule -- hundreds of `0 <= a + b <= 1` bounds -- crosses in one call
+   *  rather than one `constraintsAdd` round trip per forbidden pair. */
+  constraintsSystem(
+    rows: ConstraintView[],
+    watched: string[],
+  ): Promise<Call<SystemView>> {
+    const rowsJson = JSON.stringify(rows);
+    const watchedJson = JSON.stringify(watched);
+    const call = `gdsx.api.constraints_system(${pyStr(rowsJson)}, ${pyStr(watchedJson)})`;
+    return this.run("constraints_system", [rowsJson, watchedJson], call);
   }
 
   /** Add one row to a `System` (L38). */

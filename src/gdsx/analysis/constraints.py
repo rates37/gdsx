@@ -180,12 +180,24 @@ def _solve_dfs(system: System, limit: int) -> list[Solution]:
             rem[i] = rem[i + 1] + (1 if variables[i] in members_r else 0)
         remaining.append(rem)
 
+    # rows_for[i] = the rows variables[i] appears in. Deciding variables[i]
+    # can only change `counts` and `remaining` for those rows, so they are the
+    # only ones whose feasibility can have changed one level down -- every
+    # other row's check at depth i+1 is character for character the check it
+    # already passed at depth i. Rescanning all of them instead (which this
+    # did) is the difference between 10s and 0.3s on a system whose rows are
+    # mostly two-element spacing bounds.
+    rows_for = [
+        [r for r in range(len(constraints)) if v in members[r]] for v in variables
+    ]
+
     found: list[Solution] = []
     chosen: list[int] = []
     counts = [0] * len(constraints)
 
-    def feasible(i: int) -> bool:
-        for r, c in enumerate(constraints):
+    def feasible(rows: list[int], i: int) -> bool:
+        for r in rows:
+            c = constraints[r]
             if counts[r] > c.ub or counts[r] + remaining[r][i] < c.lb:
                 return False
         return True
@@ -198,7 +210,7 @@ def _solve_dfs(system: System, limit: int) -> list[Solution]:
                 found.append(tuple(sorted(chosen)))
             return
         v = variables[i]
-        rows = [r for r in range(len(constraints)) if v in members[r]]
+        rows = rows_for[i]
         for take in (1, 0):
             if take:
                 if any(counts[r] + 1 > constraints[r].ub for r in rows):
@@ -206,7 +218,7 @@ def _solve_dfs(system: System, limit: int) -> list[Solution]:
                 for r in rows:
                     counts[r] += 1
                 chosen.append(v)
-            if feasible(i + 1):
+            if feasible(rows, i + 1):
                 rec(i + 1)
             if take:
                 for r in rows:
@@ -214,6 +226,14 @@ def _solve_dfs(system: System, limit: int) -> list[Solution]:
                 chosen.pop()
             if len(found) >= limit:
                 return
+
+    # The narrowed check above is an induction that needs a base case: one
+    # full pass, so a row that no variable can ever satisfy (`lb` above its
+    # own element count, or `lb > 0` over no elements at all) is rejected here
+    # rather than at 2**n leaves.
+    all_rows = list(range(len(constraints)))
+    if not feasible(all_rows, 0):
+        return found
 
     rec(0)
     return found

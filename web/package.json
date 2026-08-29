@@ -23,7 +23,8 @@
     "test:register-inspector": "node --experimental-strip-types scripts/test-register-inspector.mjs",
     "test:progress": "node --experimental-strip-types scripts/test-progress.mjs",
     "test:menu": "node --experimental-strip-types scripts/test-menu.mjs",
-    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:scoring && npm run test:puzzles && npm run test:guide && npm run test:progress && npm run test:menu"
+    "test:constraint-rules": "node --experimental-strip-types scripts/test-constraint-rules.mjs",
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:scoring && npm run test:puzzles && npm run test:guide && npm run test:progress && npm run test:menu && npm run test:constraint-rules"
   },
   "dependencies": {
     "@types/three": "^0.185.4",
