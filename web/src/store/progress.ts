@@ -224,3 +224,72 @@ export function clearPuzzle(puzzleId: string): void {
 export function clearAll(): void {
   for (const key of gdsxKeys()) removeKey(key);
 }
+
+/** What the game is holding in `localStorage`: how many keys, and how many
+ *  bytes they occupy. Bytes are counted the way the quota is -- both the key
+ *  and the value, two bytes per UTF-16 code unit -- so the number can be
+ *  compared against the ~5 MB browsers allow. */
+export interface StorageUsage {
+  keys: number;
+  bytes: number;
+}
+
+/**
+ * How much storage the game is using, in total or for one puzzle.
+ *
+ * With `puzzleId`, counts exactly the keys `clearPuzzle(puzzleId)` would
+ * delete -- so a confirmation can say what is about to go, in the units a
+ * player can check afterwards.
+ */
+export function storageUsage(puzzleId?: string): StorageUsage {
+  let keys = 0;
+  let bytes = 0;
+  for (const key of gdsxKeys()) {
+    if (puzzleId !== undefined) {
+      const owned = KEY_RULES.some((rule) => rule.perPuzzle && rule.matches(key, puzzleId));
+      if (!owned) continue;
+    }
+    let value: string | null = null;
+    try {
+      value = localStorage.getItem(key);
+    } catch {
+      // Storage disabled -- nothing to measure.
+    }
+    keys++;
+    bytes += (key.length + (value?.length ?? 0)) * 2;
+  }
+  return { keys, bytes };
+}
+
+/**
+ * Call `fn` when another tab clears state this puzzle depends on.
+ *
+ * The two screens are separate documents, so clearing from the menu can never
+ * reach into a running workspace's memory -- but a player may well have the
+ * menu open in one tab and the puzzle in another, and half the panels hold
+ * their state in memory and would write it straight back on the next change.
+ * The workspace answers by reloading (see boot.ts).
+ *
+ * Scoped deliberately: a `storage` event for another puzzle's keys is ignored,
+ * so clearing a puzzle you are not in disturbs nothing. `key === null` is the
+ * whole-storage `clear()` case, and a non-null `newValue` is a write rather
+ * than a removal -- neither of those is another tab's clear of this puzzle.
+ *
+ * Returns an unsubscribe function.
+ */
+export function onCleared(puzzleId: string, fn: () => void): () => void {
+  const handler = (event: StorageEvent): void => {
+    if (event.storageArea && event.storageArea !== localStorage) return;
+    if (event.key === null) {
+      fn();
+      return;
+    }
+    if (event.newValue !== null || !event.key.startsWith(GDSX_PREFIX)) return;
+    // Per-puzzle rules narrow to this puzzle; app-level ones (layout, guide
+    // state, last played) match whoever removed them, which only clearAll
+    // does -- and that concerns every open puzzle.
+    if (KEY_RULES.some((rule) => rule.matches(event.key!, puzzleId))) fn();
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}

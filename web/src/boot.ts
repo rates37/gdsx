@@ -27,7 +27,7 @@ import { modelPanel } from "./panels/model-panel";
 import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
-import { recordSolved } from "./store/progress";
+import { onCleared, recordSolved } from "./store/progress";
 import { Guide, armAutostart } from "./guide/guide";
 import type { SubmitControl } from "./workspace/toolbar";
 import { verifySubmission, type Submission } from "./puzzles/answer-check";
@@ -74,6 +74,16 @@ export async function bootWorkspace(
   //: Before any panel is built, so the first chip drawn already knows what the
   //: player called it. Per puzzle: `n96` means nothing in another design.
   labels.open(puzzle.id);
+
+  // If this puzzle's saved state is cleared from the menu in another tab,
+  // reload rather than carry on: the notebook, labels, model and evidence
+  // stores are all held in memory here and would write themselves straight
+  // back on the next change, quietly undoing the clear. Clearing a *different*
+  // puzzle does not fire this (store/progress.ts's `onCleared` is scoped), so
+  // a workspace you are working in is never disturbed by tidying up elsewhere.
+  onCleared(puzzle.id, () => {
+    location.reload();
+  });
   document.title = `DIESHARK — ${puzzle.title}`;
 
   const allowedPanels = new Set<string>(panelsFor(puzzle));

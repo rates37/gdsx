@@ -49,12 +49,30 @@ class FakeStorage {
 
 globalThis.localStorage = new FakeStorage();
 
+// `onCleared` listens on `window`; under Node there is none, so a two-method
+// stand-in collects the listeners and the test dispatches to them directly.
+// Nothing else in progress.ts touches `window`.
+const listeners = new Set();
+globalThis.window = {
+  addEventListener: (type, fn) => {
+    if (type === "storage") listeners.add(fn);
+  },
+  removeEventListener: (type, fn) => {
+    if (type === "storage") listeners.delete(fn);
+  },
+};
+function dispatchStorage(event) {
+  for (const fn of [...listeners]) fn(event);
+}
+
 const {
   recordSolved,
   solvedState,
   allProgress,
   clearPuzzle,
   clearAll,
+  storageUsage,
+  onCleared,
   KEY_RULES,
   VERSION,
 } = await import("../src/store/progress.ts");
@@ -183,6 +201,82 @@ function keysOf(storage) {
   const out = [];
   for (let i = 0; i < storage.length; i++) out.push(storage.key(i));
   return out;
+}
+
+// ---- 3b. storageUsage counts what a clear would delete ------------------
+//
+// The menu's settings affordance shows the total, and both confirmations
+// quote a scoped figure while asking permission to delete it -- so the scope
+// must be exactly clearPuzzle's, or the dialog describes the wrong thing.
+
+reset();
+{
+  localStorage.setItem("gdsx.notebook.puzzle-a.v1", "aaaa");
+  localStorage.setItem("gdsx.labels.puzzle-a.v1", "bb");
+  localStorage.setItem("gdsx.notebook.puzzle-b.v1", "cccc");
+  localStorage.setItem("gdsx.workspace.layout.v2", "dddd");
+  localStorage.setItem("unrelated.other-app.setting", "not ours");
+
+  const all = storageUsage();
+  check(all.keys === 4, `storageUsage counts every gdsx.* key, got ${all.keys}`);
+  check(
+    all.bytes === keysOf(localStorage)
+      .filter((k) => k.startsWith("gdsx."))
+      .reduce((sum, k) => sum + (k.length + localStorage.getItem(k).length) * 2, 0),
+    "storageUsage counts key and value, two bytes per UTF-16 unit, as the quota does",
+  );
+
+  const scoped = storageUsage("puzzle-a");
+  check(scoped.keys === 2, `a scoped usage counts only that puzzle's keys, got ${scoped.keys}`);
+
+  // The property that matters: the figure quoted in the confirmation is the
+  // number of keys the clear actually removes.
+  const beforeCount = keysOf(localStorage).filter((k) => k.startsWith("gdsx.")).length;
+  clearPuzzle("puzzle-a");
+  const afterCount = keysOf(localStorage).filter((k) => k.startsWith("gdsx.")).length;
+  check(
+    beforeCount - afterCount === scoped.keys,
+    `storageUsage("puzzle-a") promised ${scoped.keys} items, clearPuzzle removed ${beforeCount - afterCount}`,
+  );
+  check(storageUsage("puzzle-a").keys === 0, "…and nothing of that puzzle's is left to count");
+}
+
+// ---- 3c. onCleared: another tab's clear reaches a running workspace -----
+//
+// The two screens are separate documents, so a clear from the menu cannot
+// touch a workspace's in-memory state directly. It can leave a workspace open
+// in another tab holding state that would be written straight back, which is
+// what this signal exists to prevent -- and it must stay scoped, so tidying up
+// one puzzle never disturbs a workspace open on another.
+
+reset();
+{
+  let fired = 0;
+  const stop = onCleared("puzzle-a", () => {
+    fired++;
+  });
+
+  dispatchStorage({ key: "gdsx.notebook.puzzle-b.v1", newValue: null });
+  check(fired === 0, "another puzzle's keys going away does not disturb this one");
+
+  dispatchStorage({ key: "gdsx.notebook.puzzle-a.v1", newValue: "written" });
+  check(fired === 0, "a write is not a clear");
+
+  dispatchStorage({ key: "unrelated.other-app.setting", newValue: null });
+  check(fired === 0, "another app's storage is not ours to react to");
+
+  dispatchStorage({ key: "gdsx.notebook.puzzle-a.v1", newValue: null });
+  check(fired === 1, "this puzzle's own key being removed fires once");
+
+  dispatchStorage({ key: "gdsx.workspace.layout.v2", newValue: null });
+  check(fired === 2, "so does an app-level key, which only clearAll removes");
+
+  dispatchStorage({ key: null, newValue: null });
+  check(fired === 3, "so does a whole-storage clear(), which reports a null key");
+
+  stop();
+  dispatchStorage({ key: "gdsx.notebook.puzzle-a.v1", newValue: null });
+  check(fired === 3, "unsubscribing stops it");
 }
 
 // ---- 4. every key prefix found in the source is covered by KEY_RULES ---

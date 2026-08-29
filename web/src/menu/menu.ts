@@ -13,14 +13,29 @@
 // a card does not itself write "last played" -- boot.ts does that when the
 // puzzle actually opens, so Continue means a puzzle that was opened, not one
 // that was clicked at.
+//
+// It is also where progress is managed, because it is the only screen that
+// can see every puzzle at once. Everything it deletes goes through
+// store/progress.ts, which owns the `gdsx.*` namespace; this file never names
+// a storage key.
 
-import { findPuzzle, type PuzzleDescriptor } from "../puzzles/catalog.ts";
-import { allProgress, type ProgressRecord } from "../store/progress.ts";
+import { findPuzzle, lastPlayedId, type PuzzleDescriptor } from "../puzzles/catalog.ts";
+import {
+  allProgress,
+  clearAll,
+  clearPuzzle,
+  storageUsage,
+  type ProgressRecord,
+  type StorageUsage,
+} from "../store/progress.ts";
+import { confirmDestructive } from "./confirm.ts";
 import { continueEntry, menuEntries, type MenuEntry } from "./entries.ts";
 
 export interface MenuOptions {
   catalog: PuzzleDescriptor[];
-  /** The last-played id from storage, in whatever spelling was saved. */
+  /** The last-played id, in whatever spelling was saved. Read from storage on
+   *  every redraw when not given -- clearing progress deletes it, and the
+   *  Continue banner has to go with it. */
   lastPlayed?: string | null;
   /** Injectable for tests; defaults to the real progress store. */
   progress?: ProgressRecord[];
@@ -41,7 +56,52 @@ function chip(text: string, extra?: string): HTMLElement {
   return el("span", extra ? `menu-chip ${extra}` : "menu-chip", text);
 }
 
-function card(entry: MenuEntry): HTMLElement {
+/** Sizes as the storage quota counts them. Rounded hard: this is a "nothing
+ *  has run away" reassurance, not an accounting figure. */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function items(usage: StorageUsage): string {
+  const plural = usage.keys === 1 ? "item" : "items";
+  return `${usage.keys} saved ${plural}, ${formatBytes(usage.bytes)}`;
+}
+
+/**
+ * "Clear this puzzle", offered only when there is something to clear.
+ *
+ * The confirmation names the puzzle, lists what a clear takes with it, and
+ * says how much of it there is -- a player is being asked to throw away hours
+ * of their own work, and "are you sure?" does not describe that.
+ */
+function clearButton(entry: MenuEntry, usage: StorageUsage, onDone: () => void): HTMLElement {
+  const button = el("button", "menu-card-clear", "clear");
+  button.type = "button";
+  button.title = `delete your saved work on ${entry.title} (${items(usage)})`;
+  button.addEventListener("click", () => {
+    void confirmDestructive({
+      title: `Clear ${entry.title}?`,
+      body: [
+        `This deletes everything you have done on ${entry.title}: notebook claims, ` +
+          `labels, the model you built, saved evidence, REPL history, sticky-flop ` +
+          `classifications, and its solved record.`,
+        `${items(usage)}. Your other levels, your panel layout and your app settings ` +
+          `are not touched.`,
+        "This cannot be undone.",
+      ],
+      confirmLabel: `clear ${entry.title}`,
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      clearPuzzle(entry.id);
+      onDone();
+    });
+  });
+  return button;
+}
+
+function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
   const item = el("li", entry.solved ? "menu-card menu-card-is-solved" : "menu-card");
   item.dataset.puzzle = entry.id;
 
@@ -62,9 +122,8 @@ function card(entry: MenuEntry): HTMLElement {
   link.append(el("p", "menu-card-blurb", entry.blurb));
   item.append(link);
 
-  // The foot is always drawn, solved or not: it is where 19.3's per-card
-  // clear button goes, and a row that appears only on solved cards would make
-  // the grid ragged.
+  // The foot is always drawn, cleared or not, so the grid does not go ragged
+  // as puzzles are played.
   const foot = el("div", "menu-card-foot");
   if (entry.solved) {
     foot.append(
@@ -75,7 +134,14 @@ function card(entry: MenuEntry): HTMLElement {
     const plural = entry.attempts === 1 ? "attempt" : "attempts";
     foot.append(el("span", "menu-card-attempts", `${entry.attempts} ${plural}`));
   }
-  foot.append(el("div", "menu-card-actions"));
+
+  const actions = el("div", "menu-card-actions");
+  // Only when the puzzle owns something. A clear button on a level nobody has
+  // opened is an affordance that does nothing, and it would also be the only
+  // thing on an otherwise untouched card.
+  const usage = storageUsage(entry.id);
+  if (usage.keys > 0) actions.append(clearButton(entry, usage, onCleared));
+  foot.append(actions);
   item.append(foot);
 
   return item;
@@ -92,11 +158,88 @@ function continueBanner(entry: MenuEntry): HTMLElement {
 }
 
 /**
+ * The settings affordance: what the game is holding, and the way to throw all
+ * of it away.
+ *
+ * The usage line is the unobtrusive half -- storage here is bounded and small,
+ * and a player who has solved everything should be able to confirm that
+ * nothing has run away without opening devtools.
+ */
+function settingsButton(puzzleCount: number, onDone: () => void): HTMLElement {
+  const wrap = el("div", "menu-settings");
+
+  const button = el("button", "menu-settings-btn", "settings");
+  button.type = "button";
+  button.title = "storage and progress";
+
+  const popover = el("div", "menu-settings-popover");
+  popover.hidden = true;
+
+  const usage = storageUsage();
+  popover.append(el("div", "menu-settings-heading", "STORAGE"));
+  popover.append(el("div", "menu-settings-usage", items(usage)));
+  popover.append(
+    el(
+      "div",
+      "menu-settings-note",
+      "Everything the game saves lives in this browser: your notebooks, labels, " +
+        "models, evidence, layout and solved records. Nothing is sent anywhere.",
+    ),
+  );
+
+  const clearAllBtn = el("button", "menu-settings-clear", "clear all progress…");
+  clearAllBtn.type = "button";
+  clearAllBtn.addEventListener("click", () => {
+    void confirmDestructive({
+      title: "Clear all progress?",
+      body: [
+        `This deletes your progress on all ${puzzleCount} puzzles — every notebook, ` +
+          `label, model, saved evidence file, REPL history, sticky-flop classification ` +
+          `and solved record.`,
+        "It also clears the app's own state: your saved panel layout, the guided " +
+          "walkthrough's progress, your die view preferences, and which level you " +
+          "last opened.",
+        `${items(usage)}. This cannot be undone.`,
+      ],
+      confirmLabel: "clear everything",
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      clearAll();
+      onDone();
+    });
+  });
+  popover.append(clearAllBtn);
+
+  const close = (): void => {
+    popover.hidden = true;
+    button.classList.remove("open");
+  };
+  button.addEventListener("click", () => {
+    popover.hidden = !popover.hidden;
+    button.classList.toggle("open", !popover.hidden);
+  });
+  // Same convention as the workspace toolbar's menus: an outside click or
+  // Escape closes it.
+  document.addEventListener("click", (event) => {
+    if (!popover.hidden && !wrap.contains(event.target as Node)) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+
+  wrap.append(button, popover);
+  return wrap;
+}
+
+/**
  * Builds the menu into `host` and returns a handle that can redraw it.
  *
- * `redraw` is here for 19.3: clearing a puzzle's progress has to update its
- * card without a page reload, and the card is a pure function of the catalog
- * and the progress records.
+ * `redraw` is what a clear calls: a card is a pure function of the catalog and
+ * what is in storage, so the screen shows the result immediately rather than
+ * asking the player to reload to find out whether it worked. Clearing cannot
+ * disturb a running workspace from here -- that is a different document -- and
+ * a workspace open on the cleared puzzle in another tab reloads itself
+ * (progress.ts's `onCleared`, wired up in boot.ts).
  */
 export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () => void } {
   const screen = el("div", "menu-screen");
@@ -110,8 +253,8 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
     const entries = menuEntries(opts.catalog, opts.progress ?? allProgress());
     // Resolved through the catalog rather than compared as a string: a saved
     // id may be a puzzle's directory name, which is a legal `?puzzle=` value.
-    const lastPlayed = findPuzzle(opts.catalog, opts.lastPlayed)?.id ?? null;
-    const resume = continueEntry(entries, lastPlayed);
+    const saved = opts.lastPlayed !== undefined ? opts.lastPlayed : lastPlayedId();
+    const resume = continueEntry(entries, findPuzzle(opts.catalog, saved)?.id ?? null);
     const solved = entries.filter((entry) => entry.solved).length;
 
     const head = el("div", "menu-head");
@@ -124,21 +267,20 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
           `${solved} solved.`,
       ),
     );
-    // 19.3's settings affordance mounts into this.
-    head.append(el("div", "menu-head-actions"));
+    const actions = el("div", "menu-head-actions");
+    actions.append(settingsButton(entries.length, draw));
+    head.append(actions);
     inner.append(head);
 
     if (resume) inner.append(continueBanner(resume));
 
     inner.append(el("div", "menu-section-label", "LEVELS"));
     const grid = el("ul", "menu-grid");
-    for (const entry of entries) grid.append(card(entry));
+    for (const entry of entries) grid.append(card(entry, draw));
     inner.append(grid);
 
     const foot = el("div", "menu-foot");
-    foot.append(
-      document.createTextNode("Every level is linkable: a URL like "),
-    );
+    foot.append(document.createTextNode("Every level is linkable: a URL like "));
     foot.append(el("code", undefined, `?puzzle=${entries[0]?.id ?? "original-puzzle"}`));
     foot.append(
       document.createTextNode(

@@ -16,7 +16,7 @@
 
 import "./styles/index.css";
 
-import { chooseRoute, lastPlayedId, loadCatalog, requestedId } from "./puzzles/catalog";
+import { chooseRoute, loadCatalog, requestedId } from "./puzzles/catalog";
 
 async function main(): Promise<void> {
   const catalog = await loadCatalog();
@@ -28,8 +28,10 @@ async function main(): Promise<void> {
     return;
   }
 
+  // No `lastPlayed` here on purpose: the menu reads it per draw, so clearing
+  // progress takes the Continue banner with it without a reload.
   const { mountMenu } = await import("./menu/menu");
-  mountMenu(document.body, { catalog, lastPlayed: lastPlayedId() });
+  mountMenu(document.body, { catalog });
 }
 
 main().catch((err) => {
