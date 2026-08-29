@@ -214,6 +214,97 @@ check(
   "no model run yet must be stated as agreement-needed, not as a missing proof",
 );
 
+// ---- the session half of §8 ---------------------------------------------
+//
+// Score and Session are driven by an optional sixth argument, so every check
+// above ran without one -- which is itself the first property worth stating.
+
+check(!md.includes("## Score"), "no session means no score section at all");
+check(!md.includes("## Session"), "…and no session section either");
+
+const session = {
+  score: {
+    total: 63,
+    available: 100,
+    solved: true,
+    bare: false,
+    lines: [
+      { name: "Model validated", earned: 40, available: 40, note: "agreed over every vector" },
+      { name: "Coverage", earned: 12, available: 25, note: "48% explained" },
+      { name: "Hints taken", earned: -3, available: 0, note: "1 revealed, 3 points each" },
+    ],
+  },
+  attempts: 4,
+  solveMs: 41 * 60_000,
+  parMinutes: 120,
+  hintsTaken: [{ tier: 0, text: "728 instances, 92 sequential" }],
+};
+
+const mdScored = generateWriteup(
+  fakeNotebook,
+  fakeEvidence,
+  fakeModelStore(validatedRun),
+  fakeSimStore(true),
+  { successNet: "success", keyPort: "I", puzzleId: "two-stars" },
+  session,
+);
+
+check(mdScored.includes("**63 of 100.**"), "the score is stated against what was available");
+check(mdScored.includes("| Coverage | 12 | 25 |"), "every component appears with its own maximum");
+check(mdScored.includes("48% explained"), "…and with the note explaining how it came out");
+check(mdScored.includes("| Hints taken | -3 |"), "a penalty is shown as a negative, not hidden");
+check(mdScored.includes("4 submitted answer(s)"), "the session reports the attempt count");
+check(mdScored.includes("41 min at the design, against a par of 120 min"), "…the time against par");
+check(
+  mdScored.includes("728 instances, 92 sequential"),
+  "a hint taken is quoted in full, not counted -- it is part of the account",
+);
+
+// The summary comes first: it is what the player re-reads.
+check(
+  mdScored.indexOf("## Score") < mdScored.indexOf("## Claims, in the order settled"),
+  "the score must precede the claims timeline",
+);
+
+// §8: a score only after solving. An unsolved card must not print one, even
+// though the session (attempts, hints) is still worth summarising.
+const mdUnsolvedScore = generateWriteup(
+  fakeNotebook,
+  fakeEvidence,
+  fakeModelStore(null),
+  fakeSimStore(false),
+  { successNet: "success", keyPort: "I", puzzleId: "two-stars" },
+  { ...session, score: { total: 0, available: 0, solved: false, bare: false, lines: [] }, solveMs: null },
+);
+check(!mdUnsolvedScore.includes("## Score"), "an unsolved puzzle prints no score");
+check(mdUnsolvedScore.includes("## Session"), "…but still summarises the session");
+check(!mdUnsolvedScore.includes("at the design"), "…with no solve time, because there was no solve");
+
+// A solve with an empty notebook is a solve. It must be told what the rest of
+// the points are for, and never scolded for how it was reached.
+const mdBare = generateWriteup(
+  fakeNotebook,
+  fakeEvidence,
+  fakeModelStore(null),
+  fakeSimStore(true),
+  { successNet: "success", keyPort: "I", puzzleId: "two-stars" },
+  {
+    ...session,
+    score: {
+      total: 10,
+      available: 100,
+      solved: true,
+      bare: true,
+      lines: [{ name: "Solved", earned: 10, available: 10, note: "required, and deliberately cheap" }],
+    },
+    hintsTaken: [],
+  },
+);
+check(mdBare.includes("Solved by driving the design."), "a bare solve is told what the rest is for");
+check(mdBare.includes("The other 90 points"), "…quoting what is actually left on the table");
+check(!/\b(failed|poor|should have)\b/i.test(mdBare), "…and is never scolded for it");
+check(mdBare.includes("no hints taken"), "no hints taken is stated rather than left blank");
+
 if (failures.length) {
   console.error(`FAIL: ${failures.length} of ${checks} checks\n`);
   for (const failure of failures) console.error(`  - ${failure}`);

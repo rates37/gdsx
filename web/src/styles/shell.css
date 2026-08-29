@@ -117,12 +117,6 @@ body {
   opacity: 0.5;
   cursor: progress;
 }
-.gdsx-toolbar-status {
-  color: #9aa2b5;
-  font-size: 11px;
-  white-space: nowrap;
-  flex: none;
-}
 /* The objective. `min-width: 0` plus the blurb's own ellipsis is what
    lets the sentence give up room first while the goal phrase -- the half
    that actually says what ends the puzzle -- always survives. */

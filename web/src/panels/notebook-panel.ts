@@ -39,8 +39,8 @@ import {
 import { notebookFor } from "../notebook/store";
 import { evidenceLog, type EvidenceRecord } from "../notebook/evidence";
 import { VerifyEngine, estimate } from "../notebook/engine";
-import { asPercent, coverage, pointsFor } from "../notebook/scoring";
-import { generateWriteup } from "../notebook/writeup";
+import { asPercent, coverage, pointsFor, type Coverage } from "../notebook/scoring";
+import { generateWriteup, type WriteupSession } from "../notebook/writeup";
 import { ModelStore } from "../model/store";
 
 const KIND_LABELS: Record<ClaimKind, string> = {
@@ -127,8 +127,18 @@ export interface NotebookPanelOptions {
   /** The sequence-editor port the write-up prints as the final key (§8).
    *  Null for a puzzle with no data input, where there is no key to print. */
   keyPort: string | null;
-  /** Called whenever coverage changes, so the toolbar can show it. */
-  onCoverage?: (text: string) => void;
+  /** The solve's score, timings and hints for the write-up's summary
+   *  sections, or null while the puzzle is unsolved. A function because it is
+   *  read at the moment the write-up is generated, and supplied by boot.ts
+   *  because the par time and the hint text live on the puzzle descriptor,
+   *  which this panel deliberately does not import. */
+  session?: () => WriteupSession | null;
+  /** Called with each freshly computed coverage, so the post-solve score can
+   *  use it. Deliberately not a display hook any more: the cone denominator
+   *  needs a design call and a step through the success flop, which is this
+   *  panel's job, and boot.ts only caches the result. Nothing shows coverage
+   *  live outside this panel (game-plan.md §8). */
+  onCoverage?: (found: Coverage) => void;
 }
 
 export function notebookPanel(options: NotebookPanelOptions): PanelDef {
@@ -373,12 +383,14 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
             `coverage ${asPercent(found.fraction)} · roles ${found.roles.done}/${found.roles.total}` +
             ` · cone ${found.cone.done}/${found.cone.total}`;
           coverageEl.textContent = text;
-          // Coverage, yes; score, no. §8 is explicit that points are shown after
-          // solving and never as live pressure, and a tooltip is still showing.
+          // Coverage, yes; score, no. §8 is explicit that points are shown
+          // after solving and never as live pressure. It is shown HERE and
+          // nowhere else: the same number in the title bar was read as a
+          // score, which is why the toolbar's status slot no longer exists.
           coverageEl.title =
             "flops with a proven role claim, and the part of the success cone " +
             "a settled claim names";
-          options.onCoverage?.(`coverage ${asPercent(found.fraction)}`);
+          options.onCoverage?.(found);
         }
       }
 
@@ -506,11 +518,18 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
         // puzzle's key -- the same localStorage record the Model Builder
         // panel writes, not a second copy of it.
         const modelStore = new ModelStore(options.puzzleId, "");
-        const markdown = generateWriteup(notebook, evidence, modelStore, store, {
-          successNet: options.successNet,
-          keyPort: options.keyPort,
-          puzzleId: options.puzzleId,
-        });
+        const markdown = generateWriteup(
+          notebook,
+          evidence,
+          modelStore,
+          store,
+          {
+            successNet: options.successNet,
+            keyPort: options.keyPort,
+            puzzleId: options.puzzleId,
+          },
+          options.session?.() ?? null,
+        );
         writeupText.value = markdown;
         writeupEl.hidden = false;
         formEl.hidden = true;

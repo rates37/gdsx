@@ -130,6 +130,11 @@ function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
       el("span", "menu-card-solved", entry.solvedOn ? `✓ solved ${entry.solvedOn}` : "✓ solved"),
     );
   }
+  if (entry.score !== null) {
+    // The number only. What it is made of is in that puzzle's write-up, which
+    // needs the design loaded -- and this screen deliberately loads none of it.
+    foot.append(el("span", "menu-card-score", `${entry.score} points`));
+  }
   if (entry.attempts > 0) {
     const plural = entry.attempts === 1 ? "attempt" : "attempts";
     foot.append(el("span", "menu-card-attempts", `${entry.attempts} ${plural}`));

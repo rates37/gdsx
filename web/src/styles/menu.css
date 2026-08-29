@@ -245,6 +245,11 @@
   color: #7d8598;
   font-size: 11px;
 }
+.menu-card-score {
+  color: #b8c0d0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
 .menu-card-actions {
   margin-left: auto;
   display: flex;

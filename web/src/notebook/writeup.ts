@@ -23,6 +23,8 @@ import type { EvidenceLog, EvidenceRecord } from "./evidence.ts";
 import type { ModelStore } from "../model/store.ts";
 import { VALIDATION_VECTORS } from "../model/store.ts";
 import type { SimStore } from "../sim/store.ts";
+import { asDuration, type ScoreCard } from "./scoring.ts";
+import type { HintTier } from "../puzzles/catalog.ts";
 
 export interface WriteupOptions {
   /** The net the notebook's coverage is measured against, and whose latch
@@ -35,6 +37,31 @@ export interface WriteupOptions {
    *  has no key section to print rather than an empty one. */
   keyPort: string | null;
   puzzleId: string;
+}
+
+/**
+ * The half of §8's write-up that is not about the design: the score, and how
+ * the session went.
+ *
+ * Optional, and passed in rather than derived, for two reasons. The score
+ * comes from the progress store and the puzzle descriptor, neither of which
+ * this module or the Notebook panel has any other business knowing about. And
+ * a caller with no session -- a test, or a player exporting a write-up before
+ * solving -- gets the document without these sections rather than a document
+ * full of zeroes.
+ */
+export interface WriteupSession {
+  score: ScoreCard;
+  /** Every submit attempt, accepted or not. */
+  attempts: number;
+  /** Engaged milliseconds at the first accepted verdict, or null if unsolved
+   *  or never recorded. */
+  solveMs: number | null;
+  parMinutes: number | null;
+  /** The tiers actually revealed, in order, with their text -- quoted in full
+   *  rather than counted. The write-up is the account the player keeps, and
+   *  what a hint told them is part of how the solve went. */
+  hintsTaken: readonly HintTier[];
 }
 
 function when(at: number): string {
@@ -93,6 +120,65 @@ function renderEvidence(record: EvidenceRecord): string {
   return lines.join("\n");
 }
 
+/**
+ * §8's score, as a table of what each part of the game was worth.
+ *
+ * The breakdown rather than the number, on purpose: a bare "63/100" is a
+ * grade, and this document is meant to be an account of a session. Every row
+ * carries the note `scoreCard` wrote for it.
+ */
+function renderScore(score: ScoreCard): string[] {
+  const out: string[] = [];
+  out.push("## Score");
+  out.push("");
+  out.push(`**${score.total} of ${score.available}.**`);
+  out.push("");
+  out.push("| | earned | of | |");
+  out.push("|---|---:|---:|---|");
+  for (const line of score.lines) {
+    const of = line.available === 0 ? "" : String(line.available);
+    out.push(`| ${line.name} | ${line.earned} | ${of} | ${line.note} |`);
+  }
+  if (score.bare) {
+    // A solve with an empty notebook is a real solve. This says what the other
+    // points are FOR rather than leaving a low number to read as a failure --
+    // §8's weights are an opinion about what is worth doing, not a judgement
+    // of how this player did it.
+    out.push("");
+    out.push(
+      `Solved by driving the design. The other ${score.available - score.total} points are for ` +
+        "explaining it: what the registers do, what the success cone depends on, and a model " +
+        "that agrees with the gate tape.",
+    );
+  }
+  out.push("");
+  return out;
+}
+
+/** How the session went: attempts, time against par, and every hint taken. */
+function renderSession(session: WriteupSession): string[] {
+  const out: string[] = [];
+  out.push("## Session");
+  out.push("");
+  out.push(`- ${session.attempts} submitted answer(s)`);
+  if (session.solveMs !== null) {
+    const spent = asDuration(session.solveMs);
+    out.push(
+      session.parMinutes === null
+        ? `- ${spent} at the design (this puzzle declares no par)`
+        : `- ${spent} at the design, against a par of ${session.parMinutes} min`,
+    );
+  }
+  if (session.hintsTaken.length === 0) {
+    out.push("- no hints taken");
+  } else {
+    out.push(`- ${session.hintsTaken.length} hint(s) taken:`);
+    for (const hint of session.hintsTaken) out.push(`  - ${hint.text}`);
+  }
+  out.push("");
+  return out;
+}
+
 /** Assemble the write-up fresh from the current state of every store. Pure:
  *  called again it returns a new string, nothing here is persisted -- the
  *  notebook, evidence log and model store already are the persistence layer. */
@@ -102,6 +188,7 @@ export function generateWriteup(
   modelStore: ModelStore,
   simStore: SimStore,
   opts: WriteupOptions,
+  session: WriteupSession | null = null,
 ): string {
   const claims = notebook.all();
   // "Settled" = has at least one recorded verdict, of whatever kind. Ordered
@@ -145,6 +232,19 @@ export function generateWriteup(
   out.push("");
   out.push("---");
   out.push("");
+
+  // ---- 1b. score and session (§8) ----------------------------------------
+  //
+  // First, because this is the summary a player re-reads. Both are omitted
+  // without a session, and the score is omitted for an unsolved puzzle --
+  // §8 shows a score only after solving, and a write-up exported mid-session
+  // is a working document, not a result.
+  if (session) {
+    if (session.score.solved) out.push(...renderScore(session.score));
+    out.push(...renderSession(session));
+    out.push("---");
+    out.push("");
+  }
 
   // ---- 2/3. claims, in the order settled ---------------------------------
   out.push("## Claims, in the order settled");

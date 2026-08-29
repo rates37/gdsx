@@ -17,12 +17,13 @@
     "test:experiments": "node --experimental-strip-types scripts/test-experiments.mjs",
     "test:model": "node --experimental-strip-types scripts/test-model-diff.mjs",
     "test:writeup": "node --experimental-strip-types scripts/test-writeup.mjs",
+    "test:scoring": "node --experimental-strip-types scripts/test-scoring.mjs",
     "test:puzzles": "node --experimental-strip-types scripts/test-puzzles.mjs",
     "test:guide": "node --experimental-strip-types scripts/test-guide.mjs",
     "test:register-inspector": "node --experimental-strip-types scripts/test-register-inspector.mjs",
     "test:progress": "node --experimental-strip-types scripts/test-progress.mjs",
     "test:menu": "node --experimental-strip-types scripts/test-menu.mjs",
-    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:puzzles && npm run test:guide && npm run test:progress && npm run test:menu"
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:scoring && npm run test:puzzles && npm run test:guide && npm run test:progress && npm run test:menu"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

@@ -121,12 +121,6 @@ export class Workspace {
     this.toolbar = attachToolbar(container, this, this.menus, opts);
   }
 
-  /** The toolbar's status readout -- the coverage percentage, per §3's title
-   *  bar. A panel calls this; nothing reads it back. */
-  setStatus(text: string): void {
-    this.toolbar.status(text);
-  }
-
   /** The readiness pill: `booting`, then `ready`, then out of the way. Driven
    *  by boot.ts, which is the only thing that knows when the design handle
    *  exists. */

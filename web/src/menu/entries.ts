@@ -34,6 +34,11 @@ export interface MenuEntry {
   solvedOn: string | null;
   /** Every submit attempt, accepted or not. 0 for an untouched puzzle. */
   attempts: number;
+  /** The best score this puzzle has been solved with (game-plan.md §8), or
+   *  null when there is none: unsolved, or solved before scoring existed. The
+   *  menu shows the number and nothing else -- the breakdown lives in the
+   *  write-up, which needs the design loaded. */
+  score: number | null;
 }
 
 function difficultyLabel(value: number | string | null): string | null {
@@ -66,6 +71,7 @@ export function menuEntries(
       solved: Boolean(record?.solvedAt),
       solvedOn: solvedDay(record?.solvedAt),
       attempts: record?.attempts ?? 0,
+      score: record?.bestScore ?? null,
     };
   });
 }

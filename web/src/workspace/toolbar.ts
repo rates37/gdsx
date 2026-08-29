@@ -8,6 +8,7 @@
 import type { MenuGroup, Workspace } from "./workspace.ts";
 import type { HintTier, PuzzleChecks } from "../puzzles/catalog.ts";
 import type { Submission, Verdict } from "../puzzles/answer-check.ts";
+import type { ScoreCard } from "../notebook/scoring.ts";
 import { goalFor } from "../puzzles/goals.ts";
 
 /** The guided-walkthrough button's wiring. Supplied by main.ts, which owns
@@ -47,6 +48,13 @@ export interface SubmitControl {
    *  retype. `""` before the simulator has loaded. */
   currentBits: (port: string) => string;
   submit: (submission: Submission) => Promise<Verdict>;
+  /** The score to show beside an accepted verdict, read AFTER `submit`
+   *  resolves so it sees the solve that call just recorded. Null when the
+   *  puzzle is not solved -- game-plan.md §8 shows a score only after solving,
+   *  so a rejection never carries one. Supplied by boot.ts, which is the only
+   *  place holding the notebook, model store and progress record at once; this
+   *  file computes nothing. */
+  scoreCard: () => ScoreCard | null;
 }
 
 /** The level picker's data: what to offer, what is open, and what to do
@@ -58,10 +66,6 @@ export interface LevelPicker {
   onSelect: (id: string) => void;
 }
 
-/** Sets the toolbar's status readout. Returns a setter rather than exposing
- *  the element: the notebook's coverage is the only thing that writes here so
- *  far (game-plan.md §3 puts it in the title bar), and keeping it a function
- *  means the toolbar owns its own markup. */
 /**
  * What the loaded puzzle is asking for. Until this existed the objective was
  * reachable only as a `title=` tooltip on an option inside the level
@@ -83,6 +87,10 @@ export interface SolvedState {
   /** `YYYY-MM-DD`, or null if the saved timestamp could not be read. */
   solvedOn: string | null;
   attempts: number;
+  /** The best score this puzzle has been solved with. Undefined on a record
+   *  saved before scoring existed, which shows as a bare "✓ solved" rather
+   *  than as a zero. */
+  score?: number;
 }
 
 /**
@@ -124,9 +132,13 @@ export interface Readiness {
 }
 
 /** The handles the shell keeps after the toolbar is built. Each is a setter
- *  rather than an exposed element: the toolbar owns its own markup. */
+ *  rather than an exposed element: the toolbar owns its own markup.
+ *
+ *  There is deliberately no general status line. The one thing that ever
+ *  wrote to it was the notebook's live coverage percentage, which game-plan
+ *  §8 rules out as live pressure (see notebook/scoring.ts) -- so the slot went
+ *  with it rather than staying as an empty affordance looking for a user. */
 export interface ToolbarHandle {
-  status: (text: string) => void;
   readiness: (state: Readiness) => void;
   solved: (state: SolvedState) => void;
 }
@@ -162,7 +174,6 @@ export function attachToolbar(
     <span class="gdsx-level-wrap"></span>
     <span class="gdsx-solved"></span>
     <span class="gdsx-objective"></span>
-    <span class="gdsx-toolbar-status"></span>
     <div class="gdsx-toolbar-spacer"></div>
     <span class="gdsx-ready-wrap"></span>
     <button class="gdsx-notebook-btn" type="button" title="your notebook — the only scored surface in the game">
@@ -214,11 +225,7 @@ export function attachToolbar(
   updateMenuChecks();
   updateNotebookState();
 
-  const statusEl = bar.querySelector(".gdsx-toolbar-status") as HTMLSpanElement;
   return {
-    status: (text: string) => {
-      statusEl.textContent = text;
-    },
     readiness: setReadiness,
     solved: setSolved,
   };
@@ -259,12 +266,18 @@ function attachSolvedChip(host: HTMLSpanElement): (state: SolvedState) => void {
   host.hidden = true;
   return (state: SolvedState) => {
     host.hidden = false;
-    host.textContent = "✓ solved";
+    // The score, once there is one, is part of the fact rather than the
+    // history: it is what the player will want to beat, and unlike the date
+    // it is short enough to sit in the bar.
+    host.textContent = state.score === undefined ? "✓ solved" : `✓ solved · ${state.score}`;
     const plural = state.attempts === 1 ? "attempt" : "attempts";
     host.title = [
       state.solvedOn ? `first solved ${state.solvedOn}` : "solved",
       `${state.attempts} ${plural}`,
-    ].join(" · ");
+      state.score === undefined ? null : "best score — see the Notebook's write-up for the breakdown",
+    ]
+      .filter((part) => part !== null)
+      .join(" · ");
   };
 }
 
@@ -779,10 +792,16 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
         if (verdict.observed) parts.push(`observed: ${verdict.observed}`);
         let text = parts.join(" — ");
         if (verdict.accepted) {
-          // This scores the answer, not the Notebook's claims -- "coverage 0%"
-          // next to an accepted verdict is correct, not a bug, but reads like
-          // one without this line.
-          text += "\nthis checks your answer only, not the Notebook's coverage -- see the Notebook for that score.";
+          // The score, which only exists now that the solve is recorded --
+          // and only here. This replaces the sentence that used to explain
+          // why `coverage 0%` sat beside an accepted verdict: the breakdown
+          // says what each part of the game was worth, which is the answer
+          // that sentence was standing in for.
+          const card = control.scoreCard();
+          if (card) {
+            text += `\nscore ${card.total} of ${card.available}`;
+            text += " · see the Notebook's write-up for the breakdown";
+          }
         }
         verdictEl.textContent = text;
         verdictEl.className = `gdsx-submit-verdict ${verdict.accepted ? "gdsx-submit-ok" : "gdsx-submit-bad"}`;

@@ -102,6 +102,7 @@ eq(
     solved: false,
     solvedOn: null,
     attempts: 0,
+    score: null,
   },
   "a descriptor that declares nothing optional produces a card that claims nothing",
 );
@@ -109,7 +110,7 @@ eq(
 // ---- 3. solved state -----------------------------------------------------
 
 const progress = [
-  { puzzleId: "0-first-light", solvedAt: "2026-08-29T10:11:12.000Z", attempts: 3 },
+  { puzzleId: "0-first-light", solvedAt: "2026-08-29T10:11:12.000Z", attempts: 3, bestScore: 63 },
   { puzzleId: "1-warm-start", attempts: 11 },
 ];
 const entries = menuEntries(catalog, progress);
@@ -120,8 +121,16 @@ eq(entries[0].attempts, 3, "so is the attempt count");
 check(!entries[1].solved, "attempts without an accepted submission do not mark it solved");
 eq(entries[1].attempts, 11, "…but the eleven tries are still counted");
 eq(entries[1].solvedOn, null, "…and there is no solve day to show");
+eq(entries[0].score, 63, "a solved card carries the best score it was solved with");
+eq(entries[1].score, null, "an unsolved card has no score to carry");
 check(!entries[2].solved, "an unattempted puzzle is marked in no way at all");
 eq(entries[2].attempts, 0, "…and reports no attempts");
+eq(
+  menuEntries(catalog, [{ puzzleId: "0-first-light", solvedAt: "2026-08-29T10:11:12.000Z", attempts: 1 }])[0]
+    .score,
+  null,
+  "a puzzle solved before scoring existed shows no score rather than a zero",
+);
 eq(
   menuEntries(catalog, [{ puzzleId: "0-first-light", solvedAt: "not a date", attempts: 1 }])[0]
     .solvedOn,

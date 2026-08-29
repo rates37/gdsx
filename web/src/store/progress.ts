@@ -51,6 +51,20 @@ export interface ProgressRecord {
    *  not tier 1" to represent. 0 if none have been taken. Scoring (game-plan
    *  §8's "hints taken" penalty) reads this; this file only records it. */
   hintsTaken: number;
+  /** Milliseconds spent with this puzzle open and the tab actually visible --
+   *  see `recordEngagement`. Keeps accumulating after a solve. 0 on a record
+   *  written before this field existed. */
+  engagedMs: number;
+  /** `engagedMs` at the moment of the first accepted verdict, frozen there.
+   *  This, not `engagedMs`, is what §8's wall-clock bonus is measured against:
+   *  how long the solve took, not how long the tab has been open since.
+   *  Absent while unsolved, and on a record solved before this field existed. */
+  solveMs?: number;
+  /** The best score this puzzle has been solved with -- see
+   *  notebook/scoring.ts's `scoreCard`. Persisted because the level menu is a
+   *  separate document that loads none of the stores a score is derived from.
+   *  Absent until a solve is scored. */
+  bestScore?: number;
 }
 
 interface Saved {
@@ -59,6 +73,9 @@ interface Saved {
   solvedAt?: string;
   lastObserved?: string;
   hintsTaken?: number;
+  engagedMs?: number;
+  solveMs?: number;
+  bestScore?: number;
 }
 
 function progressKey(puzzleId: string): string {
@@ -66,24 +83,87 @@ function progressKey(puzzleId: string): string {
 }
 
 /**
- * Record one submission against `puzzleId`. Call this for every attempt,
- * accepted or not -- see main.ts's submitControl, which calls it right after
- * verifySubmission resolves, before the toolbar shows the verdict.
+ * Read-modify-write one puzzle's record.
+ *
+ * Every writer below goes through this rather than assembling a `Saved` of its
+ * own. Each of them only cares about one or two fields, but a saved record is
+ * a whole object: a writer that builds its own drops every field it has not
+ * heard of, so the next field anyone adds is silently erased by whichever
+ * writer was not updated. `fn` receives the current record (an empty one if
+ * there is none) and returns the next.
  */
-export function recordSolved(puzzleId: string, verdict: Verdict): void {
+function update(puzzleId: string, fn: (current: Saved) => Saved): void {
   const existing = solvedState(puzzleId);
-  const next: Saved = {
+  const current: Saved = {
     version: VERSION,
-    attempts: (existing?.attempts ?? 0) + 1,
-    solvedAt: existing?.solvedAt ?? (verdict.accepted ? new Date().toISOString() : undefined),
-    lastObserved: verdict.observed ?? existing?.lastObserved,
+    attempts: existing?.attempts ?? 0,
+    solvedAt: existing?.solvedAt,
+    lastObserved: existing?.lastObserved,
     hintsTaken: existing?.hintsTaken,
+    engagedMs: existing?.engagedMs,
+    solveMs: existing?.solveMs,
+    bestScore: existing?.bestScore,
   };
   try {
-    localStorage.setItem(progressKey(puzzleId), JSON.stringify(next));
+    localStorage.setItem(progressKey(puzzleId), JSON.stringify(fn(current)));
   } catch (err) {
     console.warn("gdsx: could not save progress", err);
   }
+}
+
+/**
+ * Record one submission against `puzzleId`. Call this for every attempt,
+ * accepted or not -- see boot.ts's submitControl, which calls it right after
+ * verifySubmission resolves, before the toolbar shows the verdict.
+ */
+export function recordSolved(puzzleId: string, verdict: Verdict): void {
+  update(puzzleId, (current) => {
+    const firstSolve = verdict.accepted && current.solvedAt === undefined;
+    return {
+      ...current,
+      attempts: current.attempts + 1,
+      solvedAt: current.solvedAt ?? (verdict.accepted ? new Date().toISOString() : undefined),
+      lastObserved: verdict.observed ?? current.lastObserved,
+      // Frozen at the first solve, alongside solvedAt and for the same reason:
+      // a later re-check is not a second solve and must not restate how long
+      // the first one took.
+      solveMs: firstSolve ? (current.engagedMs ?? 0) : current.solveMs,
+    };
+  });
+}
+
+/**
+ * Add `ms` of engaged time to `puzzleId` -- time the puzzle was open and the
+ * tab was actually visible. Called by boot.ts's heartbeat.
+ *
+ * Engaged rather than calendar time on purpose: §8's wall-clock component is a
+ * *bonus*, and a player who leaves the tab open overnight has not spent that
+ * night solving. Accumulated in small increments rather than derived from a
+ * start timestamp so that closing the tab loses at most one interval, with no
+ * "session end" to record.
+ */
+export function recordEngagement(puzzleId: string, ms: number): void {
+  if (!(ms > 0)) return;
+  update(puzzleId, (current) => ({
+    ...current,
+    engagedMs: (current.engagedMs ?? 0) + ms,
+  }));
+}
+
+/**
+ * Record `score` as this puzzle's result, keeping the best ever seen.
+ *
+ * `Math.max` for the same reason `solvedAt` does not move: a player who
+ * re-checks an accepted answer after clearing their notebook has not undone
+ * the work they did, and a score that could fall would make re-checking an
+ * answer a risk. Separate from `recordSolved` because the score is derived
+ * from the record that call writes -- "solved" is one of its inputs.
+ */
+export function recordScore(puzzleId: string, score: number): void {
+  update(puzzleId, (current) => ({
+    ...current,
+    bestScore: Math.max(current.bestScore ?? 0, score),
+  }));
 }
 
 /**
@@ -94,19 +174,10 @@ export function recordSolved(puzzleId: string, verdict: Verdict): void {
  * taken.
  */
 export function recordHintTaken(puzzleId: string, tier: number): void {
-  const existing = solvedState(puzzleId);
-  const next: Saved = {
-    version: VERSION,
-    attempts: existing?.attempts ?? 0,
-    solvedAt: existing?.solvedAt,
-    lastObserved: existing?.lastObserved,
-    hintsTaken: Math.max(existing?.hintsTaken ?? 0, tier + 1),
-  };
-  try {
-    localStorage.setItem(progressKey(puzzleId), JSON.stringify(next));
-  } catch (err) {
-    console.warn("gdsx: could not save hint progress", err);
-  }
+  update(puzzleId, (current) => ({
+    ...current,
+    hintsTaken: Math.max(current.hintsTaken ?? 0, tier + 1),
+  }));
 }
 
 /** `puzzleId`'s progress, or null if it has never been attempted (or its
@@ -128,6 +199,9 @@ export function solvedState(puzzleId: string): ProgressRecord | null {
       attempts: saved.attempts,
       lastObserved: saved.lastObserved,
       hintsTaken: saved.hintsTaken ?? 0,
+      engagedMs: saved.engagedMs ?? 0,
+      solveMs: saved.solveMs,
+      bestScore: saved.bestScore,
     };
   } catch (err) {
     console.warn("gdsx: discarding unreadable progress", err);

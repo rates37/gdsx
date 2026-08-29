@@ -27,7 +27,19 @@ import { modelPanel } from "./panels/model-panel";
 import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
-import { onCleared, recordHintTaken, recordSolved, solvedDay, solvedState } from "./store/progress";
+import { notebookFor } from "./notebook/store";
+import { score, scoreCard, type Coverage, type ScoreCard } from "./notebook/scoring";
+import type { WriteupSession } from "./notebook/writeup";
+import { ModelStore } from "./model/store";
+import {
+  onCleared,
+  recordEngagement,
+  recordHintTaken,
+  recordScore,
+  recordSolved,
+  solvedDay,
+  solvedState,
+} from "./store/progress";
 import { Guide, armAutostart } from "./guide/guide";
 import type { HintsControl, SolvedState, SubmitControl } from "./workspace/toolbar";
 import { verifySubmission, type Submission } from "./puzzles/answer-check";
@@ -51,6 +63,34 @@ const MENUS: MenuGroup[] = [
   { label: "Analyse", items: ["cone-walker", "register-inspector", "repl"] },
   { label: "Experiment", items: ["sequence-editor", "experiments", "model-builder"] },
 ];
+
+/** How often engaged time is banked. Small enough that closing the tab loses
+ *  a negligible amount, large enough to be a rounding error against the
+ *  ~5 MB storage quota. */
+const ENGAGEMENT_TICK_MS = 15_000;
+
+/**
+ * Accumulate time-on-puzzle into the progress store, for §8's wall-clock
+ * bonus.
+ *
+ * Two properties this has and a start-timestamp would not. A hidden tab does
+ * not count, so a puzzle left open in a background tab overnight does not
+ * arrive at its solve looking like a twelve-hour struggle. And each tick banks
+ * at most one interval regardless of how long the timer was actually starved
+ * -- a throttled background tab or a sleeping laptop fires late, and the wall
+ * clock between two ticks is not time the player spent playing.
+ *
+ * Never stopped: the page owns the puzzle until it is unloaded.
+ */
+function startEngagementClock(puzzleId: string): void {
+  let last = Date.now();
+  setInterval(() => {
+    const now = Date.now();
+    const elapsed = Math.min(now - last, ENGAGEMENT_TICK_MS);
+    last = now;
+    if (document.visibilityState === "visible") recordEngagement(puzzleId, elapsed);
+  }, ENGAGEMENT_TICK_MS);
+}
 
 // Which puzzle is loaded, and its driver protocol, come from the catalog
 // (`/puzzles/index.json`, written by scripts/sync-assets.mjs from each baked
@@ -91,6 +131,8 @@ export async function bootWorkspace(
     location.reload();
   });
   document.title = `DIESHARK — ${puzzle.title}`;
+
+  startEngagementClock(puzzle.id);
 
   const allowedPanels = new Set<string>(panelsFor(puzzle));
 
@@ -144,14 +186,67 @@ export async function bootWorkspace(
   const solvedNow = (): SolvedState | undefined => {
     const record = solvedState(puzzle.id);
     if (!record?.solvedAt) return undefined;
-    return { solvedOn: solvedDay(record.solvedAt), attempts: record.attempts };
+    return {
+      solvedOn: solvedDay(record.solvedAt),
+      attempts: record.attempts,
+      score: record.bestScore,
+    };
+  };
+
+  // The notebook's latest coverage, reported by the panel that computes it --
+  // the cone denominator needs a design call and a step through the success
+  // flop, which is the Notebook panel's job and not worth doing twice. Null
+  // until the panel has measured it (it never opened this session), which the
+  // score reports as "not measured" rather than as 0%.
+  let latestCoverage: Coverage | null = null;
+
+  /**
+   * This puzzle's score. Assembled here because this is the one place holding
+   * the progress record, the puzzle descriptor, the notebook and the model
+   * store at once.
+   *
+   * An unsolved puzzle gets a card that says so and carries no points --
+   * game-plan.md §8 shows a score only after solving, and `scoreCard` is where
+   * that rule is enforced rather than at each of the surfaces below.
+   */
+  const currentScore = (): ScoreCard => {
+    const record = solvedState(puzzle.id);
+    const notebook = notebookFor(puzzle.id);
+    return scoreCard({
+      solved: Boolean(record?.solvedAt),
+      coverage: latestCoverage,
+      claimPoints: score(notebook),
+      // The badge, not the latest run: a model that was validated and has
+      // since been edited was still validated (see model/store.ts).
+      modelValidated: new ModelStore(puzzle.id, "").badge() !== null,
+      solveMs: record?.solveMs ?? null,
+      parMinutes: puzzle.parMinutes,
+      hintsTaken: record?.hintsTaken ?? 0,
+    });
+  };
+
+  /** The score, the timings and the hint text for the write-up's summary
+   *  (game-plan.md §8), or null before there is anything to summarise. The
+   *  hints are quoted in full rather than counted, so the tiers are looked up
+   *  here where the puzzle descriptor is. */
+  const currentSession = (): WriteupSession | null => {
+    const record = solvedState(puzzle.id);
+    // No record at all means nothing has happened worth summarising -- not
+    // one attempt, not one hint. An unsolved-but-attempted puzzle still gets
+    // a Session section; only the Score half waits for the solve.
+    if (!record) return null;
+    return {
+      score: currentScore(),
+      attempts: record.attempts,
+      solveMs: record.solveMs ?? null,
+      parMinutes: puzzle.parMinutes,
+      hintsTaken: puzzle.hints.slice(0, record.hintsTaken),
+    };
   };
 
   // Always available, never gated behind progress (game-plan.md §8): the
   // control just exposes the puzzle's tiers and reads/writes the same
   // per-puzzle progress record `submitControl` below writes attempts into.
-  // Recording a hint taken is this step's job; weighting it into a score is
-  // 20.2's.
   const hintsControl: HintsControl = {
     tiers: puzzle.hints,
     revealedCount: () => solvedState(puzzle.id)?.hintsTaken ?? 0,
@@ -175,9 +270,18 @@ export async function bootWorkspace(
       const store = puzzle.checks?.kind === "digest" ? undefined : await storeReady;
       const verdict = await verifySubmission(puzzle, submission, store);
       recordSolved(puzzle.id, verdict);
+      // Scored after recording, because "solved" is one of the score's inputs
+      // and this call is what makes it true. Persisted so the level menu --
+      // a separate document that loads none of these stores -- can show it.
+      const card = currentScore();
+      if (card.solved) recordScore(puzzle.id, card.total);
       const solved = solvedNow();
       if (solved) workspace.setSolved(solved);
       return verdict;
+    },
+    scoreCard: () => {
+      const card = currentScore();
+      return card.solved ? card : null;
     },
   };
 
@@ -271,7 +375,10 @@ export async function bootWorkspace(
         puzzleId: puzzle.id,
         successNet,
         keyPort: driver.keyPort,
-        onCoverage: (text) => workspace.setStatus(text),
+        onCoverage: (found) => {
+          latestCoverage = found;
+        },
+        session: currentSession,
       }),
       // Both of M3's measurement panels run on the gate tape, so they are live
       // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
