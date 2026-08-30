@@ -385,7 +385,14 @@ export async function bootWorkspace(
       // cracks a puzzle open is available before the analysis engine boots.
       experimentPanel({ storeReady, designReady, winCondition, puzzleId: puzzle.id, tapeUrl }),
       modelPanel({ storeReady, puzzleId: puzzle.id }),
-      registerPanel({ designReady, puzzleId: puzzle.id, successNet, winCondition }),
+      registerPanel({
+        designReady,
+        puzzleId: puzzle.id,
+        successNet,
+        winCondition,
+        clockPort: driver.clockPort,
+        resetPort: driver.resetPort,
+      }),
       replPanel({ api, designReady, puzzleId: puzzle.id }),
     ],
     {

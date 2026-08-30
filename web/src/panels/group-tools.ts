@@ -39,6 +39,10 @@ export interface GroupToolsOptions {
   notebook: Notebook;
   /** Primary input names, for the stimulus rows. */
   inputs: string[];
+  /** Excluded from the stimulus rows built from `inputs`: driving the clock
+   *  or reset as a decode stimulus is meaningless. */
+  clockPort: string;
+  resetPort: string | null;
   /** The flops to decode. */
   group: string[];
   /** Reports the Python call behind the most recent action, for the `{ }`
@@ -54,7 +58,9 @@ export interface GroupToolsOptions {
  * panel does) cannot leak listeners.
  */
 export function mountGroupTools(container: HTMLElement, opts: GroupToolsOptions): Mounted {
-  const { design, notebook, inputs, group } = opts;
+  const { design, notebook, group } = opts;
+  const excluded = new Set([opts.clockPort, opts.resetPort].filter((p): p is string => p !== null));
+  const inputs = opts.inputs.filter((p) => !excluded.has(p));
   const setCall = (call: string): void => opts.onCall?.(call);
 
       container.append(el("div", "rd-group-title", `group: ${group.join(", ")} (width ${group.length})`));

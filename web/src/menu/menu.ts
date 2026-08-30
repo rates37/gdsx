@@ -19,7 +19,7 @@
 // store/progress.ts, which owns the `gdsx.*` namespace; this file never names
 // a storage key.
 
-import { findPuzzle, lastPlayedId, type PuzzleDescriptor } from "../puzzles/catalog.ts";
+import { findPuzzle, lastPlayedId, urlFor, type PuzzleDescriptor } from "../puzzles/catalog.ts";
 import {
   allProgress,
   clearAll,
@@ -101,6 +101,25 @@ function clearButton(entry: MenuEntry, usage: StorageUsage, onDone: () => void):
   return button;
 }
 
+/**
+ * "copy link" — the toolbar's picker lists puzzles by title and the URL takes
+ * ids, and nothing else connects the two, so a player has no way to bookmark
+ * or share a level without reading the page source. Every card gets one,
+ * unconditionally: unlike `clear`, there is no state to be absent.
+ */
+function copyLinkButton(entry: MenuEntry): HTMLElement {
+  const button = el("button", "menu-card-copylink", "copy link");
+  button.type = "button";
+  button.title = `copy a link to ${entry.title}`;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    navigator.clipboard?.writeText(urlFor(entry.id)).catch(() => {});
+    button.textContent = "copied";
+    setTimeout(() => (button.textContent = "copy link"), 1000);
+  });
+  return button;
+}
+
 function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
   const item = el("li", entry.solved ? "menu-card menu-card-is-solved" : "menu-card");
   item.dataset.puzzle = entry.id;
@@ -141,6 +160,7 @@ function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
   }
 
   const actions = el("div", "menu-card-actions");
+  actions.append(copyLinkButton(entry));
   // Only when the puzzle owns something. A clear button on a level nobody has
   // opened is an affordance that does nothing, and it would also be the only
   // thing on an otherwise untouched card.

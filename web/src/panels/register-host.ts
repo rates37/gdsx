@@ -27,12 +27,16 @@ export interface RegisterHostOptions {
   puzzleId: string;
   successNet: string;
   winCondition: WinConditionSource;
+  clockPort: string;
+  resetPort: string | null;
 }
 
 export function registerPanel(options: RegisterHostOptions): PanelDef {
   const inspector = registerInspectorPanel({
     designReady: options.designReady,
     puzzleId: options.puzzleId,
+    clockPort: options.clockPort,
+    resetPort: options.resetPort,
   });
   return {
     id: "register-inspector",

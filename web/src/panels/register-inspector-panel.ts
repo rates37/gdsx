@@ -40,6 +40,10 @@ export interface RegisterInspectorOptions {
   designReady: Promise<DesignClient>;
   /** For the `pin as role` button on an orbit result. */
   puzzleId: string;
+  /** Excluded from the stimulus rows: driving the clock or reset as a decode
+   *  stimulus is meaningless. */
+  clockPort: string;
+  resetPort: string | null;
 }
 
 export function registerInspectorPanel(options: RegisterInspectorOptions): PanelDef {
@@ -218,6 +222,8 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
             design,
             notebook,
             inputs,
+            clockPort: options.clockPort,
+            resetPort: options.resetPort,
             group: reg.flops,
             onCall: (call) => {
               lastCall = call;
