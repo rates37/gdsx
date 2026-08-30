@@ -123,7 +123,9 @@ export interface NotebookPanelOptions {
   storeReady: Promise<SimStore>;
   puzzleId: string;
   /** The net whose fan-in cone coverage is measured against, per §5. */
-  successNet: string;
+  /** Null for a puzzle with no lock. Coverage is then measured over the
+   *  claims alone, there being no success cone to measure against. */
+  successNet: string | null;
   /** The sequence-editor port the write-up prints as the final key (§8).
    *  Null for a puzzle with no data input, where there is no key to print. */
   keyPort: string | null;
@@ -574,7 +576,11 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
           // What "the success cone" means is the cone of the flop's D, one cycle
           // earlier -- the same step the cone walker makes explicit.
           try {
-            let root = options.successNet;
+            const lock = options.successNet;
+            // No lock, no success cone: coverage falls back to the claims
+            // alone rather than being measured against an invented net.
+            if (lock === null) throw new Error("this puzzle declares no lock");
+            let root = lock;
             const head = await design.cone(root, { depth: 1 });
             if (head.data.leaf === "flop_q") {
               const stepped = await design.flopDNet(root);
@@ -584,7 +590,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
             // The port itself counts as part of its own cone: a claim about
             // `success` is a claim about the success cone in any sense a player
             // means it, even though the D-cone walk starts below it.
-            coneNets = [...new Set([options.successNet, ...collect(cone.data)])];
+            coneNets = [...new Set([lock, ...collect(cone.data)])];
           } catch {
             coneNets = [];
           }

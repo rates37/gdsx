@@ -75,7 +75,7 @@ const warnedKeys = new Set<string>();
  * with `descriptor.toolsEnabled` mapped through `TOOL_PANELS`. An empty
  * `toolsEnabled` means "everything" (every registered panel id), not
  * "nothing" -- it is what a puzzle with no `tools_enabled` field at all
- * decodes to (catalog.ts's `FALLBACK`), and a missing field authoring an
+ * decodes to, and a missing field authoring an
  * empty toolset would be a strange way to gate a puzzle down to CORE_PANELS.
  * A key `TOOL_PANELS` does not recognise is ignored, with a console.warn the
  * first time that key is seen.

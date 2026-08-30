@@ -7,9 +7,9 @@
   top: 100%;
   left: 8px;
   z-index: 20;
-  background: #10131a;
-  border: 1px solid #2e3444;
-  border-radius: 4px;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   max-height: 220px;
   overflow-y: auto;
   min-width: 220px;
@@ -19,8 +19,8 @@
   cursor: pointer;
 }
 .wave-suggest-item:hover {
-  background: #1c2130;
-  color: #f2cc4d;
+  background: var(--df-edge);
+  color: var(--df-gold);
 }
 /* Both scrolling rows are as wide as their content, not as wide as the
    viewport. A `sticky` child may only travel inside its containing block, so
@@ -37,9 +37,9 @@
   display: flex;
   position: sticky;
   top: 0;
-  background: #0d0f14;
+  background: var(--df-void);
   z-index: 2;
-  border-bottom: 1px solid #1c2130;
+  border-bottom: 1px solid var(--df-edge);
 }
 /* The label gutter and the ruler's spacer are one column: the ruler only
    lines up with the traces while these two agree. Both are `sticky` to the
@@ -53,8 +53,8 @@
   position: sticky;
   left: 0;
   z-index: 3;
-  background: #0d0f14;
-  border-right: 1px solid #1c2130;
+  background: var(--df-void);
+  border-right: 1px solid var(--df-edge);
   box-sizing: border-box;
 }
 .wave-ruler {
@@ -65,15 +65,15 @@
 .wave-tick {
   position: absolute;
   top: 0;
-  color: #5b6274;
+  color: var(--df-faint-2);
   font-size: 9px;
-  border-left: 1px solid #262b36;
+  border-left: 1px solid var(--df-edge-2);
   padding-left: 2px;
 }
 .wave-row {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid #171b26;
+  border-bottom: 1px solid var(--df-plate-2);
 }
 .wave-row-label {
   width: 230px;
@@ -91,12 +91,12 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  background: #0d0f14;
-  border-right: 1px solid #1c2130;
+  background: var(--df-void);
+  border-right: 1px solid var(--df-edge);
   box-sizing: border-box;
 }
 .wave-drag-handle {
-  color: #4a536b;
+  color: var(--df-edge-hi);
   font-size: 10px;
 }
 .wave-row-name {
@@ -106,7 +106,7 @@
   flex: 1;
 }
 .wave-row-name:hover {
-  color: #f2cc4d;
+  color: var(--df-gold);
 }
 /* The row's value at the cursor. Fixed width and right-aligned so a column of
    them reads as a column, and monospace so a bus does not jitter as it
@@ -117,14 +117,14 @@
   text-align: right;
   font-family: ui-monospace, monospace;
   font-size: 11px;
-  color: #f2cc4d;
+  color: var(--df-gold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .wave-row-remove {
   padding: 0 5px;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .wave-row-canvas {
   display: block;
@@ -133,10 +133,10 @@
 }
 .wave-row-radix {
   flex: none;
-  background: #10131a;
-  color: #8ecdf7;
-  border: 1px solid #262b36;
-  border-radius: 3px;
+  background: var(--df-plate);
+  color: var(--df-blue);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   font: inherit;
   font-size: 10px;
   padding: 0 2px;
@@ -151,14 +151,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #8b93a7;
+  color: var(--df-dim);
 }
 .wave-cycle {
   width: 58px;
-  background: #10131a;
-  color: #f2cc4d;
-  border: 1px solid #262b36;
-  border-radius: 3px;
+  background: var(--df-plate);
+  color: var(--df-gold);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   font: inherit;
   font-family: ui-monospace, monospace;
   padding: 2px 4px;

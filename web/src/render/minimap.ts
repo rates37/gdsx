@@ -6,6 +6,7 @@
 
 import type { RenderBundle } from "./bundle";
 import type { DieView } from "./dieview";
+import { palette } from "../theme";
 
 export class Minimap {
   private readonly ctx: CanvasRenderingContext2D;
@@ -92,10 +93,12 @@ export class Minimap {
       this.canvas.height = h;
     }
     const ctx = this.ctx;
-    ctx.fillStyle = "#0d0f14";
+    const pal = palette();
+    ctx.fillStyle = pal.void;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = "rgba(140, 148, 168, 0.6)";
+    ctx.fillStyle = pal.layer.instances;
+    ctx.globalAlpha = 0.6;
     for (let i = 0; i < this.points.length; i += 2) {
       const [cx, cy] = this.toCanvas(this.points[i], this.points[i + 1]);
       ctx.fillRect(cx, cy, 1, 1);
@@ -104,7 +107,8 @@ export class Minimap {
     const [x0, y0, x1, y1] = this.die.visibleWorldRect();
     const [cx0, cy0] = this.toCanvas(x0, y1);
     const [cx1, cy1] = this.toCanvas(x1, y0);
-    ctx.strokeStyle = "#f2cc4d";
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = pal.gold;
     ctx.lineWidth = Math.max(1, dpr);
     ctx.strokeRect(cx0, cy0, cx1 - cx0, cy1 - cy0);
   }

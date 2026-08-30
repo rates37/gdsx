@@ -14,15 +14,8 @@ import { highlightBus } from "../store/highlight";
 import { coneRootBus } from "../store/selection";
 import { openNetMenu } from "./net-menu";
 import { netTooltip } from "./net-tooltip";
+import { palette } from "../theme";
 
-const COLOUR_CSS: Record<string, string> = {
-  li1: "#6bbf6b",
-  met1: "#598cf2",
-  met2: "#f2735a",
-  met3: "#f2cc4d",
-  met4: "#bf66e6",
-  met5: "#66e6e6",
-};
 
 class FpsMeter {
   private times: number[] = [];
@@ -118,7 +111,7 @@ export function mountDie3D(
         box.addEventListener("change", () => v.setLayer(name, box.checked));
         const swatch = document.createElement("span");
         swatch.className = "swatch";
-        swatch.style.background = COLOUR_CSS[name] ?? "#fff";
+        swatch.style.background = palette().layer[name] ?? "#fff";
         const text = document.createElement("span");
         text.textContent = name;
         label.append(box, swatch, text);

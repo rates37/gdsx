@@ -230,6 +230,35 @@ function parMinutes(manifest) {
   return null;
 }
 
+/** The three difficulty bands a manifest may declare. */
+export const DIFFICULTIES = ["easy", "medium", "hard"];
+
+/**
+ * A puzzle's difficulty band, validated here rather than formatted in the UI.
+ *
+ * Manifests used to carry a mix of `0`..`5` and the string `"hard"`, and the
+ * menu had to guess what to print for each -- so six levels said "difficulty
+ * 2" and one said "hard", in the same row of chips. The vocabulary is fixed
+ * at three bands and enforced at the point the bundle becomes the web app's
+ * data, so the browser only ever receives a word it can show verbatim.
+ *
+ * Throwing rather than coercing: a manifest with a difficulty this does not
+ * recognise is an authoring mistake, and failing the sync names the file
+ * while a silent `null` would surface as a chip quietly missing from one card.
+ * A manifest may still decline to declare one at all.
+ */
+function difficulty(dir, manifest) {
+  const value = manifest.difficulty;
+  if (value === undefined || value === null || value === "") return null;
+  if (!DIFFICULTIES.includes(value)) {
+    throw new Error(
+      `${dir}/manifest.json: difficulty ${JSON.stringify(value)} is not one of ` +
+        DIFFICULTIES.join(", "),
+    );
+  }
+  return value;
+}
+
 /**
  * One entry of public/puzzles/index.json.
  *
@@ -247,7 +276,7 @@ export function describe(dir, manifest, solution, hints = {}) {
     dir,
     title: manifest.title ?? dir,
     blurb: manifest.blurb ?? "",
-    difficulty: manifest.difficulty ?? null,
+    difficulty: difficulty(dir, manifest),
     parMinutes: parMinutes(manifest),
     answerKind: solution.answer_kind ?? manifest.answer_kind ?? null,
     toolsEnabled: manifest.tools_enabled ?? [],

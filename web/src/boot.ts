@@ -141,10 +141,13 @@ export async function bootWorkspace(
   //: cache hit) rather than having one posted to it per sweep.
   const tapeUrl = puzzle.assets.tape;
   //: What the notebook's coverage measures the explained fraction of, per
-  //: game-plan.md §5. A puzzle with no lock at all (`parameter`) would need
-  //: the panels that read this gated by `tools_enabled` before it could be
-  //: offered; no baked puzzle has that shape yet.
-  const successNet = driver.successNet ?? "success";
+  //: game-plan.md §5. Null for a puzzle with no lock (`parameter`), and
+  //: carried as null rather than defaulted to a name: the descriptor is the
+  //: only thing that knows what this design calls its lock, and inventing
+  //: `"success"` here would have been right by authoring convention rather
+  //: than by anything the bundle said. The panels that read it each say what
+  //: they do without one.
+  const successNet = driver.successNet;
 
   const bundleReady: Promise<RenderBundle> = fetch(puzzle.assets.render)
     .then((r) => r.arrayBuffer())
@@ -368,8 +371,8 @@ export async function bootWorkspace(
         puzzleId: puzzle.id,
         onFocusWaveform: () => workspace.focus("waveform"),
       }),
-      waveformPanel(storeReady),
-      sequenceEditorPanel(storeReady),
+      waveformPanel({ storeReady, trackPorts: driver.trackPorts, successNet }),
+      sequenceEditorPanel({ storeReady, successNet, trackPorts: driver.trackPorts }),
       notebookPanel({
         designReady,
         storeReady,
@@ -385,7 +388,7 @@ export async function bootWorkspace(
       // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
       // cracks a puzzle open is available before the analysis engine boots.
       experimentPanel({ storeReady, designReady, winCondition, puzzleId: puzzle.id, tapeUrl }),
-      modelPanel({ storeReady, puzzleId: puzzle.id }),
+      modelPanel({ storeReady, puzzleId: puzzle.id, successNet, keyPort: driver.keyPort }),
       registerPanel({
         designReady,
         puzzleId: puzzle.id,

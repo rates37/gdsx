@@ -26,11 +26,12 @@
 // cross-highlights it via the same bus the die view and netlist browser use.
 
 import type { SimStore } from "../sim/store.ts";
-import { busValueAt } from "../sim/store.ts";
+import { busValueAt, discoverBuses } from "../sim/store.ts";
 import { cursorBus } from "../store/cursor.ts";
 import { labels } from "../store/labels.ts";
 import { instanceChip, netChip } from "./chips.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
+import { CANVAS_MONO, palette } from "../theme.ts";
 
 const ROW_H = 28;
 const MIN_CELL_W = 2;
@@ -77,7 +78,18 @@ function formatValue(value: number, bits: number, radix: Radix): string {
   }
 }
 
-export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
+export interface WaveformOptions {
+  storeReady: Promise<SimStore>;
+  /** The ports the puzzle's driver says the player drives, and the net it
+   *  says is the lock. Both come from the descriptor: the default watch list
+   *  used to be the literals `["I", "success"]`, which happened to be right
+   *  for most baked puzzles and silently watched nothing on the rest. */
+  trackPorts: string[];
+  successNet: string | null;
+}
+
+export function waveformPanel(options: WaveformOptions): PanelDef {
+  const { storeReady } = options;
   return {
     id: "waveform",
     title: "Waveform",
@@ -302,6 +314,7 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
 
       function drawTrace(canvas: HTMLCanvasElement, item: WatchItem): void {
         if (!store) return;
+        const pal = palette();
         const cycles = store.cycles;
         const cssW = cycles * cellW;
         const cssH = ROW_H;
@@ -319,7 +332,7 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
         ctx.clearRect(0, 0, cssW, cssH);
 
         // Decade gridlines, for visual alignment with the sequence editor.
-        ctx.strokeStyle = "#1c2130";
+        ctx.strokeStyle = pal.edge;
         ctx.lineWidth = 1;
         for (let c = 0; c < cycles; c += 10) {
           ctx.beginPath();
@@ -336,7 +349,7 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
 
         // Painted where the pointer left it, not snapped to the cell edge.
         const x = Math.round(cursorX * cellW) + 0.5;
-        ctx.strokeStyle = "#f2cc4d";
+        ctx.strokeStyle = pal.gold;
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, ROW_H);
@@ -344,6 +357,7 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
       }
 
       function drawBit(ctx: CanvasRenderingContext2D, item: WatchItem, cycles: number): void {
+        const pal = palette();
         const top = 5;
         const bottom = ROW_H - 5;
         const yFor = (v: number) => (v ? top : bottom);
@@ -351,7 +365,7 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
           item.kind === "flop"
             ? store!.flopValueAt(c, item.ref as string)
             : store!.netValueAt(c, item.ref as string);
-        ctx.strokeStyle = "#9fe39f";
+        ctx.strokeStyle = pal.teal;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         let x = 0;
@@ -370,11 +384,12 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
       }
 
       function drawBus(ctx: CanvasRenderingContext2D, bits: string[], cycles: number, radix: Radix): void {
+        const pal = palette();
         const top = 5;
         const bottom = ROW_H - 5;
-        ctx.strokeStyle = "#8ecdf7";
-        ctx.fillStyle = "#8ecdf7";
-        ctx.font = "10px ui-monospace, monospace";
+        ctx.strokeStyle = pal.blue;
+        ctx.fillStyle = pal.blue;
+        ctx.font = `10px ${CANVAS_MONO}`;
         let segStart = 0;
         let segValue = busValueAt(store!, 0, bits);
         const closeSegment = (end: number) => {
@@ -557,14 +572,22 @@ export function waveformPanel(storeReady: Promise<SimStore>): PanelDef {
           bodyEl.hidden = false;
           cycleInput.max = String(s.cycles - 1);
           syncCursorField();
-          // A useful default watch list: the input the player is driving,
-          // the flag they are trying to raise, and the byte it reveals.
-          for (const name of ["I", "success"]) {
+          // A useful default watch list: the inputs the player is driving,
+          // the flag they are trying to raise, and the byte it reveals. A
+          // name the tape does not carry is skipped, so a puzzle driving a
+          // wide bus does not open with sixteen rows.
+          const defaults = [...options.trackPorts, options.successNet].filter(
+            (name): name is string => name !== null,
+          );
+          for (const name of defaults) {
             if (name in s.tape.header.names) {
               addWatch({ kind: "net", label: name, ref: name, radix: "hex" });
             }
           }
-          addBus("O");
+          // Whatever this design's output words are called. `addBus` was
+          // called with the literal "O", which showed nothing on a level
+          // that names its result anything else.
+          for (const bus of discoverBuses(s, options.trackPorts)) addBus(bus.prefix);
           renderRuler();
           unsubStore = s.subscribe(redrawAll);
           unsubCursor = cursorBus.subscribe(() => {

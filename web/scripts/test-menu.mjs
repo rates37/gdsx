@@ -61,8 +61,8 @@ function puzzle(id, extra = {}) {
 }
 
 const catalog = [
-  puzzle("0-first-light", { difficulty: 0, parMinutes: 15, answerKind: "sequence" }),
-  puzzle("1-warm-start", { difficulty: 1, parMinutes: 20, answerKind: "constant" }),
+  puzzle("0-first-light", { difficulty: "easy", parMinutes: 15, answerKind: "sequence" }),
+  puzzle("1-warm-start", { difficulty: "medium", parMinutes: 20, answerKind: "constant" }),
   puzzle("original-puzzle", { difficulty: "hard", parMinutes: 120, answerKind: "sequence" }),
 ];
 
@@ -84,8 +84,8 @@ check(
 eq(none[0].href, "?puzzle=0-first-light", "the card's link is the routing rule itself");
 eq(none[0].title, "0-FIRST-LIGHT", "the title comes from the descriptor");
 eq(none[0].blurb, "0-first-light blurb", "so does the blurb");
-eq(none[0].difficulty, "difficulty 0", "a numeric difficulty is labelled");
-eq(none[2].difficulty, "hard", "a named one is shown as it stands");
+eq(none[0].difficulty, "easy", "the difficulty band is passed through, not formatted");
+eq(none[2].difficulty, "hard", "…whichever band it is");
 eq(none[0].par, "par 15m", "par time is shown in minutes");
 eq(none[0].goal, "find the input sequence", "the goal phrase is the toolbar's, for `sequence`");
 eq(none[1].goal, "recover a value", "…and for `constant`");

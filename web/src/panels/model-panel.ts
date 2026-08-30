@@ -23,7 +23,7 @@ import type { SimStore } from "../sim/store.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 import { compare, tracksOf, type DesignContext, type DiffReport } from "../model/diff.ts";
-import { ModelHost, STARTER, type Language } from "../model/host.ts";
+import { ModelHost, starterFor, type Language } from "../model/host.ts";
 import { ModelStore, VALIDATION_VECTORS, badgeView } from "../model/store.ts";
 import { generate, pulsesOf, type Pulses } from "../model/vectors.ts";
 import { POINTS } from "../notebook/scoring.ts";
@@ -40,6 +40,14 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
 export interface ModelPanelOptions {
   storeReady: Promise<SimStore>;
   puzzleId: string;
+  /** The net the printed `diff_models` call watches when a run has not set
+   *  one yet. From the descriptor rather than the literal `"success"`: this
+   *  string is copied into the REPL, so a wrong name there is a call that
+   *  does not run. */
+  successNet: string | null;
+  /** The port the driver says carries the key, for the printed call's
+   *  stimulus. Null for a puzzle with no data input. */
+  keyPort: string | null;
 }
 
 export function modelPanel(options: ModelPanelOptions): PanelDef {
@@ -81,6 +89,7 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
       const historyEl = container.querySelector(".mb-history") as HTMLDivElement;
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
 
+      const STARTER = starterFor(options.successNet);
       const model = new ModelStore(options.puzzleId, STARTER.javascript);
       let store: SimStore | null = null;
       let host: ModelHost | null = null;
@@ -92,7 +101,10 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
 
       /** The library call this panel is: `diff_models` over the same vectors. */
       function callText(): string {
-        const port = portBox.value || "I";
+        // The selected key port, or the one the descriptor names. Never a
+        // literal: this string is copied into the REPL and a wrong port is a
+        // call that does not run.
+        const port = portBox.value || options.keyPort || "";
         return (
           "from gdsx.sim import diff_models\n" +
           "tape = gdsx.api.sim_compile(handle)   # or: design.tape()\n" +
@@ -100,7 +112,7 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
           "# your model, as a per-cycle stepper over the same stimulus\n" +
           `vectors = [{${JSON.stringify(port)}: bit} for bit in key]\n` +
           `result = diff_models(tape, my_model, vectors, watch=${JSON.stringify(
-            report?.watch ?? ["success"],
+            report?.watch ?? (options.successNet ? [options.successNet] : []),
           ).replace(/"/g, "'")})\n` +
           "print(result.agree, result.first)"
         );

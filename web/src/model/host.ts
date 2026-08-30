@@ -92,18 +92,34 @@ export class ModelHost {
 /** The starter each language opens with: a model, not a stub. It is wrong on
  *  purpose -- "count the pulses and hope" is the first thing anyone writes, the
  *  differential disagrees with it immediately, and that is the loop. */
-export const STARTER: Record<Language, string> = {
-  javascript: `// pulses is a Set of cycle numbers where the key port is high.
+/**
+ * The empty model a player starts from, in each language.
+ *
+ * Takes the observable's name rather than writing one down: the sample used
+ * to return `success` from a guess about a pulse count, which named one
+ * design's lock and, worse, put a specific number in front of a player who
+ * had not worked one out yet. It now returns 0 for whatever this puzzle's
+ * lock is called, which is a model that runs, is wrong, and says nothing.
+ *
+ * `null` for a puzzle with no lock: the starter then names no observable and
+ * the player picks one, which is the whole exercise for that answer kind.
+ */
+export function starterFor(observable: string | null): Record<Language, string> {
+  const jsKey = observable === null ? "/* an observable */" : JSON.stringify(observable);
+  const pyKey = observable === null ? "# an observable" : JSON.stringify(observable);
+  return {
+    javascript: `// pulses is a Set of cycle numbers where the key port is high.
 // Return the observables you claim to predict — every name must be a
 // real net or flop of the design, because that is what it is checked against.
 function evaluate(pulses) {
-  return { success: pulses.size === 22 ? 1 : 0 };
+  return { ${jsKey}: 0 };
 }
 `,
-  python: `# pulses is a set of cycle numbers where the key port is high.
+    python: `# pulses is a set of cycle numbers where the key port is high.
 # Return the observables you claim to predict — every name must be a
 # real net or flop of the design, because that is what it is checked against.
 def evaluate(pulses):
-    return {"success": 1 if len(pulses) == 22 else 0}
+    return {${pyKey}: 0}
 `,
-};
+  };
+}

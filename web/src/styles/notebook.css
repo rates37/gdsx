@@ -14,10 +14,10 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-bottom: 1px solid #1c2130;
+  border-bottom: 1px solid var(--df-edge);
 }
 .nb-coverage {
-  color: #9aa2b5;
+  color: var(--df-ink-3);
 }
 .nb-spacer {
   flex: 1;
@@ -25,7 +25,7 @@
 .nb-loading,
 .nb-empty {
   padding: 16px;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .nb-list {
   flex: 1;
@@ -34,11 +34,11 @@
 }
 
 .nb-row {
-  border: 1px solid #1c2130;
-  border-radius: 4px;
+  border: 1px solid var(--df-edge);
+  border-radius: var(--df-radius);
   padding: 6px 8px;
   margin-bottom: 6px;
-  background: #10131a;
+  background: var(--df-plate);
 }
 .nb-row-head {
   display: flex;
@@ -51,59 +51,59 @@
 }
 .nb-struck {
   text-decoration: line-through;
-  color: #7d8598;
+  color: var(--df-dim);
 }
 .nb-verdict {
   flex: none;
-  border-radius: 3px;
+  border-radius: var(--df-radius);
   padding: 1px 6px;
   font-size: 11px;
   white-space: nowrap;
 }
 .nb-tone-green {
-  background: #16311d;
-  border: 1px solid #2f7a45;
-  color: #7fd79a;
+  background: var(--df-teal-wash);
+  border: 1px solid var(--df-teal-edge);
+  color: var(--df-teal);
 }
 .nb-tone-amber {
-  background: #33280e;
-  border: 1px solid #97741f;
-  color: #f2cc4d;
+  background: var(--df-gold-wash);
+  border: 1px solid var(--df-gold-edge);
+  color: var(--df-gold);
 }
 .nb-tone-red {
-  background: #351719;
-  border: 1px solid #8c3238;
-  color: #f08a90;
+  background: var(--df-coral-wash);
+  border: 1px solid var(--df-coral-edge);
+  color: var(--df-coral);
 }
 .nb-tone-grey {
-  background: #171b26;
-  border: 1px solid #2e3444;
-  color: #9aa2b5;
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  color: var(--df-ink-3);
 }
 .nb-row-meta {
   display: flex;
   gap: 8px;
   margin-top: 3px;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .nb-points {
-  color: #7d8598;
+  color: var(--df-dim);
 }
 .nb-note {
   margin-top: 4px;
   padding-left: 8px;
-  border-left: 2px solid #2e3444;
-  color: #9aa2b5;
+  border-left: 2px solid var(--df-edge-2);
+  color: var(--df-ink-3);
   font-size: 11px;
 }
 .nb-detail {
   margin-top: 6px;
   padding: 6px;
-  background: #0d0f14;
-  border-radius: 3px;
+  background: var(--df-void);
+  border-radius: var(--df-radius);
   font-size: 11px;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
 }
 .nb-witness {
   display: flex;
@@ -112,7 +112,7 @@
   margin-top: 4px;
 }
 .nb-witness-label {
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .nb-load {
   margin-top: 6px;
@@ -125,16 +125,16 @@
 .nb-history {
   margin-top: 6px;
   font-size: 11px;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .nb-history-row {
   padding: 2px 0 2px 10px;
 }
 
 .nb-form {
-  border-bottom: 1px solid #1c2130;
+  border-bottom: 1px solid var(--df-edge);
   padding: 8px;
-  background: #0d0f14;
+  background: var(--df-void);
 }
 .nb-field {
   display: flex;
@@ -146,7 +146,7 @@
   flex: none;
   width: 120px;
   text-align: right;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
 }
 .nb-input {
   flex: 1;
@@ -157,7 +157,7 @@
 }
 .nb-hint {
   margin: 4px 0 8px 128px;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .nb-form-footer {
@@ -171,22 +171,22 @@
   font-size: 11px;
 }
 .nb-cost-ok {
-  color: #7fd79a;
+  color: var(--df-teal);
 }
 /* The warning that has to arrive before the verdict, not after it. */
 .nb-cost-sampled {
-  color: #f2cc4d;
+  color: var(--df-gold);
 }
 .nb-cost-bad {
-  color: #f08a90;
+  color: var(--df-coral);
 }
 .nb-cost-idle {
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .nb-section {
   padding: 8px 6px 4px;
-  color: #6d7486;
-  border-top: 1px solid #1c2130;
+  color: var(--df-faint);
+  border-top: 1px solid var(--df-edge);
 }
 .nb-evidence {
   padding: 0 4px 8px;
@@ -194,11 +194,11 @@
 /* Evidence is a measurement, not an assertion: no verdict tone, and a
    left edge that reads as "recorded" rather than "settled". */
 .nb-evidence-row {
-  border-left: 2px solid #3a4256;
+  border-left: 2px solid var(--df-edge-3);
 }
 .nb-warning {
-  color: #f2cc4d;
-  border-left-color: #97741f;
+  color: var(--df-gold);
+  border-left-color: var(--df-gold-edge);
 }
 /* The write-up (game-plan.md §8): editable, so a textarea, not a
    preview -- the player owns this copy the moment it is generated. */
@@ -207,18 +207,18 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  border-top: 1px solid #1c2130;
+  border-top: 1px solid var(--df-edge);
 }
 .nb-writeup-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-bottom: 1px solid #1c2130;
+  border-bottom: 1px solid var(--df-edge);
 }
 .nb-writeup-hint {
   flex: 1;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .nb-writeup-text {
@@ -226,8 +226,8 @@
   min-height: 0;
   resize: none;
   border: none;
-  background: #10131a;
-  color: #d7dbe6;
+  background: var(--df-plate);
+  color: var(--df-ink);
   font: 12px/1.5 ui-monospace, "SF Mono", monospace;
   padding: 10px;
   box-sizing: border-box;

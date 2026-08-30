@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "1-warm-start",
   "title": "Warm Start",
-  "difficulty": 1,
+  "difficulty": "easy",
   "blurb": "An accumulator with a non-zero reset. Read O when success goes high.",
   "author": "gdsx",
   "answer_kind": "constant",

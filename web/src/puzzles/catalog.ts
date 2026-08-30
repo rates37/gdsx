@@ -87,7 +87,10 @@ export interface PuzzleDescriptor {
   dir: string;
   title: string;
   blurb: string;
-  difficulty: number | string | null;
+  /** `easy` | `medium` | `hard`, or null when the manifest declares none.
+   *  Validated at sync time by web/scripts/puzzle-index.mjs, which refuses
+   *  anything else, so this is safe to show verbatim. */
+  difficulty: string | null;
   parMinutes: number | null;
   answerKind: string | null;
   toolsEnabled: string[];
@@ -107,61 +110,28 @@ const INDEX_URL = "/puzzles/index.json";
 const LAST_PLAYED_KEY = "gdsx.puzzle.last.v1";
 const PARAM = "puzzle";
 
-/**
- * Two Stars on the /samples/ assets: what the app loaded before it could
- * load anything else, and what it falls back to if the catalog is missing.
- *
- * That happens for real -- `npm run dev` after a `git pull` that added this
- * file but before `sync-assets` has run -- and a shell that boots into the
- * puzzle it has always booted into is a much better failure than a blank
- * page. The values are the ones main.ts used to hold as constants.
- */
-export const FALLBACK: PuzzleDescriptor = {
-  id: "original-puzzle",
-  dir: "original-puzzle",
-  title: "Original Puzzle",
-  blurb: "The 728-instance design. Find the sequence that raises success.",
-  difficulty: "hard",
-  parMinutes: 120,
-  answerKind: "sequence",
-  toolsEnabled: [],
-  assets: {
-    netlist: "/samples/puzzle.netlist.json",
-    render: "/samples/puzzle.render.bin",
-    tape: "/samples/puzzle.tape.bin",
-  },
-  driver: {
-    clockPort: "clk",
-    resetPort: "rst_n",
-    resetVector: { clk: 0, rst_n: 0, enable: 1, I: 0 },
-    resetCycles: 1,
-    initialLevels: { enable: 1, rst_n: 1 },
-    cycles: 141,
-    keyPort: "I",
-    trackPorts: ["I"],
-    successNet: "success",
-  },
-  // Like every other field here, the original puzzle's real value. A `null`
-  // would leave the offline shell unable to check an answer it is perfectly
-  // capable of checking -- nothing in a latch check is a spoiler.
-  checks: { kind: "latch", net: "success", value: 1, byCycle: 121, sticky: true },
-  // The real tiers from puzzles/original-puzzle/hints.json, not a spoiler --
-  // the fallback shell should offer the same hints the synced catalog would.
-  hints: [
-    { tier: 0, text: "728 instances, 92 sequential" },
-    { tier: 1, text: "17 of 92 registers have no recovered freeze condition" },
-    { tier: 2, text: "the flops form 3 register groups; the largest is reg_dfrtp_2_40 (84 members)" },
-    { tier: 3, text: "success is driven by one flop (dfrtp_2_83); its D cone has 57 leaves" },
-  ],
-};
-
 interface CatalogFile {
   schema_version?: number;
   puzzles?: PuzzleDescriptor[];
 }
 
-/** The catalog, or the single fallback entry if it cannot be read. Never
- *  rejects: a missing catalog is a degraded shell, not a dead one. */
+/**
+ * The catalog, or an empty one if it cannot be read. Never rejects: a missing
+ * catalog is an empty menu that says so, not a dead page.
+ *
+ * **There is no built-in puzzle to fall back to, deliberately.** This module
+ * used to carry a complete hand-written descriptor for the original puzzle --
+ * title, blurb, difficulty, par, driver, checks and the four real hint tiers
+ * -- as an offline shell for `npm run dev` before `sync-assets` had run. Two
+ * things were wrong with it. `predev` runs `sync-assets`, so the scenario it
+ * existed for could not happen; and a second copy of a puzzle's authored data
+ * drifts, which it had -- its blurb was a paraphrase of the manifest's and
+ * would have gone on diverging every time a level was re-baked.
+ *
+ * Every fact about a puzzle now has exactly one source: its `manifest.json`
+ * and `solution.json`, through `scripts/puzzle-index.mjs` into
+ * `public/puzzles/index.json`. Nothing in `src/` restates any of it.
+ */
 export async function loadCatalog(fetchImpl: typeof fetch = fetch): Promise<PuzzleDescriptor[]> {
   try {
     const response = await fetchImpl(INDEX_URL);
@@ -170,8 +140,8 @@ export async function loadCatalog(fetchImpl: typeof fetch = fetch): Promise<Puzz
     if (!data.puzzles?.length) throw new Error("catalog lists no puzzles");
     return data.puzzles;
   } catch (err) {
-    console.warn(`gdsx: no puzzle catalog at ${INDEX_URL}, falling back to ${FALLBACK.id}`, err);
-    return [FALLBACK];
+    console.warn(`gdsx: no puzzle catalog at ${INDEX_URL} — run \`npm run sync-assets\``, err);
+    return [];
   }
 }
 

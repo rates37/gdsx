@@ -8,7 +8,7 @@
 // and it means there is no cache to get wrong.
 
 import type { SimStore } from "../sim/store.ts";
-import { busValueAt } from "../sim/store.ts";
+import { busValueAt, discoverBuses } from "../sim/store.ts";
 import { cursorBus } from "../store/cursor.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
 
@@ -22,18 +22,34 @@ function el(tag: string, className?: string, text?: string): HTMLElement {
   return e;
 }
 
-/** Nets named `<prefix>[<i>]`, sorted by index -- how a bus is grouped for display. */
-function findBus(store: SimStore, prefix: string, width = 8): string[] | null {
-  const names: string[] = [];
-  for (let i = 0; i < width; i++) {
-    const name = `${prefix}[${i}]`;
-    if (!(name in store.tape.header.names)) return names.length ? names : null;
-    names.push(name);
-  }
-  return names;
+/**
+ * The bus a message would arrive on, or null if the design has none.
+ *
+ * The widest bus the tape carries that is not one of the driver's own input
+ * ports. This used to look for the literal name `"O"` at a fixed width of 8,
+ * which is what the baked puzzles happen to call their output word -- a fact
+ * about the current pack rather than about the game.
+ */
+function messageBus(store: SimStore, inputPorts: readonly string[]): string[] | null {
+  const buses = discoverBuses(store, inputPorts);
+  if (buses.length === 0) return null;
+  let widest = buses[0];
+  for (const bus of buses) if (bus.bits.length > widest.bits.length) widest = bus;
+  return widest.bits;
 }
 
-export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
+export interface SequenceEditorOptions {
+  storeReady: Promise<SimStore>;
+  /** The net whose latch this panel reports. From the descriptor -- it was
+   *  the literal `"success"`, which is what this design happens to call it. */
+  successNet: string | null;
+  /** The driver's own input ports, so bus discovery does not offer the
+   *  stimulus back as if it were a result. */
+  trackPorts: string[];
+}
+
+export function sequenceEditorPanel(options: SequenceEditorOptions): PanelDef {
+  const { storeReady, successNet } = options;
   return {
     id: "sequence-editor",
     title: "Sequence Editor",
@@ -168,10 +184,12 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
       function renderResult(): void {
         if (!store) return;
         const stale = store.isDirty();
-        const latch = store.firstLatchedHigh("success");
-        const bus = findBus(store, "O", 8);
+        // A puzzle with no lock has nothing for this line to report.
+        const latch = successNet === null ? null : store.firstLatchedHigh(successNet);
+        const bus = messageBus(store, options.trackPorts);
         if (latch === null) {
-          resultEl.textContent = stale ? "(stale) success: not latched" : "success: not latched";
+          const said = successNet === null ? "no lock to latch" : `${successNet}: not latched`;
+          resultEl.textContent = stale ? `(stale) ${said}` : said;
           resultEl.className = stale ? "seq-result stale" : "seq-result";
           return;
         }
@@ -195,7 +213,7 @@ export function sequenceEditorPanel(storeReady: Promise<SimStore>): PanelDef {
         }
         if (message.length < 2) message = "";
         resultEl.textContent =
-          `${stale ? "(stale) " : ""}success latches at cycle ${latch}` +
+          `${stale ? "(stale) " : ""}${successNet} latches at cycle ${latch}` +
           (message ? `  →  ${JSON.stringify(message)}` : "");
         resultEl.className = stale ? "seq-result latched stale" : "seq-result latched";
       }

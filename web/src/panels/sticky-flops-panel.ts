@@ -88,7 +88,9 @@ class StickyClassifications {
 export interface StickyFlopsPanelOptions {
   designReady: Promise<DesignClient>;
   puzzleId: string;
-  successNet: string;
+  /** Null for a puzzle with no lock: there is then no win condition to
+   *  suggest from, and the button that would do it is not drawn. */
+  successNet: string | null;
   /** The flops the win condition names, shared with the Experiments panel. */
   winCondition: WinConditionSource;
 }
@@ -108,7 +110,7 @@ export function mountStickyFlops(
     container.innerHTML = `
       <div class="sf-toolbar">
         <span class="sf-count"></span>
-        <button type="button" class="sf-suggest" disabled hidden>suggest from the win condition (${options.successNet})</button>
+        <button type="button" class="sf-suggest" disabled hidden>suggest from the win condition${options.successNet ? ` (${options.successNet})` : ""}</button>
         <span class="sf-status"></span>
         <span class="py-call-slot"></span>
       </div>

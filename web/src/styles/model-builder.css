@@ -11,10 +11,10 @@
   min-height: 180px;
   flex: 1 1 auto;
   resize: vertical;
-  background: #0d0f14;
-  color: #cfd4de;
-  border: 1px solid #262b36;
-  border-radius: 3px;
+  background: var(--df-void);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 8px;
   font: inherit;
   tab-size: 2;
@@ -25,12 +25,12 @@
   gap: 8px;
 }
 .mb-points {
-  color: #7d8598;
+  color: var(--df-dim);
   font-size: 11px;
 }
 .mb-badge-detail {
   margin-top: 3px;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .mb-summary {
@@ -39,11 +39,11 @@
   align-items: baseline;
 }
 .mb-agreement {
-  color: #cfd4de;
+  color: var(--df-ink-2);
 }
 .mb-watch,
 .mb-pulses {
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 /* The panel's whole point: not "wrong", but wrong HERE, on this vector,
@@ -51,40 +51,40 @@
 .mb-divergence {
   margin-top: 6px;
   padding: 8px;
-  border: 1px solid #8c3238;
-  border-radius: 3px;
-  background: #180f11;
-  color: #f0b6ba;
+  border: 1px solid var(--df-coral-edge);
+  border-radius: var(--df-radius);
+  background: var(--df-coral-wash);
+  color: var(--df-coral-hi);
   font-size: 11px;
 }
 .mb-divergence-head {
-  color: #f08a90;
+  color: var(--df-coral);
   font-weight: 600;
   margin-bottom: 4px;
 }
 .mb-agreed {
   margin-top: 6px;
-  color: #f2cc4d;
+  color: var(--df-gold);
   font-size: 11px;
 }
 /* "Nothing was tested" has to read as a warning, not as a pass. */
 .mb-vacuous {
   margin-top: 6px;
   padding: 4px 8px;
-  border-left: 2px solid #97741f;
-  background: #1c1710;
-  color: #f2cc4d;
+  border-left: 2px solid var(--df-gold-edge);
+  background: var(--df-gold-wash);
+  color: var(--df-gold);
   font-size: 11px;
 }
 .mb-mismatches {
   margin-top: 6px;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   font-size: 11px;
 }
 .mb-error {
   padding: 8px;
-  border-left: 2px solid #8c3238;
-  color: #f08a90;
+  border-left: 2px solid var(--df-coral-edge);
+  color: var(--df-coral);
   white-space: pre-wrap;
   font-size: 11px;
 }

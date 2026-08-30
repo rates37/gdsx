@@ -25,7 +25,7 @@ export const REGISTER_SECTIONS = ["registers", "sticky"] as const;
 export interface RegisterHostOptions {
   designReady: Promise<DesignClient>;
   puzzleId: string;
-  successNet: string;
+  successNet: string | null;
   winCondition: WinConditionSource;
   clockPort: string;
   resetPort: string | null;

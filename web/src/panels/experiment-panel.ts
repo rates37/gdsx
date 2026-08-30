@@ -42,6 +42,7 @@ import { labels } from "../store/labels.ts";
 import { instanceChip, netChip } from "./chips.ts";
 import { attachPythonCallButton } from "./python-call.ts";
 import type { PanelDef } from "../workspace/workspace.ts";
+import { CANVAS_MONO, palette } from "../theme.ts";
 import { evidenceLog } from "../notebook/evidence.ts";
 import {
   RECIPES,
@@ -454,6 +455,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
 
       function draw(): void {
         if (!result) return;
+        const pal = palette();
         const dpr = window.devicePixelRatio || 1;
         const ax = axes();
         const { w: cellW, h: cellH } = cellSize();
@@ -468,14 +470,14 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx2d.clearRect(0, 0, width, height);
         const fontPx = Math.min(13, Math.max(8, Math.round(cellH * 0.8)));
-        ctx2d.font = `${fontPx}px ui-monospace, Menlo, monospace`;
+        ctx2d.font = `${fontPx}px ${CANVAS_MONO}`;
         ctx2d.textBaseline = "middle";
 
         for (let r = 0; r < ax.rowCount; r++) {
           const y = r * cellH;
-          ctx2d.fillStyle = r % 2 ? "#10131a" : "#0d0f14";
+          ctx2d.fillStyle = r % 2 ? pal.plate : pal.void;
           ctx2d.fillRect(0, y, width, cellH);
-          ctx2d.fillStyle = ax.rowMarked(r) ? "#9aa2b5" : "#4b5162";
+          ctx2d.fillStyle = ax.rowMarked(r) ? pal.ink3 : pal.faint2;
           ctx2d.fillText(ax.rowLabel(r), 4, y + cellH / 2);
 
           for (let c = 0; c < ax.colCount; c++) {
@@ -483,13 +485,13 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             if (!value) continue;
             // "changed" is one colour because it is one bit. A value scan is
             // showing the value itself, and 1 and 0 are not "hit" and "miss".
-            ctx2d.fillStyle = result.cellKind === "changed" ? "#4d9be0" : "#6fbf73";
+            ctx2d.fillStyle = result.cellKind === "changed" ? pal.blue : pal.teal;
             ctx2d.fillRect(GUTTER_W + c * cellW + 1, y + 1, cellW - 2, cellH - 2);
           }
         }
 
         if (hovered) {
-          ctx2d.strokeStyle = "#f2cc4d";
+          ctx2d.strokeStyle = pal.gold;
           ctx2d.lineWidth = 1;
           ctx2d.strokeRect(
             GUTTER_W + hovered.column * cellW + 0.5,

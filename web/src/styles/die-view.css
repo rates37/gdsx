@@ -11,8 +11,8 @@
   gap: 10px;
   padding: 0 8px;
   box-sizing: border-box;
-  background: #10131a;
-  border-bottom: 1px solid #262b36;
+  background: var(--df-plate);
+  border-bottom: 1px solid var(--df-edge-2);
 }
 .die-modebar-spacer {
   flex: 1;
@@ -21,26 +21,27 @@
   display: flex;
 }
 .die-mode-seg button {
-  border-radius: 0;
+  border-radius: var(--df-radius);
   padding: 2px 12px;
-  color: #7d8598;
+  color: var(--df-dim);
 }
 .die-mode-seg button:first-child {
-  border-radius: 3px 0 0 3px;
+  border-radius: var(--df-radius);
 }
 .die-mode-seg button:last-child {
-  border-radius: 0 3px 3px 0;
+  border-radius: var(--df-radius);
   border-left: 0;
 }
 .die-mode-seg button.on {
-  background: #2a3346;
-  color: #cfd4de;
+  background: var(--df-plate-2);
+  color: var(--df-ink);
+  box-shadow: inset 0 -2px 0 var(--df-gold);
 }
 .die-debug-toggle {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #6d7486;
+  color: var(--df-faint);
   cursor: pointer;
 }
 .die-mode-host {
@@ -83,7 +84,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .die-minimap {
   position: absolute;
@@ -91,16 +92,16 @@
   bottom: 10px;
   width: 200px;
   height: 140px;
-  border: 1px solid #262b36;
-  border-radius: 4px;
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   cursor: crosshair;
 }
 
 .panel-overlay {
   position: absolute;
   background: rgba(16, 19, 26, 0.88);
-  border: 1px solid #262b36;
-  border-radius: 4px;
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 8px 10px;
 }
 .die-layers {
@@ -125,31 +126,31 @@
 .swatch {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--df-radius);
   display: inline-block;
 }
 .panel-overlay h2 {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #7d8598;
+  color: var(--df-dim);
   margin: 0 0 6px;
   font-weight: 600;
 }
 .panel-overlay hr {
   border: 0;
-  border-top: 1px solid #262b36;
+  border-top: 1px solid var(--df-edge-2);
   margin: 8px 0 6px;
 }
 .panel-overlay select {
-  background: #10131a;
-  color: #cfd4de;
-  border: 1px solid #262b36;
+  background: var(--df-plate);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
   font: inherit;
   width: 100%;
 }
 .panel-overlay .hint {
-  color: #6d7486;
+  color: var(--df-faint);
 }
 
 /* ---- die view, 3D (§4.2) ----------------------------------------- */
@@ -177,7 +178,7 @@
   justify-content: center;
   padding: 0 20px;
   text-align: center;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .die3d-layers {
   top: 10px;
@@ -216,7 +217,7 @@
 .die3d-trace-status {
   left: 10px;
   bottom: 10px;
-  color: #f2cc4d;
+  color: var(--df-gold);
 }
 
 /* ---- the net read-out under the cursor (net-tooltip.ts) ----------- */
@@ -231,14 +232,14 @@
   line-height: 1.4;
 }
 .die-tooltip-name {
-  color: #f2cc4d;
+  color: var(--df-gold);
 }
 .die-tooltip-raw {
-  color: #7d8598;
+  color: var(--df-dim);
   font-size: 11px;
 }
 .die-tooltip-hint {
-  color: #5a6072;
+  color: var(--df-faint-2);
   font-size: 10px;
   margin-top: 3px;
 }

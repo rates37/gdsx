@@ -13,7 +13,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 6px 8px;
-  border-bottom: 1px solid #1c2130;
+  border-bottom: 1px solid var(--df-edge);
 }
 .xp-params {
   display: flex;
@@ -26,14 +26,14 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
 }
 .xp-num {
   width: 64px;
-  background: #10131a;
-  border: 1px solid #262b36;
-  border-radius: 3px;
-  color: #cfd4de;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  color: var(--df-ink-2);
   padding: 3px 4px;
 }
 .xp-watch-list {
@@ -42,13 +42,13 @@
 }
 .xp-blurb {
   padding: 4px 8px 6px;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .xp-loading,
 .mb-loading {
   padding: 16px;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .xp-body {
   flex: 1;
@@ -57,12 +57,12 @@
 }
 .xp-status,
 .mb-status {
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   font-size: 11px;
 }
 .xp-status.bad,
 .mb-status.bad {
-  color: #f08a90;
+  color: var(--df-coral);
 }
 /* The two self-checks from the sensitivity map. Amber, above the matrix,
    and never collapsed into a console log: a matrix with either problem
@@ -70,14 +70,14 @@
 .xp-warning {
   margin: 6px 0;
   padding: 4px 8px;
-  border-left: 2px solid #97741f;
-  background: #1c1710;
-  color: #f2cc4d;
+  border-left: 2px solid var(--df-gold-edge);
+  background: var(--df-gold-wash);
+  color: var(--df-gold);
   font-size: 11px;
 }
 .xp-baseline-note {
   margin: 6px 0;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .xp-canvas-toolbar {
@@ -88,7 +88,7 @@
 }
 .xp-readout {
   padding: 4px 0;
-  color: #cfd4de;
+  color: var(--df-ink-2);
   font-size: 11px;
 }
 .xp-zoom {
@@ -105,8 +105,8 @@
 .xp-canvas-wrap {
   overflow: auto;
   max-height: 45%;
-  border: 1px solid #1c2130;
-  background: #0d0f14;
+  border: 1px solid var(--df-edge);
+  background: var(--df-void);
 }
 .xp-canvas {
   display: block;
@@ -116,7 +116,7 @@
   margin-top: 8px;
 }
 .xp-summary-note {
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .xp-table-row {
@@ -126,17 +126,17 @@
   font-size: 11px;
 }
 .xp-orient {
-  color: #7d8598;
+  color: var(--df-dim);
 }
 .xp-to-constraints {
   margin-left: auto;
   flex: none;
   padding: 0 6px;
   font-size: 10px;
-  color: #7d8598;
+  color: var(--df-dim);
 }
 .xp-to-constraints:disabled {
-  color: #6fbf73;
+  color: var(--df-teal);
   opacity: 1;
 }
 .xp-table-row .net-chip {
@@ -144,14 +144,14 @@
   width: 120px;
 }
 .xp-hits {
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   word-break: break-word;
 }
 .xp-hits-more {
   margin-left: 4px;
   padding: 0 4px;
   font-size: 10px;
-  color: #4d9be0;
+  color: var(--df-blue);
   background: none;
   border: none;
   cursor: pointer;
@@ -166,40 +166,40 @@
   margin-top: 8px;
 }
 .xp-evidence-note {
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 
 /* ---- constraints panel (§4.13) -------------------------------------- */
 .cs-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; overflow-y: auto; }
-.cs-toolbar { display: flex; align-items: center; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
-.cs-note { color: #6d7486; font-size: 11px; font-style: italic; }
-.cs-add { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid #1c2130; }
+.cs-toolbar { display: flex; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
+.cs-note { color: var(--df-faint); font-size: 11px; font-style: italic; }
+.cs-add { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
 .cs-name { width: 100px; }
 .cs-elements { flex: 1; }
 .cs-k { width: 60px; }
-.cs-gen { padding: 6px 8px; border-bottom: 1px solid #1c2130; display: flex; flex-direction: column; gap: 5px; }
+.cs-gen { padding: 6px 8px; border-bottom: 1px solid var(--df-edge); display: flex; flex-direction: column; gap: 5px; }
 .cs-gen-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 11px; }
-.cs-gen-label { color: #cfd4de; font-family: ui-monospace, Menlo, monospace; min-width: 58px; }
-.cs-gen-text { color: #6d7486; }
+.cs-gen-label { color: var(--df-ink-2); font-family: ui-monospace, Menlo, monospace; min-width: 58px; }
+.cs-gen-text { color: var(--df-faint); }
 .cs-gen input[type="number"] { width: 52px; }
-.cs-gen-note { color: #6d7486; font-size: 11px; font-style: italic; }
+.cs-gen-note { color: var(--df-faint); font-size: 11px; font-style: italic; }
 .cs-rows { padding: 4px 8px; }
 .cs-row-expand { font-size: 11px; }
-.cs-row-detail { padding: 2px 0 4px 24px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #6d7486; max-height: 180px; overflow-y: auto; }
+.cs-row-detail { padding: 2px 0 4px 24px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-faint); max-height: 180px; overflow-y: auto; }
 .cs-row-detail-line { padding: 1px 0; }
 .cs-solution-port { margin-left: 8px; }
 .cs-solution-load { margin-left: 4px; font-size: 11px; }
-.cs-solution-said { margin-left: 6px; color: #6d7486; font-style: italic; }
+.cs-solution-said { margin-left: 6px; color: var(--df-faint); font-style: italic; }
 .cs-row { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; padding: 2px 0; }
-.cs-row-name { color: #cfd4de; min-width: 90px; }
-.cs-row-source { color: #6d7486; }
-.cs-row-elements { color: #9aa2b5; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cs-row-exactly { color: #6d7486; }
+.cs-row-name { color: var(--df-ink-2); min-width: 90px; }
+.cs-row-source { color: var(--df-faint); }
+.cs-row-elements { color: var(--df-ink-3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-row-exactly { color: var(--df-faint); }
 .cs-row-k { width: 50px; }
 .cs-summary { padding: 4px 8px; }
-.cs-summary-line { color: #9aa2b5; font-size: 11px; }
-.cs-warning { color: #e0b34d; font-size: 11px; margin-top: 4px; }
+.cs-summary-line { color: var(--df-ink-3); font-size: 11px; }
+.cs-warning { color: var(--df-gold); font-size: 11px; margin-top: 4px; }
 .cs-solve-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
-.cs-solve-status { color: #9aa2b5; font-size: 11px; }
-.cs-solutions { padding: 0 8px 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #9aa2b5; }
+.cs-solve-status { color: var(--df-ink-3); font-size: 11px; }
+.cs-solutions { padding: 0 8px 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-ink-3); }

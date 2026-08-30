@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "0-first-light",
   "title": "First Light",
-  "difficulty": 0,
+  "difficulty": "easy",
   "blurb": "Guided. Six flops, one comparator, one lock — and a walkthrough of every tool.",
   "author": "gdsx",
   "answer_kind": "sequence",

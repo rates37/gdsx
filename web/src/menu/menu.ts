@@ -120,17 +120,47 @@ function copyLinkButton(entry: MenuEntry): HTMLElement {
   return button;
 }
 
+/**
+ * The routing ornament at the head of a card.
+ *
+ * It is a generated mark, not a picture of the level: this screen loads
+ * `index.json` and nothing else, and the render bundle that would let it draw
+ * a real layout is 30 seconds and a megabyte away. Three integers derived
+ * from the id set the pitch of three gradient tracks, so a level's mark is
+ * stable across reloads and different from its neighbours' -- and that is the
+ * whole of what it claims to be.
+ *
+ * `aria-hidden`: it carries no information a screen reader could want.
+ */
+function plate(id: string): HTMLElement {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  const node = el("span", "menu-card-plate");
+  node.setAttribute("aria-hidden", "true");
+  node.style.setProperty("--pitch-a", `${5 + (hash % 4)}px`);
+  node.style.setProperty("--pitch-b", `${16 + ((hash >>> 4) % 9)}px`);
+  node.style.setProperty("--pitch-c", `${41 + ((hash >>> 9) % 33)}px`);
+  return node;
+}
+
 function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
   const item = el("li", entry.solved ? "menu-card menu-card-is-solved" : "menu-card");
   item.dataset.puzzle = entry.id;
 
   const link = el("a", "menu-card-link");
   link.href = entry.href;
+  link.append(plate(entry.id));
 
+  // The body is the middle column: what the level is called and what it is.
+  // The meta chips move out of it into a column of their own, so a long blurb
+  // and a long chip list stop competing for the same line.
+  const body = el("div", "menu-card-body");
   const head = el("div", "menu-card-head");
   head.append(el("h2", "menu-card-title", entry.title));
-  if (entry.solved) head.append(el("span", "menu-card-tick", "✓"));
-  link.append(head);
+  if (entry.solved) head.append(el("span", "menu-card-tick", "solved"));
+  body.append(head);
+  body.append(el("p", "menu-card-blurb", entry.blurb));
+  link.append(body);
 
   const meta = el("div", "menu-card-meta");
   if (entry.difficulty) meta.append(chip(entry.difficulty));
@@ -138,7 +168,6 @@ function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
   if (entry.goal) meta.append(chip(entry.goal, "menu-chip-goal"));
   link.append(meta);
 
-  link.append(el("p", "menu-card-blurb", entry.blurb));
   item.append(link);
 
   // The foot is always drawn, cleared or not, so the grid does not go ragged
@@ -283,19 +312,29 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
     const solved = entries.filter((entry) => entry.solved).length;
 
     const head = el("div", "menu-head");
-    head.append(el("h1", "menu-title", "DIESHARK"));
-    head.append(
-      el(
-        "p",
-        "menu-tagline",
-        `${entries.length} levels — a gate-level netlist, a lock, and no source. ` +
-          `${solved} solved.`,
-      ),
-    );
+    head.append(el("h1", "menu-title", "Dieshark"));
+    head.append(el("p", "menu-tagline", `${entries.length} levels · ${solved} solved`));
     const actions = el("div", "menu-head-actions");
     actions.append(settingsButton(entries.length, draw));
     head.append(actions);
     inner.append(head);
+
+    // An empty catalog is a build that has not been synced, not a game with
+    // no levels, and the screen says which. It used to be impossible to reach
+    // because `loadCatalog` invented a puzzle rather than returning nothing;
+    // that copy of the original puzzle's data is gone, so this is now the
+    // honest end of that path.
+    if (entries.length === 0) {
+      const empty = el("div", "menu-empty");
+      empty.append(el("p", "menu-empty-title", "No puzzles are bundled with this build."));
+      const note = el("p", "menu-empty-note");
+      note.append(document.createTextNode("Bake or sync them with "));
+      note.append(el("code", undefined, "npm run sync-assets"));
+      note.append(document.createTextNode(" and reload."));
+      empty.append(note);
+      inner.append(empty);
+      return;
+    }
 
     if (resume) inner.append(continueBanner(resume));
 
@@ -306,7 +345,9 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
 
     const foot = el("div", "menu-foot");
     foot.append(document.createTextNode("Every level is linkable: a URL like "));
-    foot.append(el("code", undefined, `?puzzle=${entries[0]?.id ?? "original-puzzle"}`));
+    // The first level in the catalog, not a name written down here. There is
+    // no puzzle id in this file for the same reason there is no descriptor.
+    foot.append(el("code", undefined, `?puzzle=${entries[0].id}`));
     foot.append(
       document.createTextNode(
         " opens it directly, and the level picker in the toolbar switches between them without" +

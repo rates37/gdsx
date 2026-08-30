@@ -228,3 +228,43 @@ export function busValueAt(store: SimStore, cycle: number, bitNets: readonly str
   for (let i = 0; i < bitNets.length; i++) value |= store.netValueAt(cycle, bitNets[i]) << i;
   return value >>> 0;
 }
+
+/**
+ * Every bus in the tape: a prefix with contiguous `[0]`..`[n]` bits, and its
+ * bit nets in that order.
+ *
+ * Two panels used to look for the literal name `"O"` and give up if the
+ * design did not have one — which is a fact about the puzzles that happen to
+ * be baked, not about the app. Discovering buses from the tape means a level
+ * whose output word is called something else shows one, and a level with no
+ * bus at all shows none, without either being written down anywhere.
+ *
+ * `exclude` drops the driver's own input ports, so a puzzle whose key is a
+ * bus does not have the stimulus offered back as if it were a result.
+ */
+export function discoverBuses(
+  store: SimStore,
+  exclude: readonly string[] = [],
+): { prefix: string; bits: string[] }[] {
+  const skip = new Set(exclude.map((name) => name.replace(/\[\d+\]$/, "")));
+  const prefixes = new Set<string>();
+  for (const name of Object.keys(store.tape.header.names)) {
+    const m = /^(.+)\[0\]$/.exec(name);
+    if (m && !skip.has(m[1])) prefixes.add(m[1]);
+  }
+
+  const buses: { prefix: string; bits: string[] }[] = [];
+  for (const prefix of [...prefixes].sort()) {
+    const bits: string[] = [];
+    // Contiguous from bit 0. A gap ends the bus rather than being skipped:
+    // the value is little-endian over these names and a hole would shift
+    // every bit above it.
+    for (let i = 0; ; i++) {
+      const bit = `${prefix}[${i}]`;
+      if (!(bit in store.tape.header.names)) break;
+      bits.push(bit);
+    }
+    if (bits.length > 1) buses.push({ prefix, bits });
+  }
+  return buses;
+}

@@ -30,7 +30,9 @@ export interface WriteupOptions {
   /** The net the notebook's coverage is measured against, and whose latch
    *  state decides "solved" -- the same constant every other panel that
    *  needs it takes as a parameter (see `stickyFlopsPanel` in main.ts). */
-  successNet: string;
+  /** Null for a puzzle with no lock, whose write-up reports no verdict --
+   *  there is nothing to latch. */
+  successNet: string | null;
   /** The sequence-editor port whose contents are printed as the final key.
    *  Null for a puzzle with no data input at all -- an autonomous design's
    *  answer is a value it computes, not a stimulus, and the write-up then
@@ -201,7 +203,11 @@ export function generateWriteup(
     .sort((a, b) => a.history[0].at - b.history[0].at);
   const unsettled = claims.filter((r) => r.history.length === 0);
 
-  const latchedAt = simStore.firstLatchedHigh(opts.successNet);
+  // A puzzle with no lock has nothing to latch, so it has no verdict to
+  // report -- not "not solved", which would be a claim about a net that does
+  // not exist.
+  const latchedAt =
+    opts.successNet === null ? null : simStore.firstLatchedHigh(opts.successNet);
   const solved = latchedAt !== null;
   const keyBits = opts.keyPort === null ? null : bitString(simStore.bitsOf(opts.keyPort));
 

@@ -15,16 +15,8 @@ import { highlightBus } from "../store/highlight";
 import { coneRootBus } from "../store/selection";
 import { openNetMenu } from "./net-menu";
 import { netTooltip } from "./net-tooltip";
+import { palette } from "../theme";
 
-const COLOUR_CSS: Record<string, string> = {
-  instances: "#8c94a8",
-  li1: "#6bbf6b",
-  met1: "#598cf2",
-  met2: "#f2735a",
-  met3: "#f2cc4d",
-  met4: "#bf66e6",
-  met5: "#66e6e6",
-};
 
 export interface FrameStats {
   fps: number;
@@ -145,7 +137,7 @@ export function mountDie2D(
         box.addEventListener("change", () => view.setLayer(name, box.checked));
         const swatch = document.createElement("span");
         swatch.className = "swatch";
-        swatch.style.background = COLOUR_CSS[name] ?? "#fff";
+        swatch.style.background = palette().layer[name] ?? "#fff";
         const text = document.createElement("span");
         const counts = bundle.header.lods["0"]?.[name]?.rects.count;
         text.textContent =

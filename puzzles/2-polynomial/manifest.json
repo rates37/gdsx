@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "2-polynomial",
   "title": "Polynomial",
-  "difficulty": 2,
+  "difficulty": "medium",
   "blurb": "A free-running 32-bit register with no lock. Recover its feedback polynomial and jump its state ahead a trillion cycles.",
   "author": "gdsx",
   "answer_kind": "parameter",

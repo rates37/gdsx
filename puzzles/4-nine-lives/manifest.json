@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "4-nine-lives",
   "title": "Nine Lives",
-  "difficulty": 4,
+  "difficulty": "hard",
   "blurb": "A one-hot state machine with nine lives, one word it accepts, and three states it never leaves.",
   "author": "gdsx",
   "answer_kind": "sequence",

@@ -1,19 +1,202 @@
 :root {
   color-scheme: dark;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--df-mono);
   font-size: 12px;
 }
 html,
 body {
   margin: 0;
   height: 100%;
-  background: #0d0f14;
-  color: #cfd4de;
+  background: var(--df-void);
+  color: var(--df-ink-2);
   overflow: hidden;
+  /* Spline Sans Mono's default figures are already tabular, but a column of
+     cycle numbers is the app's most common alignment problem and saying so
+     costs nothing. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 #workspace {
   position: absolute;
   inset: 0;
+}
+
+/* Scrollbars. Almost every panel is a long list, so the browser default --
+   a light grey bar on a light track -- ends up being one of the brightest
+   things on screen, several times over. `scrollbar-color` covers Firefox and
+   recent Chrome; the WebKit pseudo-elements cover the rest of Safari. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--df-edge-3) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--df-edge-2);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--df-edge-hi);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* The display serif, wherever a surface names itself. Titles only: it never
+   carries a net name, a cycle count or a control label, because it is not
+   monospaced and every one of those wants to align with the one below it. */
+.df-title {
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--df-ink);
+}
+
+/* ---- empty and loading states ------------------------------------ */
+/*
+   The one place the display serif is allowed inside a panel. These are the
+   only lines in the workspace that are prose rather than data -- they say
+   what to do next and then they are gone -- so nothing they are set beside
+   has to align with them, and the change of voice is the point: a panel with
+   a serif sentence in it reads as waiting, not as empty.
+
+   Listed by hand rather than given a shared class because each of these is a
+   panel's own empty state and the panels do not import from one another; a
+   new one is added here.
+*/
+.cw-loading,
+.die-loading,
+.die3d-loading,
+.gdsx-hints-empty,
+.labels-empty,
+.mb-loading,
+.nb-empty,
+.nb-loading,
+.netlist-detail-empty,
+.netlist-loading,
+.repl-loading,
+.ri-loading,
+.seq-loading,
+.sf-loading,
+.wave-loading,
+.xp-loading {
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-size: 15px;
+  font-weight: 300;
+  letter-spacing: 0;
+  line-height: 1.6;
+  color: var(--df-dim);
+}
+
+/* ---- dockview: the panel frame ----------------------------------- */
+/*
+   Overrides for the `themeAbyss` dockview ships with, applied here rather
+   than by editing `workspace/dockview.css` -- that file is a vendored copy
+   of the dependency's stylesheet and re-extracting it (npm run
+   extract-dockview-css) would throw away anything written into it.
+
+   The tab strip is the single biggest surface in the app and abyss draws it
+   as fourteen equal filled boxes. Darkfield draws tabs as text on the page
+   ground, with the active one marked by a rule beneath it: the strip then
+   reads as one row of labels rather than a row of competing buttons.
+*/
+/*
+   The class is doubled deliberately. `workspace/dockview.css` is imported by
+   `workspace.ts` rather than by `index.css`, so it lands in the workspace
+   chunk and its `.dockview-theme-abyss` block is applied *after* this file.
+   At equal specificity the later rule wins and every override here is a
+   no-op. `.a.a` outranks `.a` and settles it whatever the load order turns
+   out to be.
+
+   The `--dv-color-abyss-*` primitives are set as well as the semantic
+   variables: abyss's second block redefines the semantic ones in terms of the
+   primitives, so overriding only the semantic names leaves half the theme
+   pointing back at navy.
+*/
+.dockview-theme-abyss.dockview-theme-abyss {
+  --dv-color-abyss-dark: var(--df-void);
+  --dv-color-abyss: var(--df-void);
+  --dv-color-abyss-light: var(--df-plate);
+  --dv-color-abyss-lighter: var(--df-edge);
+  --dv-color-abyss-accent: var(--df-gold);
+  --dv-color-abyss-primary-text: var(--df-ink);
+  --dv-color-abyss-secondary-text: var(--df-dim);
+  --dv-group-view-background-color: var(--df-void);
+  --dv-tabs-and-actions-container-background-color: var(--df-void);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--df-void);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--df-void);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--df-void);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--df-void);
+  --dv-tab-divider-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: var(--df-ink);
+  --dv-activegroup-hiddenpanel-tab-color: var(--df-dim);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--df-ink-3);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--df-faint);
+  --dv-separator-border: var(--df-edge);
+  --dv-paneview-header-border-color: var(--df-edge);
+  --dv-paneview-active-outline-color: var(--df-gold);
+  --dv-color-abyss-accent: var(--df-gold);
+  --dv-tabs-and-actions-container-height: 30px;
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-drag-over-background-color: rgba(255, 209, 102, 0.14);
+  --dv-edge-dock-indicator-color: var(--df-gold);
+  --dv-icon-hover-background-color: var(--df-plate-2);
+  /* abyss ships `#888` here, which drew a light rule the width of the tab
+     strip -- brighter than the active tab's own marker. */
+  --dv-tabs-container-scrollbar-color: var(--df-edge-2);
+  --dv-floating-border: 1px solid var(--df-edge-3);
+  --dv-floating-box-shadow: 0 10px 34px rgba(0, 0, 0, 0.62);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tabs-and-actions-container {
+  border-bottom: 1px solid var(--df-edge);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab {
+  padding: 0;
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab {
+  /* `box-sizing` is load-bearing, not tidiness. dockview sizes this element
+     `width: 100%` of the tab, and the tab's own width comes from this
+     element's intrinsic width -- so under the default content-box, adding
+     padding here made the inner element 24px wider than the tab that
+     contains it. The overflow ran the close button out over the next tab
+     (mostly hiding it), and the sum of the overhangs made
+     `.dv-tabs-container` scrollable even when every tab fitted. */
+  box-sizing: border-box;
+  padding: 0 13px;
+  /* The rule under the active tab is drawn as an inset shadow rather than a
+     border so it does not add a pixel of height and jog the strip. */
+  box-shadow: inset 0 -2px 0 transparent;
+}
+/* The close button. Quiet by default -- it is one click from throwing a
+   panel's state away and should not read as part of the label -- and pulled
+   into the tab's right padding so it costs the strip a few pixels rather
+   than a whole control's width. */
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab .dv-default-tab-content {
+  margin-right: 7px;
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab .dv-default-tab-action {
+  padding: 2px;
+  margin-right: -6px;
+  color: var(--df-faint);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab .dv-default-tab-action:hover {
+  border-radius: var(--df-radius);
+  color: var(--df-ink);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab.dv-active-tab .dv-default-tab {
+  box-shadow: inset 0 -2px 0 var(--df-gold);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab.dv-inactive-tab .dv-default-tab:hover {
+  box-shadow: inset 0 -2px 0 var(--df-edge-hi);
 }
 
 /* ---- app toolbar: reset layout, reopen closed tabs --------------- */
@@ -22,21 +205,27 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 28px;
+  height: 32px;
   z-index: 30;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 8px;
-  background: #10131a;
-  border-bottom: 1px solid #262b36;
+  padding: 0 12px;
+  background: var(--df-void);
+  border-bottom: 1px solid var(--df-edge);
   box-sizing: border-box;
 }
+/* The wordmark. Set in the display serif at a readable size rather than as
+   tracked-out mono caps: it is the one place in the app that is a name and
+   not a value, and it should not look like another label in the strip. */
 .gdsx-toolbar-title {
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #7d8598;
-  font-size: 11px;
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  color: var(--df-ink);
+  flex: none;
 }
 .gdsx-toolbar-spacer {
   flex: 1;
@@ -45,26 +234,26 @@ body {
    it navigates, and the browser should say so on hover. */
 .gdsx-home {
   flex: none;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   text-decoration: none;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--df-radius);
   padding: 3px 7px;
   white-space: nowrap;
 }
 .gdsx-home:hover {
-  color: #e6e9f0;
-  background: #1a1f2b;
-  border-color: #2e3444;
+  color: var(--df-ink);
+  background: var(--df-plate-2);
+  border-color: var(--df-edge-2);
 }
 /* "You have solved this one", beside the objective. Absent, not greyed, when
    the puzzle is unsolved -- which is most puzzles most of the time. */
 .gdsx-solved {
   flex: none;
-  color: #9fe39f;
-  border: 1px solid #2b4a2b;
-  background: #131c13;
-  border-radius: 3px;
+  color: var(--df-teal);
+  border: 1px solid var(--df-teal-edge);
+  background: var(--df-teal-wash);
+  border-radius: var(--df-radius);
   padding: 0 5px;
   font-size: 11px;
   white-space: nowrap;
@@ -74,24 +263,24 @@ body {
 .gdsx-ready {
   flex: none;
   font-size: 11px;
-  border-radius: 3px;
+  border-radius: var(--df-radius);
   padding: 0 6px;
   white-space: nowrap;
   cursor: default;
   transition: opacity 0.6s ease;
 }
 .gdsx-ready-booting {
-  color: #f2cc4d;
-  border: 1px solid #5a4d1f;
+  color: var(--df-gold);
+  border: 1px solid var(--df-gold-edge);
 }
 .gdsx-ready-ready {
-  color: #9fe39f;
-  border: 1px solid #2b4a2b;
+  color: var(--df-teal);
+  border: 1px solid var(--df-teal-edge);
 }
 .gdsx-ready-failed {
-  color: #e39f9f;
-  border: 1px solid #7a3d3d;
-  background: #1c1417;
+  color: var(--df-coral);
+  border: 1px solid var(--df-coral-edge);
+  background: var(--df-coral-wash);
 }
 /* Out of the way once it has been read: a permanent green light is noise,
    and the state it reports does not come back. Opacity rather than `display`
@@ -101,17 +290,17 @@ body {
   pointer-events: none;
 }
 .gdsx-level-select {
-  background: #1a1f2b;
-  color: #cfd4de;
-  border: 1px solid #2e3444;
-  border-radius: 3px;
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 2px 4px;
   font: inherit;
   max-width: 240px;
   cursor: pointer;
 }
 .gdsx-level-select:hover:not(:disabled) {
-  border-color: #4a536b;
+  border-color: var(--df-edge-hi);
 }
 .gdsx-level-select:disabled {
   opacity: 0.5;
@@ -130,23 +319,23 @@ body {
 }
 .gdsx-objective-goal {
   flex: none;
-  color: #f2cc4d;
-  border: 1px solid #5a4d1f;
-  border-radius: 3px;
+  color: var(--df-gold);
+  border: 1px solid var(--df-gold-edge);
+  border-radius: var(--df-radius);
   padding: 0 5px;
   white-space: nowrap;
 }
 .gdsx-objective-blurb {
-  color: #7d8598;
+  color: var(--df-dim);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .gdsx-toolbar button {
-  background: #1a1f2b;
-  color: #cfd4de;
-  border: 1px solid #2e3444;
-  border-radius: 3px;
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 3px 8px;
   font: inherit;
   cursor: pointer;
@@ -156,7 +345,7 @@ body {
   white-space: nowrap;
 }
 .gdsx-toolbar button:hover:not(:disabled) {
-  border-color: #4a536b;
+  border-color: var(--df-edge-hi);
 }
 .gdsx-toolbar button:disabled {
   opacity: 0.4;
@@ -174,9 +363,9 @@ body {
 }
 .gdsx-menu-btn {
   background: transparent;
-  color: #cfd4de;
+  color: var(--df-ink-2);
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--df-radius);
   padding: 3px 8px;
   font: inherit;
   cursor: pointer;
@@ -185,8 +374,8 @@ body {
 }
 .gdsx-menu-btn:hover,
 .gdsx-menu-btn.open {
-  background: #1a1f2b;
-  border-color: #2e3444;
+  background: var(--df-plate-2);
+  border-color: var(--df-edge-2);
 }
 .gdsx-menu-dropdown {
   position: absolute;
@@ -194,9 +383,9 @@ body {
   left: 0;
   margin-top: 4px;
   min-width: 180px;
-  background: #10131a;
-  border: 1px solid #2e3444;
-  border-radius: 4px;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   overflow: hidden;
   z-index: 31;
 }
@@ -209,8 +398,8 @@ body {
   white-space: nowrap;
 }
 .gdsx-menu-item:hover {
-  background: #1c2130;
-  color: #f2cc4d;
+  background: var(--df-edge);
+  color: var(--df-gold);
 }
 /* Reserved so an item's label does not jog left/right depending on
    whether its panel happens to be open. */
@@ -227,13 +416,13 @@ body {
   flex: none;
 }
 .gdsx-notebook-btn.on {
-  border-color: #5a4d1f;
-  color: #f2cc4d;
+  border-color: var(--df-gold-edge);
+  color: var(--df-gold);
 }
 /* ---- submit surface: value against the checks block (web-ui-architecture.md §8) --- */
 .gdsx-submit-btn.on {
-  border-color: #2b4a2b;
-  color: #9fe39f;
+  border-color: var(--df-teal-edge);
+  color: var(--df-teal);
 }
 .gdsx-submit-popover {
   position: absolute;
@@ -243,9 +432,9 @@ body {
   margin-top: 4px;
   width: max-content;
   max-width: min(420px, 70vw);
-  background: #0d0f14;
-  border: 1px solid #2e3444;
-  border-radius: 4px;
+  background: var(--df-void);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -282,7 +471,7 @@ body {
 .gdsx-submit-label {
   flex: none;
   min-width: 90px;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -290,19 +479,19 @@ body {
 .gdsx-submit-input {
   flex: 1;
   min-width: 140px;
-  background: #1a1f2b;
-  color: #cfd4de;
-  border: 1px solid #2e3444;
-  border-radius: 3px;
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 2px 6px;
   font: inherit;
 }
 .gdsx-submit-radix {
   flex: none;
-  background: #1a1f2b;
-  color: #cfd4de;
-  border: 1px solid #2e3444;
-  border-radius: 3px;
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 2px 4px;
   font: inherit;
 }
@@ -316,13 +505,13 @@ body {
   word-break: break-word;
 }
 .gdsx-submit-pending {
-  color: #9aa2b5;
+  color: var(--df-ink-3);
 }
 .gdsx-submit-ok {
-  color: #9fe39f;
+  color: var(--df-teal);
 }
 .gdsx-submit-bad {
-  color: #e08a8a;
+  color: var(--df-coral);
 }
 /* ---- hints: tiered, revealed one at a time, always available (20.1) ---- */
 .gdsx-hints-slot {
@@ -330,8 +519,8 @@ body {
   flex: none;
 }
 .gdsx-hints-btn.on {
-  border-color: #5a4d1f;
-  color: #f2cc4d;
+  border-color: var(--df-gold-edge);
+  color: var(--df-gold);
 }
 .gdsx-hints-popover {
   position: absolute;
@@ -344,9 +533,9 @@ body {
      puzzles found tier text up to 442 characters, and a narrower box would
      wrap that into an unreadable column of one word per line. */
   max-width: min(480px, 85vw);
-  background: #0d0f14;
-  border: 1px solid #2e3444;
-  border-radius: 4px;
+  background: var(--df-void);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -360,7 +549,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -383,16 +572,16 @@ body {
 .gdsx-hints-tier {
   margin: 0;
   padding: 6px 8px;
-  background: #1a1f2b;
-  border: 1px solid #2e3444;
-  border-radius: 3px;
-  color: #cfd4de;
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  color: var(--df-ink-2);
   font-size: 12px;
   line-height: 1.4;
 }
 .gdsx-hints-empty {
   margin: 0;
-  color: #6d7486;
+  color: var(--df-faint);
   font-size: 11px;
 }
 .gdsx-hints-reveal {
@@ -401,7 +590,8 @@ body {
 }
 .gdsx-dock-mount {
   position: absolute;
-  top: 28px;
+  /* Matches `.gdsx-toolbar`'s height. */
+  top: 32px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -413,7 +603,7 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0d0f14;
+  background: var(--df-void);
 }
 
 /* ---- sub-tab host (panels/mounts.ts) ----------------------------- */
@@ -426,29 +616,33 @@ body {
   flex-direction: column;
   height: 100%;
 }
+/* Same underline treatment as the dockview tab strip above it, one step
+   quieter: a shorter rule in a dimmer colour. Two rows of tabs are
+   unavoidable here, so the difference between them has to be legible at a
+   glance -- the outer row marks the panel, the inner row marks the section
+   inside it. */
 .pt-tabs {
   display: flex;
-  gap: 2px;
+  gap: 14px;
   flex: none;
-  padding: 4px 6px 0;
-  border-bottom: 1px solid #1c2130;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--df-edge);
 }
 .pt-tab {
   background: transparent;
-  border: 1px solid transparent;
-  border-bottom: 0;
-  border-radius: 3px 3px 0 0;
-  padding: 3px 12px;
-  color: #7d8598;
+  border: 0;
+  border-radius: var(--df-radius);
+  padding: 6px 0;
+  color: var(--df-faint);
   cursor: pointer;
+  box-shadow: inset 0 -1px 0 transparent;
 }
 .pt-tab:hover {
-  color: #cfd4de;
+  color: var(--df-ink-2);
 }
 .pt-tab.on {
-  background: #0d0f14;
-  border-color: #262b36;
-  color: #f2cc4d;
+  color: var(--df-ink);
+  box-shadow: inset 0 -1px 0 var(--df-ink-3);
 }
 .pt-host {
   position: relative;
@@ -469,8 +663,8 @@ body {
 /* ---- collapsible drawer (panels/mounts.ts) ----------------------- */
 .pd-drawer {
   flex: none;
-  border-top: 1px solid #262b36;
-  background: #0d0f14;
+  border-top: 1px solid var(--df-edge-2);
+  background: var(--df-void);
 }
 .pd-drawer-head {
   display: flex;
@@ -479,18 +673,18 @@ body {
   width: 100%;
   background: transparent;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--df-radius);
   padding: 5px 8px;
   text-align: left;
-  color: #7d8598;
+  color: var(--df-dim);
   cursor: pointer;
 }
 .pd-drawer-head:hover {
-  color: #cfd4de;
-  background: #121722;
+  color: var(--df-ink-2);
+  background: var(--df-plate-2);
 }
 .pd-drawer.on .pd-drawer-title {
-  color: #cfd4de;
+  color: var(--df-ink-2);
 }
 .pd-drawer-caret {
   width: 10px;
@@ -499,9 +693,9 @@ body {
 .pd-drawer-badge {
   margin-left: auto;
   font-size: 10px;
-  color: #f2cc4d;
-  border: 1px solid #5a4d1f;
-  border-radius: 3px;
+  color: var(--df-gold);
+  border: 1px solid var(--df-gold-edge);
+  border-radius: var(--df-radius);
   padding: 0 5px;
 }
 .pd-drawer-badge:empty {
@@ -510,7 +704,7 @@ body {
 .pd-drawer-body {
   max-height: 45vh;
   overflow-y: auto;
-  border-top: 1px solid #1c2130;
+  border-top: 1px solid var(--df-edge);
 }
 
 /* ---- waveform + sequence editor: shared bits ----------------------- */
@@ -528,13 +722,13 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-bottom: 1px solid #1c2130;
+  border-bottom: 1px solid var(--df-edge);
   flex: none;
 }
 .wave-loading,
 .seq-loading {
   padding: 16px;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .wave-body,
 .seq-body {
@@ -558,9 +752,9 @@ body {
   max-height: 60vh;
   display: flex;
   flex-direction: column;
-  background: #10131a;
-  border: 1px solid #3a4258;
-  border-radius: 5px;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-3);
+  border-radius: var(--df-radius);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
 }
 .guide-head {
@@ -568,7 +762,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-bottom: 1px solid #262b36;
+  border-bottom: 1px solid var(--df-edge-2);
 }
 .guide-collapsed .guide-head {
   border-bottom: 0;
@@ -577,10 +771,10 @@ body {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #f2cc4d;
+  color: var(--df-gold);
 }
 .guide-count {
-  color: #7d8598;
+  color: var(--df-dim);
   font-size: 11px;
 }
 .guide-collapse {
@@ -588,12 +782,12 @@ body {
 }
 .guide-head button {
   padding: 0 6px;
-  color: #7d8598;
+  color: var(--df-dim);
 }
 .guide-title {
   margin: 10px 10px 0;
   font-size: 13px;
-  color: #e6e9f0;
+  color: var(--df-ink);
 }
 .guide-body {
   overflow-y: auto;
@@ -603,47 +797,47 @@ body {
 .guide-body p {
   margin: 8px 0;
   line-height: 1.65;
-  color: #b6bdcc;
+  color: var(--df-ink-3);
 }
 .guide-body code {
-  color: #8ecdf7;
-  background: #171b26;
-  border-radius: 3px;
+  color: var(--df-blue);
+  background: var(--df-plate-2);
+  border-radius: var(--df-radius);
   padding: 0 3px;
 }
 .guide-goal {
   margin: 0 10px 8px;
   padding: 4px 8px;
-  border: 1px dashed #2e3444;
-  border-radius: 4px;
-  color: #7d8598;
+  border: 1px dashed var(--df-edge-2);
+  border-radius: var(--df-radius);
+  color: var(--df-dim);
 }
 .guide-goal-done {
-  color: #9fe39f;
+  color: var(--df-teal);
   border-style: solid;
-  border-color: #2b4a2b;
-  background: #131c13;
+  border-color: var(--df-teal-edge);
+  background: var(--df-teal-wash);
 }
 .guide-foot {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px;
-  border-top: 1px solid #262b36;
+  border-top: 1px solid var(--df-edge-2);
 }
 .guide-next {
   font-weight: 600;
-  color: #e6e9f0;
+  color: var(--df-ink);
 }
 .guide-jump {
   margin-left: auto;
   max-width: 170px;
-  background: #1a1f2b;
-  border: 1px solid #2e3444;
-  border-radius: 3px;
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
   padding: 2px 4px;
 }
 .gdsx-guide-btn.on {
-  border-color: #5a4d1f;
-  color: #f2cc4d;
+  border-color: var(--df-gold-edge);
+  color: var(--df-gold);
 }

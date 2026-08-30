@@ -88,7 +88,7 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
           <div class="repl-output"></div>
           <div class="repl-input-row">
             <span class="repl-prompt">&gt;&gt;&gt;</span>
-            <textarea class="repl-input" rows="1" spellcheck="false" placeholder="nl.instances[0], graph.d_pin('dfrtp_2_83'), design.registers(ordered=True)…"></textarea>
+            <textarea class="repl-input" rows="1" spellcheck="false" placeholder="nl.instances[0], graph.d_pin(nl.instances[0].name), design.registers(ordered=True)…"></textarea>
             <button type="button" class="repl-run">run</button>
           </div>
         </div>`;

@@ -25,12 +25,11 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, SPOILERS } from "./puzzle-index.mjs";
+import { describe, DIFFICULTIES, SPOILERS } from "./puzzle-index.mjs";
 import { answerDigestInput, normaliseAnswer } from "../src/puzzles/answer-normalise.mjs";
 import { hashAnswer, verifySubmission } from "../src/puzzles/answer-check.ts";
 import {
   chooseRoute,
-  FALLBACK,
   findPuzzle,
   loadCatalog,
   menuUrl,
@@ -304,15 +303,47 @@ eq(
   "switching levels replaces an existing selection",
 );
 
-// ---- 5. a missing catalog degrades to the built-in puzzle ---------------
+// ---- 4b. difficulty is one of three bands, and describe() enforces it ---
+//
+// Six levels used to declare a number and one a word, so the menu printed
+// "difficulty 2" beside "hard". The vocabulary is fixed here, at the point
+// the bundle becomes the web app's data, so the browser only ever receives a
+// word it can show verbatim.
+
+for (const dir of bakedDirs) {
+  const value = descriptorFor(dir).difficulty;
+  check(
+    value === null || DIFFICULTIES.includes(value),
+    `${dir}: difficulty ${JSON.stringify(value)} must be one of ${DIFFICULTIES.join(", ")}`,
+  );
+}
+
+let rejected = false;
+try {
+  describe("bogus", { difficulty: 3 }, {});
+} catch {
+  rejected = true;
+}
+check(rejected, "a manifest declaring a difficulty outside the vocabulary fails the sync");
+eq(describe("nodiff", {}, {}).difficulty, null, "a manifest may still declare no difficulty");
+
+// ---- 5. a missing catalog is empty, and invents nothing -----------------
+//
+// There is no built-in descriptor to fall back to any more. It was a second
+// copy of the original puzzle's authored data -- title, blurb, driver, checks
+// and hint tiers -- living in src/, and it had already drifted from the
+// manifest it was copied from. Every fact about a puzzle now comes from its
+// manifest.json and solution.json through describe(), and nothing in src/
+// restates any of it.
 
 const offline = await loadCatalog(async () => {
   throw new Error("no catalog here");
 });
-eq(offline.map((p) => p.id), [FALLBACK.id], "a missing catalog falls back to one built-in puzzle");
-check(
-  FALLBACK.assets.render.startsWith("/samples/"),
-  "the fallback must point at the sample assets, which ship without a sync",
+eq(offline, [], "a missing catalog is empty rather than an invented puzzle");
+eq(
+  chooseRoute(offline, { requested: "original-puzzle" }).kind,
+  "menu",
+  "…and every route into it lands on the menu, which says the build is unsynced",
 );
 
 // ---- 6. every tools_enabled key a manifest actually declares maps to a
@@ -459,7 +490,8 @@ eq(
 );
 
 check(
-  !(await verifySubmission({ ...FALLBACK, checks: null }, { value: 1 })).accepted,
+  !(await verifySubmission({ ...descriptorFor("original-puzzle"), checks: null }, { value: 1 }))
+    .accepted,
   "a puzzle with no checks reports that, rather than throwing",
 );
 

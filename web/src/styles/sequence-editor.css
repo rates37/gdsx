@@ -5,38 +5,38 @@
 .seq-toolbar-sep {
   width: 1px;
   align-self: stretch;
-  background: #1c2130;
+  background: var(--df-edge);
 }
 .seq-autorun {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #9aa2b5;
+  color: var(--df-ink-3);
   white-space: nowrap;
 }
 .seq-run-btn {
   white-space: nowrap;
 }
 .seq-run-status {
-  color: #6d7486;
+  color: var(--df-faint);
   white-space: nowrap;
   font-size: 11px;
 }
 .seq-run-status.dirty {
-  color: #f2cc4d;
+  color: var(--df-gold);
 }
 .seq-result.stale {
-  color: #f2a65a !important;
+  color: var(--df-gold) !important;
 }
 .seq-result {
   margin-left: auto;
-  color: #6d7486;
+  color: var(--df-faint);
 }
 .seq-result.latched {
-  color: #9fe39f;
+  color: var(--df-teal);
 }
 .seq-track {
-  border-bottom: 1px solid #171b26;
+  border-bottom: 1px solid var(--df-plate-2);
   padding: 4px 8px;
 }
 .seq-track-header {
@@ -48,7 +48,7 @@
 .seq-track-name {
   width: 70px;
   flex: none;
-  color: #cfd4de;
+  color: var(--df-ink-2);
   font-weight: 600;
 }
 .seq-track-io {
@@ -67,7 +67,7 @@
 .seq-tick {
   position: absolute;
   top: 0;
-  color: #5b6274;
+  color: var(--df-faint-2);
   font-size: 9px;
 }
 .seq-cells {
@@ -78,17 +78,17 @@
 .seq-cell {
   position: absolute;
   top: 0;
-  background: #171b26;
-  border-right: 1px solid #0d0f14;
+  background: var(--df-plate-2);
+  border-right: 1px solid var(--df-void);
   box-sizing: border-box;
 }
 .seq-cell.epoch {
-  border-right: 1px solid #2e3444;
+  border-right: 1px solid var(--df-edge-2);
 }
 .seq-cell.on {
-  background: #3a6b3a;
+  background: var(--df-teal-edge);
 }
 .seq-cell.cursor {
-  outline: 1px solid #f2cc4d;
+  outline: 1px solid var(--df-gold);
   outline-offset: -1px;
 }

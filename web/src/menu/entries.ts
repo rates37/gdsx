@@ -18,8 +18,10 @@ export interface MenuEntry {
   /** `?puzzle=<id>`, relative -- the card is a real link, so the routing rule
    *  and the click target are the same thing. */
   href: string;
-  /** "difficulty 3", or "hard" for a puzzle whose manifest says so. Null when
-   *  the manifest declares none. */
+  /** The difficulty band the manifest declares — `easy`, `medium` or `hard` —
+   *  or null when it declares none. Shown verbatim: the vocabulary is fixed
+   *  and validated by web/scripts/puzzle-index.mjs at sync time, so there is
+   *  nothing for this screen to format or decide. */
   difficulty: string | null;
   /** "par 20m", or null. */
   par: string | null;
@@ -41,10 +43,6 @@ export interface MenuEntry {
   score: number | null;
 }
 
-function difficultyLabel(value: number | string | null): string | null {
-  if (value === null || value === "") return null;
-  return typeof value === "number" ? `difficulty ${value}` : String(value);
-}
 
 /**
  * One entry per catalog puzzle, in catalog order.
@@ -65,7 +63,7 @@ export function menuEntries(
       title: puzzle.title,
       blurb: puzzle.blurb,
       href: `?puzzle=${encodeURIComponent(puzzle.id)}`,
-      difficulty: difficultyLabel(puzzle.difficulty),
+      difficulty: puzzle.difficulty,
       par: puzzle.parMinutes ? `par ${puzzle.parMinutes}m` : null,
       goal: goalFor(puzzle.answerKind),
       solved: Boolean(record?.solvedAt),

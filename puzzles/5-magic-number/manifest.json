@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "5-magic-number",
   "title": "Magic Number",
-  "difficulty": 5,
+  "difficulty": "hard",
   "blurb": "A 32-bit serial comparator and four decoys, laid out so the die view actively misleads. Read the constant out of the gates.",
   "author": "gdsx",
   "answer_kind": "constant",
