@@ -8,6 +8,7 @@ import type { DesignClient } from "../design/client";
 import type { InstanceView, NetView } from "../gdsx-types";
 import { highlightBus } from "../store/highlight";
 import { coneRootBus } from "../store/selection";
+import { panelRouteBus } from "../store/panel-route";
 import { labels, type LabelKind } from "../store/labels";
 import { instanceChip, netChip, openLabelEditor } from "./chips";
 import { attachPythonCallButton } from "./python-call";
@@ -101,6 +102,9 @@ export function mountNetlistBrowser(
     let allInstances: InstanceView[] = [];
     let allNets: NetView[] = [];
     let selectedName: string | null = null;
+    /** The nets currently in the list, in list order -- what a reveal has to
+     *  search to know which row to scroll to. */
+    let shownNets: NetView[] = [];
     let instList: VirtualList<InstanceView> | null = null;
     let netList: VirtualList<NetView> | null = null;
     let seqOnlyEl: HTMLInputElement | null = null;
@@ -207,8 +211,41 @@ export function mountNetlistBrowser(
           return n.name.toLowerCase().includes(q) || labels.matches("net", n.name, q);
         });
         countEl.textContent = `${filtered.length} / ${allNets.length} nets`;
+        shownNets = filtered;
         netList.setItems(filtered);
       }
+    }
+
+    /**
+     * "Show me this net" from somewhere else in the workspace -- the die
+     * view's right-click menu, a chip, a cone node.
+     *
+     * Routes to the Nets sub-tab, drops any filter that would hide the net
+     * (revealing nothing is worse than not revealing), scrolls the row into
+     * view and opens its detail. Both routes are needed: the outer host owns
+     * browser-vs-labels, the inner one instances-vs-nets, and either may not
+     * be mounted yet -- `panelRouteBus` remembers the request for whichever
+     * mounts later.
+     */
+    function revealNet(name: string): void {
+      const net = allNets.find((n) => n.name === name);
+      if (!net) return;
+      panelRouteBus.open("netlist", "browser");
+      panelRouteBus.open("netlist-browser", "nets");
+
+      selectedName = name;
+      showNetDetail(net);
+
+      if (!shownNets.some((n) => n.name === name)) {
+        filterEl.value = "";
+        if (portsOnlyEl) portsOnlyEl.checked = false;
+        if (kindSelectEl) kindSelectEl.value = "";
+      }
+      applyFilter();
+
+      const index = shownNets.findIndex((n) => n.name === name);
+      if (index >= 0) netList?.scrollToIndex(index);
+      netList?.refresh();
     }
 
     /** The Instances sub-tab: its own "sequential only" checkbox above its
@@ -327,6 +364,16 @@ export function mountNetlistBrowser(
       netList?.refresh();
     });
 
+    // The other half of the cross-panel selection: this panel has always
+    // *fired* `coneRootBus` and never listened to it, so a net opened
+    // elsewhere left the browser sitting on whatever was last clicked here.
+    // The `selectedName` guard is what stops a row click -- which fires the
+    // bus itself -- from bouncing back through the reveal.
+    const unsubRoot = coneRootBus.subscribe((net) => {
+      if (net === selectedName) return;
+      revealNet(net);
+    });
+
     // A rename has to re-run the filter, not just repaint: it can change
     // which rows match the current query.
     const unsubLabels = labels.subscribe(() => {
@@ -344,6 +391,7 @@ export function mountNetlistBrowser(
       dispose() {
         disposed = true;
         unsub();
+        unsubRoot();
         unsubLabels();
         tabs?.dispose?.();
       },

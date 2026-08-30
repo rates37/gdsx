@@ -341,12 +341,17 @@ export class DieView {
     let lastY = 0;
 
     c.addEventListener("pointerdown", (e) => {
+      // The right button belongs to the context menu. Panning with it would
+      // slide the die out from under the menu between the press and the
+      // release, so the menu would name a wire that is no longer there.
+      if (e.button === 2) return;
       dragging = true;
       lastX = e.clientX;
       lastY = e.clientY;
       c.setPointerCapture(e.pointerId);
     });
     c.addEventListener("pointerup", (e) => {
+      if (!dragging) return;
       dragging = false;
       c.releasePointerCapture(e.pointerId);
     });

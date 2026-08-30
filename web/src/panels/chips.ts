@@ -123,8 +123,16 @@ let openEditor: (() => void) | null = null;
  * double-clicked, showing the raw name so it is never in doubt what is being
  * labelled. Deliberately not `window.prompt` -- the raw name has to stay
  * visible while you type the alias for it.
+ *
+ * `anchor` is usually the chip itself, but a `DOMRect` is accepted for the
+ * callers that have no element to hang off: labelling a net from the die
+ * view's right-click menu anchors to where the cursor was.
  */
-export function openLabelEditor(kind: LabelKind, name: string, anchor: HTMLElement): void {
+export function openLabelEditor(
+  kind: LabelKind,
+  name: string,
+  anchor: HTMLElement | DOMRect,
+): void {
   openEditor?.();
 
   const pop = document.createElement("div");
@@ -155,7 +163,7 @@ export function openLabelEditor(kind: LabelKind, name: string, anchor: HTMLEleme
   // Anchored below the chip, nudged back on screen if that would overflow.
   // The popover is in `body`, not the panel, so a panel's `overflow: hidden`
   // cannot clip it.
-  const box = anchor.getBoundingClientRect();
+  const box = anchor instanceof DOMRect ? anchor : anchor.getBoundingClientRect();
   const width = pop.offsetWidth;
   const height = pop.offsetHeight;
   pop.style.left = `${Math.max(6, Math.min(box.left, window.innerWidth - width - 6))}px`;

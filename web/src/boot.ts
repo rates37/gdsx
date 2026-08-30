@@ -356,6 +356,7 @@ export async function bootWorkspace(
       dieViewPanel({
         bundleReady,
         statusLine: () => pyLine,
+        onFocusPanel: (id) => workspace.focus(id),
         onReady: (api) => {
           dieApi = api;
         },

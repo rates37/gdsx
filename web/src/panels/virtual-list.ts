@@ -31,6 +31,18 @@ export class VirtualList<T> {
     this.render();
   }
 
+  /** Bring row `i` into view, centred. What "show me this net" needs when
+   *  the net was chosen somewhere else and could be four thousand rows down:
+   *  the row exists in `items` but has never been rendered, so scrolling is
+   *  the only way to put it on screen. */
+  scrollToIndex(i: number): void {
+    if (i < 0 || i >= this.items.length) return;
+    const max = Math.max(0, this.items.length * this.rowHeight - this.viewport.clientHeight);
+    const centred = i * this.rowHeight - this.viewport.clientHeight / 2 + this.rowHeight / 2;
+    this.viewport.scrollTop = Math.min(max, Math.max(0, centred));
+    this.render();
+  }
+
   /** Re-render the currently visible rows without changing `items` -- for
    *  when a row's own appearance depends on outside state (e.g. whether
    *  it's the highlighted net). */

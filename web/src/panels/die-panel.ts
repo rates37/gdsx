@@ -12,6 +12,9 @@ import type { RenderBundle } from "../render/bundle";
 import { DieView } from "../render/dieview";
 import { Minimap } from "../render/minimap";
 import { highlightBus } from "../store/highlight";
+import { coneRootBus } from "../store/selection";
+import { openNetMenu } from "./net-menu";
+import { netTooltip } from "./net-tooltip";
 
 const COLOUR_CSS: Record<string, string> = {
   instances: "#8c94a8",
@@ -67,6 +70,12 @@ export interface DiePanelOptions {
   bundleReady: Promise<RenderBundle>;
   /** Extra line shown under the frame stats, e.g. Pyodide boot status. */
   statusLine: () => string;
+  /** Brings another workspace panel to the front -- what the right-click
+   *  menu's "open this net over there" items need. Injected rather than
+   *  imported: the panels are constructed before the `Workspace` that owns
+   *  them exists (see `boot.ts`), which is also why the Cone Walker takes
+   *  its `onFocusWaveform` the same way. */
+  onFocusPanel?: (id: string) => void;
   /** Called with the live view once the bundle has loaded, and with `null`
    *  when this mount is torn down -- so a holder (main.ts's `spike`) never
    *  keeps calling into a renderer the player has switched away from. */
@@ -97,7 +106,7 @@ export function mountDie2D(
           <option value="2">LOD 2 &mdash; cells only</option>
         </select>
         <hr />
-        <div class="hint">drag: pan<br />wheel: zoom<br />F: fit die<br />hover: highlight net</div>
+        <div class="hint">drag: pan<br />wheel: zoom<br />F: fit die<br />hover: highlight net<br />click: select net<br />right-click: actions</div>
       </div>
       <pre class="panel-overlay die-stats"></pre>
       <canvas class="die-minimap" title="click or drag to jump"></canvas>
@@ -115,6 +124,7 @@ export function mountDie2D(
   let unsubHighlight: (() => void) | null = null;
   let onKeydown: ((e: KeyboardEvent) => void) | null = null;
   let resizeObserver: ResizeObserver | null = null;
+  let tooltip: ReturnType<typeof netTooltip> | null = null;
 
   opts.bundleReady
     .then((bundle) => {
@@ -177,11 +187,64 @@ export function mountDie2D(
       });
       resizeObserver.observe(canvas);
 
+      // Hover names the net and glows it; click fixes on it. The two are
+      // different layers of the same bus (`set` vs `pin`), so moving the
+      // pointer away undims back to whatever was clicked rather than
+      // clearing the die.
+      tooltip = netTooltip(
+        container.querySelector(".die-canvas-wrap") as HTMLElement,
+      );
+      const tip = tooltip;
+
       canvas.addEventListener("pointermove", (e) => {
         const hit = view.pickNet(e.clientX, e.clientY);
         highlightBus.set(hit ? { name: hit.name } : null);
+        if (hit) tip.show(e.clientX, e.clientY, hit.name);
+        else tip.hide();
       });
-      canvas.addEventListener("pointerleave", () => highlightBus.set(null));
+      canvas.addEventListener("pointerleave", () => {
+        highlightBus.set(null);
+        tip.hide();
+      });
+
+      // A click is a press that did not turn into a pan. The die view's
+      // primary gesture is dragging the camera, so anything past a few
+      // pixels of travel is a pan and must not also select.
+      const DRAG_SLOP_PX = 3;
+      let pressX = 0;
+      let pressY = 0;
+      let pressButton = -1;
+      canvas.addEventListener("pointerdown", (e) => {
+        pressX = e.clientX;
+        pressY = e.clientY;
+        pressButton = e.button;
+      });
+      canvas.addEventListener("pointerup", (e) => {
+        if (e.button !== 0 || pressButton !== 0) return;
+        if (
+          Math.abs(e.clientX - pressX) > DRAG_SLOP_PX ||
+          Math.abs(e.clientY - pressY) > DRAG_SLOP_PX
+        ) {
+          return;
+        }
+        const hit = view.pickNet(e.clientX, e.clientY);
+        highlightBus.pin(hit ? { name: hit.name } : null);
+        // Same pair a netlist row click performs: pin what is selected, and
+        // re-root the Cone Walker on it. Focus stays here -- the player is
+        // looking at the die, and yanking them to another tab on every click
+        // would make the die view unusable for browsing.
+        if (hit) coneRootBus.open(hit.name);
+      });
+
+      canvas.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const hit = view.pickNet(e.clientX, e.clientY);
+        if (hit) highlightBus.pin({ name: hit.name });
+        openNetMenu(e.clientX, e.clientY, hit?.name ?? null, {
+          onFocusPanel: opts.onFocusPanel,
+        });
+      });
+
       unsubHighlight = highlightBus.subscribe((sel) =>
         view.setHighlightNet(sel ? view.netIdOf(sel.name) : null),
       );
@@ -248,6 +311,8 @@ export function mountDie2D(
       disposed = true;
       cancelAnimationFrame(rafId);
       unsubHighlight?.();
+      tooltip?.dispose();
+      tooltip = null;
       resizeObserver?.disconnect();
       if (onKeydown) window.removeEventListener("keydown", onKeydown);
       opts.onReady?.(null);

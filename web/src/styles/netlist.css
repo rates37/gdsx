@@ -338,3 +338,41 @@ select {
 .labels-actions { display: flex; gap: 4px; margin-left: auto; }
 .labels-actions button { padding: 1px 6px; font-size: 11px; }
 .labels-drop { color: #a8707a; }
+
+/* ---- the right-click menu (context-menu.ts) ----------------------- */
+/* Same surface as the label editor above -- both are body-level popovers
+   floating over a panel, and reading as two different kinds of object would
+   be a lie about how related they are. */
+.ctx-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 190px;
+  padding: 4px;
+  background: #10131a;
+  border: 1px solid #3a4258;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+.ctx-menu hr {
+  border: 0;
+  border-top: 1px solid #262b36;
+  margin: 4px 2px;
+}
+.ctx-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #cfd4de;
+  cursor: pointer;
+}
+.ctx-menu-item:hover:not(:disabled) {
+  background: #2a3346;
+}
+.ctx-menu-item:disabled {
+  color: #5a6072;
+  cursor: default;
+}

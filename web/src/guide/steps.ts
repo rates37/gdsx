@@ -82,7 +82,8 @@ export const STEPS: GuideStep[] = [
     body: [
       "This is the actual layout, drawn from the extracted geometry — not a diagram of it. Drag to pan, wheel to zoom, press {{F}} to fit the die back in frame.",
       "The {{Layers}} box on the left toggles each metal layer and the cell outlines. Turn {{met2}} and above off and you are looking at local interconnect and the cells themselves; turn the cells off and you see routing alone.",
-      "Hover anywhere over a wire. Everything on that net lights up across every layer it climbs through — that is the same net highlight every other panel drives.",
+      "Hover anywhere over a wire. A read-out names the net, and everything on it lights up across every layer it climbs through — that is the same net highlight every other panel drives.",
+      "Click the wire to keep it selected once the pointer moves away, and right-click it for the rest: open it in the Cone Walker, find it in the Netlist Browser, or give it a name of your own.",
     ],
     goal: "hover a wire to highlight its net",
     done: () => hasHoveredNet,
@@ -94,7 +95,7 @@ export const STEPS: GuideStep[] = [
     body: [
       "Click {{3D}} in the bar above the canvas. The same layout, extruded through the real sky130 metal stack.",
       "Drag the {{Exploded view}} slider to pull the layers apart — via stacks become obvious once the metals are not sitting on top of each other. {{Cross-section}} cuts the die with a plane you can drag through it.",
-      "Click a wire to select its net, then {{Trace selected net}}, and the camera follows the conductor up through the vias. Switch back to {{2D}} when you have had a look; the rest of the walkthrough uses the flat view.",
+      "Left-drag orbits; right-drag, middle-drag or {{Shift}}-drag pans across the die, and {{Reset view}} puts it back if you lose it. Click a wire to select its net, then {{Trace selected net}}, and the camera follows the conductor up through the vias. Switch back to {{2D}} when you have had a look; the rest of the walkthrough uses the flat view.",
     ],
     goal: "switch the die view to 3D",
     done: () => q('.die-mode-seg button[data-mode="3d"].on') !== null,

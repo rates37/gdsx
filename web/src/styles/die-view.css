@@ -218,3 +218,27 @@
   bottom: 10px;
   color: #f2cc4d;
 }
+
+/* ---- the net read-out under the cursor (net-tooltip.ts) ----------- */
+/* `pointer-events: none` is load-bearing: the tooltip sits a few pixels off
+   the cursor, and without it a fast move can put the element under the
+   pointer, which stops the picking that decides what the tooltip says. */
+.die-tooltip {
+  pointer-events: none;
+  z-index: 6;
+  padding: 5px 8px;
+  max-width: 280px;
+  line-height: 1.4;
+}
+.die-tooltip-name {
+  color: #f2cc4d;
+}
+.die-tooltip-raw {
+  color: #7d8598;
+  font-size: 11px;
+}
+.die-tooltip-hint {
+  color: #5a6072;
+  font-size: 10px;
+  margin-top: 3px;
+}

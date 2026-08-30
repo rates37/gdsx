@@ -102,11 +102,16 @@ export class Die3D {
   private traceActiveLayer: string | null = null;
   private traceLabel: string | null = null;
 
-  // Orbit camera: spherical around a fixed target at the stack's midpoint.
+  // Orbit camera: spherical around a target that starts at the stack's
+  // midpoint and can be panned across the die.
   private azimuth = Math.PI / 4;
   private elevation = 0.6;
   private radius: number;
   private readonly target: THREE.Vector3;
+
+  /** Latest cursor position awaiting a hover raycast, consumed in `render`. */
+  private hoverPoint: { x: number; y: number } | null = null;
+  private hoveredNet = -1;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -232,44 +237,110 @@ export class Die3D {
     this.camera.lookAt(this.target);
   }
 
-  /** Reset to the default 3/4 view of the whole stack. */
+  /** Reset to the default 3/4 view of the whole stack. Recentres the target
+   *  too, so "Reset view" is a way back from a camera panned off the die --
+   *  which is the only way back, since panning has no bounds you can feel. */
   fit(): void {
     this.azimuth = Math.PI / 4;
     this.elevation = 0.6;
     this.radius = Math.max(this.dieWidthUm, this.dieHeightUm, this.stackHeightUm) * 1.6 || 10;
+    this.target.set(0, 0, this.stackHeightUm / 2);
+    this.updateCamera();
+  }
+
+  /**
+   * Slide the orbit target across the die, in the camera's own basis, so a
+   * drag moves the scene the way the pointer moves however the view is
+   * oriented. Scaled by the distance to the target: panning at full-die zoom
+   * covers ground, panning up close is fine-grained.
+   */
+  private pan(dxPixels: number, dyPixels: number): void {
+    const height = this.canvas.clientHeight || 1;
+    const fov = (this.camera.fov * Math.PI) / 180;
+    const unitsPerPixel = (2 * this.radius * Math.tan(fov / 2)) / height;
+
+    this.camera.updateMatrixWorld();
+    const m = this.camera.matrixWorld.elements;
+    const right = new THREE.Vector3(m[0], m[1], m[2]);
+    const up = new THREE.Vector3(m[4], m[5], m[6]);
+
+    this.target.addScaledVector(right, -dxPixels * unitsPerPixel);
+    this.target.addScaledVector(up, dyPixels * unitsPerPixel);
+
+    // Bounded to roughly a die's width beyond the die on each side. Without
+    // this, one fast drag at full zoom puts the layout off screen with no
+    // visible cue about which way to go back.
+    const limitX = this.dieWidthUm;
+    const limitY = this.dieHeightUm;
+    this.target.x = Math.min(limitX, Math.max(-limitX, this.target.x));
+    this.target.y = Math.min(limitY, Math.max(-limitY, this.target.y));
+    this.target.z = Math.min(
+      this.stackHeightUm * 2,
+      Math.max(-this.stackHeightUm, this.target.z),
+    );
     this.updateCamera();
   }
 
   private attachInput(): void {
     const c = this.canvas;
-    let dragging = false;
+    // Left drag orbits, and any of right / middle / shift-left pans -- the
+    // three bindings CAD tools have taught people to reach for, since none of
+    // them is available on every mouse and trackpad.
+    let mode: "orbit" | "pan" | null = null;
     let dragged = false;
+    let button = -1;
     let lastX = 0;
     let lastY = 0;
 
     c.addEventListener("pointerdown", (e) => {
-      dragging = true;
+      mode = e.button === 0 && !e.shiftKey ? "orbit" : "pan";
+      button = e.button;
       dragged = false;
       lastX = e.clientX;
       lastY = e.clientY;
       c.setPointerCapture(e.pointerId);
     });
     c.addEventListener("pointerup", (e) => {
-      dragging = false;
+      if (mode === null) return;
+      mode = null;
       c.releasePointerCapture(e.pointerId);
-      if (!dragged) this.handleClick(e.clientX, e.clientY);
+      // A press that never became a drag is a click. Which click it is
+      // depends on the button: left picks a net, right asks for the menu.
+      if (dragged) return;
+      if (button === 0) this.handleClick(e.clientX, e.clientY);
+      else if (button === 2) this.onNetContext?.(e.clientX, e.clientY, this.pickNetAt(e.clientX, e.clientY));
     });
     c.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
+      if (mode === null) {
+        // Not dragging: remember where the pointer is and let `render` do at
+        // most one raycast a frame for it. Raycasting here instead would run
+        // several times per frame on a fast move, against every instanced
+        // layer, for an answer that can only be drawn once.
+        this.hoverPoint = { x: e.clientX, y: e.clientY };
+        return;
+      }
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragged = true;
-      this.azimuth -= dx * 0.006;
-      this.elevation = Math.min(1.5, Math.max(0.05, this.elevation + dy * 0.006));
       lastX = e.clientX;
       lastY = e.clientY;
+      if (mode === "pan") {
+        this.pan(dx, dy);
+        return;
+      }
+      this.azimuth -= dx * 0.006;
+      this.elevation = Math.min(1.5, Math.max(0.05, this.elevation + dy * 0.006));
       this.updateCamera();
     });
+    c.addEventListener("pointerleave", () => {
+      this.hoverPoint = null;
+      if (this.hoveredNet < 0) return;
+      this.hoveredNet = -1;
+      this.onNetHover?.(null);
+    });
+    // The browser's own menu would cover the die and offer nothing useful
+    // over a canvas; `pointerup` raises ours instead.
+    c.addEventListener("contextmenu", (e) => e.preventDefault());
     c.addEventListener(
       "wheel",
       (e) => {
@@ -284,9 +355,12 @@ export class Die3D {
     );
   }
 
-  /** Click-to-select: raycast the visible layer meshes, resolve the hit
-   *  instance's net id, and publish it the same way a 2D hover does. */
-  private handleClick(clientX: number, clientY: number): void {
+  /**
+   * Which net (if any) the pointer is over: raycast the visible layer
+   * meshes and resolve the hit instance's net id. The 3D counterpart of
+   * `DieView.pickNet`, and the one place this view walks the scene.
+   */
+  pickNetAt(clientX: number, clientY: number): NetHit3D | null {
     const rect = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(
       ((clientX - rect.left) / rect.width) * 2 - 1,
@@ -297,25 +371,47 @@ export class Die3D {
       .filter((lm) => this.enabled.has(lm.name))
       .map((lm) => lm.mesh);
     const hits = this.raycaster.intersectObjects(targets, false);
-    if (hits.length === 0) {
-      this.onNetPick?.(null);
-      return;
-    }
+    if (hits.length === 0) return null;
     const hit = hits[0];
     const lm = [...this.layers.values()].find((l) => l.mesh === hit.object);
     const instanceId = hit.instanceId;
-    if (!lm || instanceId === undefined) return;
+    if (!lm || instanceId === undefined) return null;
     const netId = lm.netIds[instanceId];
-    if (netId < 0) {
-      this.onNetPick?.(null);
-      return;
-    }
-    this.onNetPick?.({ id: netId, name: this.netNameById.get(netId) ?? `n${netId}` });
+    if (netId < 0) return null;
+    return { id: netId, name: this.netNameById.get(netId) ?? `n${netId}` };
+  }
+
+  /** Click-to-select: the pick, published for the panel to pin. */
+  private handleClick(clientX: number, clientY: number): void {
+    this.onNetPick?.(this.pickNetAt(clientX, clientY));
+  }
+
+  /** At most one raycast per frame, and none at all while a drag is in
+   *  progress -- orbiting is the frame budget's worst case and the pointer
+   *  is not asking about a wire then anyway. */
+  private updateHover(): void {
+    const point = this.hoverPoint;
+    if (point === null) return;
+    this.hoverPoint = null;
+    const hit = this.pickNetAt(point.x, point.y);
+    const id = hit?.id ?? -1;
+    if (id === this.hoveredNet) return;
+    this.hoveredNet = id;
+    this.onNetHover?.(hit ? { hit, x: point.x, y: point.y } : null);
   }
 
   /** Set by the panel to hear clicks; kept as a plain field rather than an
    *  event emitter since there is exactly one subscriber. */
   onNetPick: ((hit: NetHit3D | null) => void) | null = null;
+
+  /** Fired when the net under the pointer changes, with the cursor position
+   *  the answer was computed for -- the tooltip has to be placed somewhere,
+   *  and by the time this fires the event is long gone. */
+  onNetHover: ((hover: { hit: NetHit3D; x: number; y: number } | null) => void) | null =
+    null;
+
+  /** Fired on a right-click that was not a pan, with whatever was under it. */
+  onNetContext: ((x: number, y: number, hit: NetHit3D | null) => void) | null = null;
 
   // ---- layers -----------------------------------------------------------
 
@@ -346,8 +442,14 @@ export class Die3D {
     return this.netIdByName.get(name) ?? null;
   }
 
+  /** Unlike the 2D view's one-uniform highlight, this rewrites every
+   *  instance's colour, so it is guarded: hovering across the die must not
+   *  repaint the whole stack for a net it is already showing, and a trace
+   *  sweep must not be cancelled by a hover that lands back on its own net. */
   setHighlightNet(id: number | null): void {
-    this.highlightedNet = id ?? -1;
+    const next = id ?? -1;
+    if (next === this.highlightedNet) return;
+    this.highlightedNet = next;
     this.traceState = null;
     this.traceActiveLayer = null;
     this.traceLabel = null;
@@ -477,6 +579,7 @@ export class Die3D {
   render(): void {
     const now = performance.now();
     this.updateTrace(now);
+    this.updateHover();
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(this.canvas.clientWidth));

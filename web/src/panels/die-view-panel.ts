@@ -72,6 +72,9 @@ export function dieViewPanel(opts: DiePanelOptions): PanelDef {
         mounted?.dispose();
         mode = next;
         for (const b of buttons) b.classList.toggle("on", b.dataset.mode === next);
+        // `DiePanelOptions` is a superset of `Die3DPanelOptions`, so both
+        // renderers take the same options object -- including the panel-focus
+        // callback their shared right-click menu navigates with.
         mounted = next === "2d" ? mountDie2D(host, opts) : mountDie3D(host, opts);
       }
 

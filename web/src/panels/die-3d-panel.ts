@@ -11,6 +11,9 @@
 import type { RenderBundle } from "../render/bundle";
 import { Die3D } from "../render/die3d";
 import { highlightBus } from "../store/highlight";
+import { coneRootBus } from "../store/selection";
+import { openNetMenu } from "./net-menu";
+import { netTooltip } from "./net-tooltip";
 
 const COLOUR_CSS: Record<string, string> = {
   li1: "#6bbf6b",
@@ -36,6 +39,9 @@ class FpsMeter {
 
 export interface Die3DPanelOptions {
   bundleReady: Promise<RenderBundle>;
+  /** Brings another workspace panel to the front, for the right-click menu.
+   *  Same injection as the 2D view's -- see `DiePanelOptions`. */
+  onFocusPanel?: (id: string) => void;
 }
 
 /** Mounts the 3D view into `container`, which must be a positioned element
@@ -63,7 +69,7 @@ export function mountDie3D(
         <hr />
         <button class="die3d-trace" disabled>Trace selected net</button>
         <button class="die3d-fit">Reset view</button>
-        <div class="hint">drag: orbit<br />wheel: zoom<br />click: pick net</div>
+        <div class="hint">drag: orbit<br />right/middle/shift-drag: pan<br />wheel: zoom<br />hover: highlight net<br />click: select net<br />right-click: actions</div>
       </div>
       <div class="panel-overlay die3d-trace-status" hidden></div>
       <pre class="panel-overlay die3d-stats"></pre>
@@ -84,6 +90,7 @@ export function mountDie3D(
   let rafId = 0;
   let unsubHighlight: (() => void) | null = null;
   let view: Die3D | null = null;
+  let tooltip: ReturnType<typeof netTooltip> | null = null;
 
   opts.bundleReady
     .then((bundle) => {
@@ -137,8 +144,36 @@ export function mountDie3D(
         if (id !== null) v.traceNet(id);
       });
 
+      // Mirrors the 2D view: hover names and glows, click fixes on the net
+      // and re-roots the Cone Walker, right-click opens the shared menu.
+      tooltip = netTooltip(container.querySelector(".die3d-wrap") as HTMLElement);
+      const tip = tooltip;
+
+      v.onNetHover = (hover) => {
+        if (!hover) {
+          highlightBus.set(null);
+          tip.hide();
+          return;
+        }
+        highlightBus.set({ name: hover.hit.name });
+        tip.show(hover.x, hover.y, hover.hit.name);
+      };
+
       v.onNetPick = (hit) => {
-        highlightBus.set(hit ? { name: hit.name } : null);
+        highlightBus.pin(hit ? { name: hit.name } : null);
+        if (hit) coneRootBus.open(hit.name);
+      };
+
+      v.onNetContext = (x, y, hit) => {
+        if (hit) highlightBus.pin({ name: hit.name });
+        openNetMenu(x, y, hit?.name ?? null, {
+          onFocusPanel: opts.onFocusPanel,
+          // The layer-by-layer sweep is this view's alone, so it is offered
+          // where the pick happened as well as on the button in the corner.
+          extra: hit
+            ? [{ label: "Trace net through the stack", onSelect: () => v.traceNet(hit.id) }]
+            : [],
+        });
       };
 
       unsubHighlight = highlightBus.subscribe((sel) => {
@@ -183,6 +218,8 @@ export function mountDie3D(
       disposed = true;
       cancelAnimationFrame(rafId);
       unsubHighlight?.();
+      tooltip?.dispose();
+      tooltip = null;
       view?.dispose();
       view = null;
       container.classList.remove("die3d-panel");
