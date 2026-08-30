@@ -74,6 +74,14 @@ const LEAF_LABEL: Record<string, string> = {
 
 const SHORT_CELL = /^sky130_fd_sc_hd__/;
 
+/** The leaf kinds that mean "this net cannot move", and the value they hold. */
+const CONSTANT_LEAF: Record<string, 0 | 1 | undefined> = { const0: 0, const1: 1 };
+
+/** Names a supply rail goes by in this library. Only changes the wording of
+ *  the constant panel -- a tie cell's output is just as constant, and is
+ *  reported the same way with a different sentence. */
+const SUPPLY_NET = /^(VGND|VPWR|VNB|VPB|VSS|VDD)$/i;
+
 export interface ConeWalkerPanelOptions {
   designReady: Promise<DesignClient>;
   /** For the live ✓/✗ column on a flattened cone. The walk itself is pure
@@ -155,17 +163,32 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
       //: `requirements()` for a cosmetic change would be a wasted round trip.
       let lastFlatten: RequirementsView | null = null;
       let focusNet: string | null = null;
+      //: The walk's leaf verdict on `focusNet`, or null when it has none
+      //: (an internal net, or a focus set before the walk answered).
+      let focusLeaf: string | null = null;
       let flattenValue: 0 | 1 = 1;
       let disposed = false;
       let store: SimStore | null = null;
       const notebook = notebookFor(options.puzzleId);
 
-      function setFocus(net: string): void {
+      /**
+       * `net` is the new flatten focus. `leaf` is the walk's verdict on it,
+       * when the caller has one: a constant net is a fact rather than a
+       * question, and `runFlatten` needs to know which before it asks the
+       * analysis engine to justify it.
+       */
+      function setFocus(net: string, leaf?: string | null): void {
         focusNet = net;
+        focusLeaf = leaf ?? null;
         focusNetEl.replaceChildren(netChip(net, { onClick: false }));
         flattenBtn.disabled = direction !== "in";
         labelBtn.disabled = false;
         labelBtn.textContent = labels.has("net", net) ? "relabel" : "label";
+        // "flatten for 1" and "flatten for 0" both answer the same way on a
+        // net that cannot move, so the pair is disabled rather than left
+        // looking like a choice that does something.
+        const isConstant = CONSTANT_LEAF[focusLeaf ?? ""] !== undefined;
+        for (const b of valBtns) b.disabled = isConstant;
       }
 
       function renderTree(): void {
@@ -243,7 +266,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
 
         row.addEventListener("click", (e) => {
           if ((e.target as HTMLElement).closest("button, .net-chip")) return;
-          setFocus(node.net);
+          setFocus(node.net, node.leaf);
         });
 
         wrapEl.append(row);
@@ -295,7 +318,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
           const res = await design.cone(net, { depth: DEPTH, direction });
           lastCall = res.call;
           root = wrap(res.data);
-          setFocus(net);
+          setFocus(net, res.data.leaf);
           loadingEl.hidden = true;
           bodyEl.hidden = false;
           renderTree();
@@ -367,6 +390,20 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
 
       async function runFlatten(): Promise<void> {
         if (!design || !focusNet || direction !== "in") return;
+
+        // A constant has nothing above it to justify, so there is no
+        // question here to put to the analysis engine. Asking it anyway
+        // returned a contradiction -- `VGND == 1: INCONSISTENT, conflicting:
+        // VGND` -- which is true and useless: it reads as the tool failing
+        // rather than as the net being a supply rail. Supplies are the ones
+        // this happens to in practice, because VGND and VPWR are on every
+        // instance in the netlist browser and are one click from here.
+        const constant = CONSTANT_LEAF[focusLeaf ?? ""];
+        if (constant !== undefined) {
+          renderConstantFocus(focusNet, constant);
+          return;
+        }
+
         flattenTitle.textContent = `flattening ${focusNet}…`;
         flattenBody.replaceChildren();
         flattenPanel.hidden = false;
@@ -377,6 +414,35 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
         } catch (err) {
           flattenBody.textContent = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
         }
+      }
+
+      /**
+       * The flatten panel for a net that is already a constant.
+       *
+       * States the value and why, and stops. There is no forced list and no
+       * choices list to draw: both would be empty, and an empty derivation
+       * next to the word INCONSISTENT is what made this look like a failure.
+       */
+      function renderConstantFocus(net: string, value: 0 | 1): void {
+        lastFlatten = null;
+        lastCall = null;
+        flattenPanel.hidden = false;
+        flattenTitle.replaceChildren(netChip(net, { onClick: false }));
+        flattenCaption.replaceChildren();
+        flattenBody.replaceChildren();
+
+        const box = el("div", "cw-flatten-constant");
+        box.append(
+          el("span", "cw-leaf cw-leaf-const" + value, `constant ${value}`),
+          el(
+            "span",
+            "cw-flatten-constant-text",
+            SUPPLY_NET.test(net)
+              ? `${net} is a supply rail, tied to ${value}. Nothing drives it and nothing can change it, so there is no derivation to flatten.`
+              : `${net} is tied to ${value} by its driver, which has no inputs. There is nothing above it to justify.`,
+          ),
+        );
+        flattenBody.append(box);
       }
 
       /** What the player typed, as a raw net name: a label they gave a net is

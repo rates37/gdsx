@@ -7,14 +7,17 @@
 // strip that had already overflowed.
 
 import type { DesignClient } from "../design/client";
-import { mountNetlistBrowser } from "./netlist-panel";
+import { mountNetlistBrowser, type NetlistBrowserOptions } from "./netlist-panel";
 import { mountLabels } from "./labels-panel";
 import { subTabHost } from "./mounts";
 import type { PanelDef } from "../workspace/workspace";
 
 export const NETLIST_SECTIONS = ["browser", "labels"] as const;
 
-export function netlistPanel(designReady: Promise<DesignClient>): PanelDef {
+export function netlistPanel(
+  designReady: Promise<DesignClient>,
+  options: NetlistBrowserOptions = {},
+): PanelDef {
   return {
     id: "netlist",
     title: "Netlist",
@@ -23,7 +26,7 @@ export function netlistPanel(designReady: Promise<DesignClient>): PanelDef {
         {
           id: "browser",
           title: "Browser",
-          mount: (host) => mountNetlistBrowser(host, designReady),
+          mount: (host) => mountNetlistBrowser(host, designReady, options),
           // Both sections hold state that is expensive to rebuild (the browser
           // re-fetches 728 instances and 5,000 nets from Pyodide) or annoying
           // to lose (selection, scroll, filter). Neither holds a GPU context.

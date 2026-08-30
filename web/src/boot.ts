@@ -364,7 +364,7 @@ export async function bootWorkspace(
           dieApi = api;
         },
       }),
-      netlistPanel(designReady),
+      netlistPanel(designReady, { onFocusPanel: (id) => workspace.focus(id) }),
       coneWalkerPanel({
         designReady,
         storeReady,

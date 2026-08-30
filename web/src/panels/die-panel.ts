@@ -153,11 +153,23 @@ export function mountDie2D(
         meter.reset();
       });
 
+      // Ignored while a text field has focus: this listener is on `window`,
+      // so without the guard typing an "f" into the netlist filter or the
+      // cone walker's net box reframed the die behind it.
       onKeydown = (e: KeyboardEvent) => {
-        if (e.key === "f" || e.key === "F") {
-          view.fit();
-          meter.reset();
+        if (e.key !== "f" && e.key !== "F") return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          active instanceof HTMLSelectElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          return;
         }
+        view.fit();
+        meter.reset();
       };
       window.addEventListener("keydown", onKeydown);
 

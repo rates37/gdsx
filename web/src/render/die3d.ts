@@ -44,6 +44,36 @@ const HIGHLIGHT_COLOUR = 0xffd926; // matches dieview.ts's (1, 0.85, 0.15)
 const DIM_FACTOR = 0.35; // matches dieview.ts's non-selected rgb *= 0.35
 const PULSE_COLOUR = 0xffffff;
 
+/**
+ * The floor of the next *drawn* layer above `index`, or null if this is the
+ * top one.
+ *
+ * Walks `layerOrder` rather than `header.stack`, because the stack also lists
+ * the via tiers and those are never drawn -- the answer wanted here is "where
+ * does the next visible slab start", which is what a layer has to reach to
+ * look joined to it.
+ */
+function drawnStackTop(
+  layerOrder: readonly string[],
+  index: number,
+  stackByName: Map<string, { z: number; thickness: number }>,
+): number | null {
+  for (let i = index + 1; i < layerOrder.length; i++) {
+    const next = stackByName.get(layerOrder[i]);
+    if (next) return next.z;
+  }
+  return null;
+}
+
+/** An angle folded into (-PI, PI]. */
+function wrapAngle(radians: number): number {
+  const twoPi = Math.PI * 2;
+  const wrapped = radians % twoPi;
+  if (wrapped > Math.PI) return wrapped - twoPi;
+  if (wrapped <= -Math.PI) return wrapped + twoPi;
+  return wrapped;
+}
+
 /** Rects below this, in microns, would render as a sliver or vanish. */
 const MIN_SIZE_UM = 0.03;
 /** How far apart the exploded view pulls adjacent stack layers, at factor 1. */
@@ -186,8 +216,31 @@ export class Die3D {
       const pos = new THREE.Vector3();
       const scale = new THREE.Vector3();
       const quat = new THREE.Quaternion();
-      const cz = stackEntry.z + stackEntry.thickness / 2;
-      const thickness = Math.max(stackEntry.thickness, MIN_SIZE_UM);
+      // Drawn from this layer's floor up to the next drawn layer's floor,
+      // rather than to its own true ceiling.
+      //
+      // `header.stack` is contiguous -- every metal's top is the bottom of
+      // the via tier above it, and that via tier's top is the bottom of the
+      // next metal. But `header.layers` lists only the routing layers, so no
+      // geometry is ever built for the vias, and drawing each metal at its
+      // true thickness left a floating stack of slabs with the exact height
+      // of the missing via tier between each pair -- 0.27 to 0.5 um of
+      // nothing, which at any sensible zoom reads as a design that is not
+      // connected to itself. Filling the gap makes the stack read as one
+      // object, and the extra height is not invented: it is the via tier,
+      // drawn as part of the metal below it because there is nothing else
+      // to draw it as.
+      //
+      // `explode` still separates them, so the true layer boundaries are one
+      // slider away.
+      const nextDrawn = drawnStackTop(this.layerOrder, index, stackByName);
+      const floor = stackEntry.z;
+      const span = Math.max(
+        nextDrawn === null ? stackEntry.thickness : nextDrawn - floor,
+        MIN_SIZE_UM,
+      );
+      const cz = floor + span / 2;
+      const thickness = span;
 
       for (let i = 0; i < count; i++) {
         const o = i * 4;
@@ -230,10 +283,28 @@ export class Die3D {
   // ---- camera ---------------------------------------------------------
 
   private updateCamera(): void {
-    const x = this.target.x + this.radius * Math.cos(this.elevation) * Math.cos(this.azimuth);
-    const y = this.target.y + this.radius * Math.cos(this.elevation) * Math.sin(this.azimuth);
-    const z = this.target.z + this.radius * Math.sin(this.elevation);
-    this.camera.position.set(x, y, z);
+    const ce = Math.cos(this.elevation);
+    const se = Math.sin(this.elevation);
+    const ca = Math.cos(this.azimuth);
+    const sa = Math.sin(this.azimuth);
+
+    this.camera.position.set(
+      this.target.x + this.radius * ce * ca,
+      this.target.y + this.radius * ce * sa,
+      this.target.z + this.radius * se,
+    );
+
+    // The up vector is the sphere's own north tangent at this point --
+    // d/d(elevation) of the position direction -- rather than a fixed +Z.
+    //
+    // That is what lets elevation run the whole way round instead of being
+    // clamped to the top hemisphere. With a fixed +Z up, `lookAt` degenerates
+    // at the poles (the view direction and up become parallel) and flips the
+    // image once past them, which is why the old code stopped at 0.05..1.5
+    // radians and would not let you look at the die from below. This tangent
+    // is continuous everywhere on the sphere, poles included, so there is no
+    // orientation the camera cannot reach and none it snaps out of.
+    this.camera.up.set(-se * ca, -se * sa, ce);
     this.camera.lookAt(this.target);
   }
 
@@ -329,7 +400,10 @@ export class Die3D {
         return;
       }
       this.azimuth -= dx * 0.006;
-      this.elevation = Math.min(1.5, Math.max(0.05, this.elevation + dy * 0.006));
+      // Both angles wrap; neither is clamped. Kept in (-PI, PI] only so the
+      // numbers stay small over a long session, which changes no orientation.
+      this.elevation = wrapAngle(this.elevation + dy * 0.006);
+      this.azimuth = wrapAngle(this.azimuth);
       this.updateCamera();
     });
     c.addEventListener("pointerleave", () => {

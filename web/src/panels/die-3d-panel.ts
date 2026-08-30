@@ -62,7 +62,7 @@ export function mountDie3D(
         <hr />
         <button class="die3d-trace" disabled>Trace selected net</button>
         <button class="die3d-fit">Reset view</button>
-        <div class="hint">drag: orbit<br />right/middle/shift-drag: pan<br />wheel: zoom<br />hover: highlight net<br />click: select net<br />right-click: actions</div>
+        <div class="hint">drag: orbit (no limits)<br />right/middle/shift-drag: pan<br />wheel: zoom<br />F: fit view<br />hover: highlight net<br />click: select net<br />right-click: actions</div>
       </div>
       <div class="panel-overlay die3d-trace-status" hidden></div>
       <pre class="panel-overlay die3d-stats"></pre>
@@ -80,6 +80,7 @@ export function mountDie3D(
   const stats = container.querySelector(".die3d-stats") as HTMLPreElement;
 
   let disposed = false;
+  let onKeydown: ((e: KeyboardEvent) => void) | null = null;
   let rafId = 0;
   let unsubHighlight: (() => void) | null = null;
   let view: Die3D | null = null;
@@ -131,6 +132,27 @@ export function mountDie3D(
       });
 
       fitBtn.addEventListener("click", () => v.fit());
+
+      // Same key as the 2D view's fit. The two views are one panel with a
+      // toggle between them and having F reframe one but not the other was a
+      // difference the player has to remember for no reason. Ignored while a
+      // text field has focus, so typing an "f" into a filter box somewhere
+      // does not move the camera.
+      onKeydown = (e: KeyboardEvent) => {
+        if (e.key !== "f" && e.key !== "F") return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          active instanceof HTMLSelectElement ||
+          (active instanceof HTMLElement && active.isContentEditable)
+        ) {
+          return;
+        }
+        v.fit();
+      };
+      window.addEventListener("keydown", onKeydown);
 
       traceBtn.addEventListener("click", () => {
         const id = v.highlightedNetId;
@@ -210,6 +232,8 @@ export function mountDie3D(
     dispose() {
       disposed = true;
       cancelAnimationFrame(rafId);
+      if (onKeydown) window.removeEventListener("keydown", onKeydown);
+      onKeydown = null;
       unsubHighlight?.();
       tooltip?.dispose();
       tooltip = null;

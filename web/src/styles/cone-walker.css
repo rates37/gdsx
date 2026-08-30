@@ -179,3 +179,21 @@
 .cw-flatten-cycle-link:hover {
   color: var(--df-gold);
 }
+
+/* ---- flattening a constant ---------------------------------------- */
+/* A supply or a tie has no derivation, so this replaces the forced and
+   choices lists rather than sitting above two empty ones. */
+.cw-flatten-constant {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+}
+/* The pill states the value; only the sentence beside it should wrap. */
+.cw-flatten-constant > .cw-leaf {
+  flex: none;
+}
+.cw-flatten-constant-text {
+  color: var(--df-dim);
+  line-height: 1.65;
+}

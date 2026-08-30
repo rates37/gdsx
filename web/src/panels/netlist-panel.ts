@@ -68,9 +68,18 @@ function driverText(net: NetView): string {
  * `netlist-host.ts` for the host and `mounts.ts` for why sections are
  * mounted and disposed rather than hidden.
  */
+export interface NetlistBrowserOptions {
+  /** Brings a workspace panel to the front. Absent = the browser still opens
+   *  nets on the cone bus, it just cannot navigate to the panel that shows
+   *  them. Injected from boot.ts, the same way the die view receives it:
+   *  panels are constructed before the workspace exists. */
+  onFocusPanel?: (id: string) => void;
+}
+
 export function mountNetlistBrowser(
   container: HTMLElement,
   designReady: Promise<DesignClient>,
+  options: NetlistBrowserOptions = {},
 ): Mounted {
     container.classList.add("netlist-panel");
     container.innerHTML = `
@@ -152,7 +161,14 @@ export function mountNetlistBrowser(
         "open in Cone Walker",
       ) as HTMLButtonElement;
       openBtn.type = "button";
-      openBtn.addEventListener("click", () => coneRootBus.open(net.name));
+      // The same two-step the die view's context menu makes: the bus says
+      // *what* to walk, focusing says *where to look*. Selecting a row fires
+      // the bus alone and deliberately does not navigate -- a click in a list
+      // of 5,000 nets should not throw you out of the list.
+      openBtn.addEventListener("click", () => {
+        coneRootBus.open(net.name);
+        options.onFocusPanel?.("cone-walker");
+      });
       box.append(openBtn);
       box.append(el("h4", undefined, `readers (${net.readers.length})`));
       const readers = el("div", "detail-conns");
