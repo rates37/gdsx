@@ -71,6 +71,14 @@ export interface ReplResult {
 // every keystroke. `nl`, `sim`, `design` are bound to the open design, per
 // game-plan.md §4.14 -- the same three names the panel's own text promises.
 //
+// The namespace those names live in is created once per design and kept for
+// the session. It used to be rebuilt on every call, which meant a name the
+// player bound -- `a = 1`, a helper function, an intermediate result -- was
+// written into a dict that was thrown away before the next prompt, so the
+// following line could not see it. A console you cannot build anything up
+// in is a calculator, and everything interesting to ask about a netlist
+// takes more than one line.
+//
 // "Rich output" here is deliberately modest: a `Netlist`/trace-shaped object
 // gets pretty-printed as JSON via `gdsx.core.serial.to_dict` when it is one
 // of the dataclasses that module already knows how to flatten (the same
@@ -78,28 +86,60 @@ export interface ReplResult {
 // everything else falls back to `repr()`, honestly, rather than pretending
 // to have a table view for an arbitrary Python object.
 const REPL_BOOTSTRAP = `
-def _gdsx_repl_eval(_handle, _source):
-    import io, contextlib, json
+_GDSX_REPL_NAMESPACES = {}
+
+
+def _gdsx_repl_bindings(_handle):
+    """The names the panel promises are in scope, freshly resolved."""
     import gdsx.api as _api
-    from gdsx.core import serial as _serial
 
     _design = _api._get(_handle)
-    _ns = {
+    return {
         "nl": _design.netlist,
         "graph": _design.graph,
         "sim": _design.simulator(),
         "design": _design,
         "api": _api,
     }
+
+
+def _gdsx_repl_namespace(_handle):
+    """This design's session namespace, created on first use.
+
+    Keyed by handle so opening a different puzzle starts clean rather than
+    inheriting names bound against a netlist that is no longer loaded.
+    """
+    _ns = _GDSX_REPL_NAMESPACES.get(_handle)
+    if _ns is None:
+        _ns = _gdsx_repl_bindings(_handle)
+        # The way back from \`nl = None\`. Everything else in here a player
+        # can rebuild by typing it again; the design bindings they cannot,
+        # and losing them to a typo would mean reloading the page.
+        _ns["reset"] = lambda: _ns.update(_gdsx_repl_bindings(_handle))
+        _GDSX_REPL_NAMESPACES[_handle] = _ns
+    return _ns
+
+
+def _gdsx_repl_eval(_handle, _source):
+    import ast, io, contextlib, json
+    from gdsx.core import serial as _serial
+
+    _ns = _gdsx_repl_namespace(_handle)
     _buf = io.StringIO()
     _value = None
     _error = None
     try:
+        _body = ast.parse(_source, "<repl>", "exec").body
+        # A trailing expression is evaluated rather than executed, so its
+        # value can be shown -- that is the difference between a console and
+        # a script runner, and it has to survive the statements before it in
+        # a pasted block.
+        _tail = _body.pop() if _body and isinstance(_body[-1], ast.Expr) else None
         with contextlib.redirect_stdout(_buf):
-            try:
-                _value = eval(compile(_source, "<repl>", "eval"), _ns)
-            except SyntaxError:
-                exec(compile(_source, "<repl>", "exec"), _ns)
+            if _body:
+                exec(compile(ast.Module(body=_body, type_ignores=[]), "<repl>", "exec"), _ns)
+            if _tail is not None:
+                _value = eval(compile(ast.Expression(body=_tail.value), "<repl>", "eval"), _ns)
     except Exception as exc:  # noqa: BLE001 -- shown to the player, not raised
         _error = f"{type(exc).__name__}: {exc}"
 

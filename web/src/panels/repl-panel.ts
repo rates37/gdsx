@@ -5,6 +5,12 @@
 // the popover, paste into the input -- the popover is read-only display, so
 // that hand-off is copy/paste rather than a second code path).
 //
+// It is a *session*, not a series of one-shot evaluations: names bound here
+// stay bound until the page is reloaded, because the interesting questions
+// about a netlist take more than one line to ask. The namespace itself lives
+// in the worker (`REPL_BOOTSTRAP` in worker.ts), keyed by design handle --
+// this panel only ships source over and renders what comes back.
+//
 // Rich output is real but modest: a returned dataclass the library already
 // knows how to flatten (`gdsx.core.serial.to_dict`, the same serialiser
 // every `gdsx.api` endpoint uses) pretty-prints as JSON; a `Netlist` or a
