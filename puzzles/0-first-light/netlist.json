@@ -3,13 +3,13 @@
   "ports": {
     "clk": "input",
     "rst_n": "input",
-    "O[0]": "output",
     "O[1]": "output",
+    "O[0]": "output",
     "O[2]": "output",
     "O[3]": "output",
     "O[4]": "output",
-    "O[5]": "output",
     "success": "output",
+    "O[5]": "output",
     "I": "input"
   },
   "power_nets": [
@@ -21,44 +21,11 @@
       "name": "and2_2_1",
       "cell": "sky130_fd_sc_hd__and2_2",
       "connections": {
-        "A": "O[3]",
-        "B": "O[2]",
-        "VGND": "VGND",
-        "VPWR": "VPWR",
-        "X": "n118"
-      }
-    },
-    {
-      "name": "and2_2_2",
-      "cell": "sky130_fd_sc_hd__and2_2",
-      "connections": {
-        "A": "n118",
-        "B": "n128",
-        "VGND": "VGND",
-        "VPWR": "VPWR",
-        "X": "n143"
-      }
-    },
-    {
-      "name": "and2_2_3",
-      "cell": "sky130_fd_sc_hd__and2_2",
-      "connections": {
-        "A": "n134",
-        "B": "n130",
-        "VGND": "VGND",
-        "VPWR": "VPWR",
-        "X": "n128"
-      }
-    },
-    {
-      "name": "and2_2_4",
-      "cell": "sky130_fd_sc_hd__and2_2",
-      "connections": {
         "A": "O[0]",
         "B": "O[5]",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "X": "n134"
+        "X": "n117"
       }
     },
     {
@@ -138,11 +105,43 @@
       "cell": "sky130_fd_sc_hd__dfrtp_2",
       "connections": {
         "CLK": "clk",
-        "D": "n158",
+        "D": "n122",
         "Q": "success",
         "RESET_B": "rst_n",
         "VGND": "VGND",
         "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "inv_2_1",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "success",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n118"
+      }
+    },
+    {
+      "name": "nand2_2_1",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "O[3]",
+        "B": "O[2]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n126"
+      }
+    },
+    {
+      "name": "nand2_2_2",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n117",
+        "B": "n140",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n136"
       }
     },
     {
@@ -153,37 +152,34 @@
         "B": "O[1]",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n130"
+        "Y": "n140"
       }
     },
     {
-      "name": "or2_2_1",
-      "cell": "sky130_fd_sc_hd__or2_2",
+      "name": "o21ai_2_1",
+      "cell": "sky130_fd_sc_hd__o21ai_2",
       "connections": {
-        "A": "success",
-        "B": "n143",
+        "A1": "n126",
+        "A2": "n136",
+        "B1": "n118",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "X": "n158"
+        "Y": "n122"
       }
     }
   ],
   "nets": {
-    "O[3]": [
+    "O[0]": [
       "and2_2_1/A",
-      "dfrtp_2_4/Q",
-      "dfrtp_2_5/D"
+      "dfrtp_2_1/Q",
+      "dfrtp_2_2/D"
     ],
-    "O[2]": [
+    "O[5]": [
       "and2_2_1/B",
-      "dfrtp_2_3/Q",
-      "dfrtp_2_4/D"
+      "dfrtp_2_6/Q"
     ],
     "VGND": [
       "and2_2_1/VGND",
-      "and2_2_2/VGND",
-      "and2_2_3/VGND",
-      "and2_2_4/VGND",
       "dfrtp_2_1/VGND",
       "dfrtp_2_2/VGND",
       "dfrtp_2_3/VGND",
@@ -191,14 +187,14 @@
       "dfrtp_2_5/VGND",
       "dfrtp_2_6/VGND",
       "dfrtp_2_7/VGND",
+      "inv_2_1/VGND",
+      "nand2_2_1/VGND",
+      "nand2_2_2/VGND",
       "nor2_2_1/VGND",
-      "or2_2_1/VGND"
+      "o21ai_2_1/VGND"
     ],
     "VPWR": [
       "and2_2_1/VPWR",
-      "and2_2_2/VPWR",
-      "and2_2_3/VPWR",
-      "and2_2_4/VPWR",
       "dfrtp_2_1/VPWR",
       "dfrtp_2_2/VPWR",
       "dfrtp_2_3/VPWR",
@@ -206,37 +202,15 @@
       "dfrtp_2_5/VPWR",
       "dfrtp_2_6/VPWR",
       "dfrtp_2_7/VPWR",
+      "inv_2_1/VPWR",
+      "nand2_2_1/VPWR",
+      "nand2_2_2/VPWR",
       "nor2_2_1/VPWR",
-      "or2_2_1/VPWR"
+      "o21ai_2_1/VPWR"
     ],
-    "n118": [
+    "n117": [
       "and2_2_1/X",
-      "and2_2_2/A"
-    ],
-    "n128": [
-      "and2_2_2/B",
-      "and2_2_3/X"
-    ],
-    "n143": [
-      "and2_2_2/X",
-      "or2_2_1/B"
-    ],
-    "n134": [
-      "and2_2_3/A",
-      "and2_2_4/X"
-    ],
-    "n130": [
-      "and2_2_3/B",
-      "nor2_2_1/Y"
-    ],
-    "O[0]": [
-      "and2_2_4/A",
-      "dfrtp_2_1/Q",
-      "dfrtp_2_2/D"
-    ],
-    "O[5]": [
-      "and2_2_4/B",
-      "dfrtp_2_6/Q"
+      "nand2_2_2/A"
     ],
     "clk": [
       "dfrtp_2_1/CLK",
@@ -264,18 +238,44 @@
       "dfrtp_2_3/D",
       "nor2_2_1/B"
     ],
+    "O[2]": [
+      "dfrtp_2_3/Q",
+      "dfrtp_2_4/D",
+      "nand2_2_1/B"
+    ],
+    "O[3]": [
+      "dfrtp_2_4/Q",
+      "dfrtp_2_5/D",
+      "nand2_2_1/A"
+    ],
     "O[4]": [
       "dfrtp_2_5/Q",
       "dfrtp_2_6/D",
       "nor2_2_1/A"
     ],
-    "n158": [
+    "n122": [
       "dfrtp_2_7/D",
-      "or2_2_1/X"
+      "o21ai_2_1/Y"
     ],
     "success": [
       "dfrtp_2_7/Q",
-      "or2_2_1/A"
+      "inv_2_1/A"
+    ],
+    "n118": [
+      "inv_2_1/Y",
+      "o21ai_2_1/B1"
+    ],
+    "n126": [
+      "nand2_2_1/Y",
+      "o21ai_2_1/A1"
+    ],
+    "n140": [
+      "nand2_2_2/B",
+      "nor2_2_1/Y"
+    ],
+    "n136": [
+      "nand2_2_2/Y",
+      "o21ai_2_1/A2"
     ]
   },
   "floating": [],

@@ -513,7 +513,7 @@
       "name": "and2_2_41",
       "cell": "sky130_fd_sc_hd__and2_2",
       "connections": {
-        "A": "n490",
+        "A": "n556",
         "B": "n495",
         "VGND": "VGND",
         "VPWR": "VPWR",
@@ -1176,7 +1176,7 @@
       "cell": "sky130_fd_sc_hd__dfrtp_2",
       "connections": {
         "CLK": "clk",
-        "D": "n1328",
+        "D": "n1295",
         "Q": "O[1]",
         "RESET_B": "rst_n",
         "VGND": "VGND",
@@ -1224,7 +1224,7 @@
       "cell": "sky130_fd_sc_hd__dfrtp_2",
       "connections": {
         "CLK": "clk",
-        "D": "n1399",
+        "D": "n1432",
         "Q": "n565",
         "RESET_B": "rst_n",
         "VGND": "VGND",
@@ -1592,7 +1592,7 @@
         "S": "enable",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "X": "n1328"
+        "X": "n1295"
       }
     },
     {
@@ -1640,7 +1640,7 @@
         "S": "enable",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "X": "n1399"
+        "X": "n1432"
       }
     },
     {
@@ -1861,7 +1861,7 @@
         "B": "n566",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n490"
+        "Y": "n556"
       }
     },
     {
@@ -3099,7 +3099,7 @@
       "and2_2_40/X",
       "and2_2_45/B"
     ],
-    "n490": [
+    "n556": [
       "and2_2_41/A",
       "nor2_2_3/Y"
     ],
@@ -3442,7 +3442,7 @@
       "dfrtp_2_24/D",
       "mux2_1_32/X"
     ],
-    "n1328": [
+    "n1295": [
       "dfrtp_2_25/D",
       "mux2_1_16/X"
     ],
@@ -3458,7 +3458,7 @@
       "dfrtp_2_28/D",
       "mux2_1_19/X"
     ],
-    "n1399": [
+    "n1432": [
       "dfrtp_2_29/D",
       "mux2_1_20/X"
     ],

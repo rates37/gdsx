@@ -57,7 +57,7 @@
         "B2": "n27",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n15"
+        "Y": "n126"
       }
     },
     {
@@ -300,7 +300,7 @@
         "B": "n17",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "X": "n283"
+        "X": "n199"
       }
     },
     {
@@ -520,7 +520,7 @@
       "name": "inv_2_1",
       "cell": "sky130_fd_sc_hd__inv_2",
       "connections": {
-        "A": "n15",
+        "A": "n126",
         "VGND": "VGND",
         "VPWR": "VPWR",
         "Y": "n115"
@@ -744,7 +744,7 @@
       "cell": "sky130_fd_sc_hd__o22ai_2",
       "connections": {
         "A1": "n315",
-        "A2": "n283",
+        "A2": "n199",
         "B1": "n80",
         "B2": "n348",
         "VGND": "VGND",
@@ -757,7 +757,7 @@
       "cell": "sky130_fd_sc_hd__o22ai_2",
       "connections": {
         "A1": "n325",
-        "A2": "n283",
+        "A2": "n199",
         "B1": "n82",
         "B2": "n348",
         "VGND": "VGND",
@@ -770,7 +770,7 @@
       "cell": "sky130_fd_sc_hd__o22ai_2",
       "connections": {
         "A1": "n387",
-        "A2": "n283",
+        "A2": "n199",
         "B1": "n81",
         "B2": "n348",
         "VGND": "VGND",
@@ -1151,7 +1151,7 @@
       "dfrtp_2_1/Q",
       "nand2_2_1/B"
     ],
-    "n15": [
+    "n126": [
       "a22oi_2_3/Y",
       "inv_2_1/A"
     ],
@@ -1328,7 +1328,7 @@
       "and2b_2_3/B",
       "nand2_2_7/A"
     ],
-    "n283": [
+    "n199": [
       "and2b_2_4/X",
       "o22ai_2_1/A2",
       "o22ai_2_2/A2",

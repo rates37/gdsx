@@ -48,9 +48,11 @@ raised exception at build time rather than a merged net at extract time.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from ..config import TechConfig
+from ..functions import async_nets, clock_nets, lookup
 from ..geo.types import Point
 from ..netlist import Netlist
 from .place import ROW_HEIGHT, Placement
@@ -66,9 +68,9 @@ VIA = (68, 44)
 MET2 = (69, 20)
 VIA2 = (69, 44)
 MET3 = (70, 20)
+MET3_PIN = (70, 5)
 VIA3 = (70, 44)
 MET4 = (71, 20)
-MET4_PIN = (71, 5)
 
 STUB = 85  # nm, half-width of a wire and of an mcon/via/via2 square --
 # measured from VIA_L1M1_PR_MR etc in samples/puzzle.gds: (-85,-85;85,85)
@@ -225,6 +227,95 @@ def build_pin_table(tech: TechConfig, reference) -> PinTable:
             pins.setdefault(p.name, p.point)
         table[name] = pins
     return table
+
+
+# ---------------------------------------------------------------------------
+# port pins
+
+# How far outside the core's own furniture a pin column sits. The pin's access
+# stack is a square of half-width STUB, so at two met3 pitches the nearest
+# metal it could touch is 595 nm away -- four times SPACING -- on every side:
+# the met1 rails start at x=0 and end at core_width + RAIL_MARGIN, the met2
+# power straps sit inside that, and the lowest rail spans y=0 +/- RAIL_HALF_HEIGHT.
+PORT_MARGIN = 2 * MET3_PITCH
+# Bottom pins sit below the lowest power rail rather than beside it, so their
+# clearance is in y instead of x.
+BOTTOM_PIN_Y = -(RAIL_HALF_HEIGHT + PORT_MARGIN)
+
+
+def _natural(name: str) -> tuple:
+    """Sort key that orders `O[2]` before `O[10]`, so a bus reads in order."""
+    return tuple(
+        int(part) if part.isdigit() else part for part in re.split(r"(\d+)", name)
+    )
+
+
+def _control_nets(nl: Netlist) -> set[str]:
+    """The nets that land on a sequential cell's clock or async set/reset pin.
+
+    Read off the cell library rather than matched by name, so a design that
+    calls its clock something other than `clk` still gets its pins on the
+    right edge.
+    """
+    nets: set[str] = set()
+    for inst in nl.instances:
+        cell = lookup(inst.cell)
+        if cell is None or cell.sequential is None:
+            continue
+        nets |= clock_nets(cell, inst.connections)
+        nets |= async_nets(cell, inst.connections)
+    return nets
+
+
+def _spread(count: int, lo: int, hi: int, pitch: int) -> list[int]:
+    """`count` evenly pitched positions strictly inside `[lo, hi]`."""
+    step = (hi - lo) / (count + 1)
+    return [round((lo + step * (i + 1)) / pitch) * pitch for i in range(count)]
+
+
+def port_pins(nl: Netlist, core_width: int, n_rows: int) -> dict[str, Point]:
+    """One die-edge pin per top-level port: data inputs on the left edge,
+    outputs on the right edge, clock and async reset along the bottom.
+
+    A port is only a port because a label sits on its net, so where that label
+    goes is the whole of a port's physical identity. Dropping it wherever the
+    net happened to be routed makes every port an interior point and the die
+    unreadable as a chip: you cannot tell by looking which side data enters
+    from. Giving each port a real pin -- its own access stack, on its own
+    edge, evenly pitched along it, in name order -- costs one extra met4 link
+    per port and makes the die view say what the interface is.
+
+    Sides follow docs/game/puzzle-pack.md section 0.2. Within a side the first
+    name is placed at the top (or, along the bottom, at the left), so a bus
+    runs in index order the way a pin list does.
+    """
+    control = _control_nets(nl)
+    left: list[str] = []
+    right: list[str] = []
+    bottom: list[str] = []
+    for net, direction in nl.ports.items():
+        if net in nl.power_nets:
+            continue
+        if net in control:
+            bottom.append(net)
+        elif direction == "input":
+            left.append(net)
+        else:
+            right.append(net)
+
+    pins: dict[str, Point] = {}
+    height = n_rows * ROW_HEIGHT
+    for side, x in (
+        (left, -PORT_MARGIN),
+        (right, core_width + RAIL_MARGIN + PORT_MARGIN),
+    ):
+        ys = _spread(len(side), 0, height, MET4_PITCH)
+        for net, y in zip(sorted(side, key=_natural), reversed(ys)):
+            pins[net] = Point(x, y)
+    xs = _spread(len(bottom), 0, core_width, MET3_PITCH)
+    for net, x in zip(sorted(bottom, key=_natural), xs):
+        pins[net] = Point(x, BOTTOM_PIN_Y)
+    return pins
 
 
 # ---------------------------------------------------------------------------
@@ -500,7 +591,7 @@ class _Router:
                 self._emit(VIA2, stack, net)
                 self._emit(MET3, stack, net)
 
-    def signal(self, net: str, pins: list[Point], is_port: bool) -> None:
+    def signal(self, net: str, pins: list[Point], port_pin: Point | None) -> None:
         """Route one net as a chain of local links, not as one wide track.
 
         Pins are sorted by y and each neighbouring pair is joined
@@ -519,18 +610,26 @@ class _Router:
         so the risers get longer. Linking neighbours keeps every riser inside
         the gap between two adjacent pins, which is short no matter how large
         the die is.
+
+        `port_pin` is the net's die-edge pin, where it has one. It is joined
+        to whichever of the net's own pins is closest in y -- not folded into
+        the chain by y order, which would put a long link on either side of it
+        instead of one -- and it carries the net's label, because that pin is
+        what makes the net a port.
         """
         ordered = sorted(pins, key=lambda p: (p.y, p.x))
-        anchor: tuple[int, int] | None = None  # (column x, track y) for a label
+        anchor: tuple[int, int] | None = None
         for a, b in zip(ordered, ordered[1:]):
             anchor = self.link(net, a, b) or anchor
-        if anchor is None:
-            # A one-pin net has nothing to join. It is still a real net -- an
-            # unconnected output, or a port with a single reader -- and it
-            # still needs a label if it is a port, so give it a stub track.
-            anchor = self.link(net, ordered[0], ordered[0])
-        if is_port and anchor is not None:
-            self.out.texts.append((*MET4_PIN, net, anchor[0], anchor[1]))
+        if anchor is None and port_pin is None:
+            # A one-pin net with no edge pin has nothing to join. It is still
+            # a real net -- an unconnected output -- and a zero-length stub
+            # keeps it on the grid rather than leaving it as a bare via stack.
+            self.link(net, ordered[0], ordered[0])
+        if port_pin is not None:
+            nearest = min(ordered, key=lambda p: (abs(p.y - port_pin.y), p.y, p.x))
+            self.link(net, port_pin, nearest)
+            self.out.texts.append((*MET3_PIN, net, port_pin.x, port_pin.y))
 
     def link(self, net: str, a: Point, b: Point) -> tuple[int, int] | None:
         """Join two pins of one net through a met4 line between them."""
@@ -583,21 +682,31 @@ def route(
             pts.append(_transform(pin_table[cell_of[inst]][pin], placements[inst]))
         pins_of[net] = pts
 
-    # Widest-first: a net whose pins straddle many rows has the least freedom
-    # in which met3 grid line it can reach, so it picks before the local nets
-    # that can settle anywhere. Ties break on name, so the result is
-    # deterministic (layout-guide.md §10 point 8).
+    ports = port_pins(nl, core_width, n_rows)
+
+    # Ports first, then widest-first: a net whose pins straddle many rows has
+    # the least freedom in which met3 grid line it can reach, so it picks
+    # before the local nets that can settle anywhere -- and a port's link runs
+    # from the die edge to somewhere inside the core, which is wider still and
+    # wants a met4 line while the layer is empty. Ties break on name, so the
+    # result is deterministic (layout-guide.md §10 point 8).
     order = sorted(
         pins_of,
         key=lambda n: (
+            n not in ports,
             -(max(p.y for p in pins_of[n]) - min(p.y for p in pins_of[n])),
             -len(pins_of[n]),
             n,
         ),
     )
-    r.access(pins_of)
+    r.access(
+        {
+            net: pts + ([ports[net]] if net in ports else [])
+            for net, pts in pins_of.items()
+        }
+    )
     for net in order:
-        r.signal(net, pins_of[net], net in nl.ports)
+        r.signal(net, pins_of[net], ports.get(net))
 
     verify(r.shapes)
     return r.out

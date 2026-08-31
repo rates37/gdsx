@@ -94,6 +94,32 @@ def test_every_verilog_port_is_labelled(intended, extracted):
     assert extracted.ports == intended.ports
 
 
+def test_ports_are_pins_on_the_die_edge(intended, spec):
+    """Data inputs left, outputs right, clock and async reset along the
+    bottom -- puzzle-pack.md §0.2. Each side is one column (or row) of pins
+    outside the core, evenly pitched and in name order, so the die reads as a
+    chip rather than as a bag of interior labels.
+    """
+    placed = place(intended, spec, REFERENCE)
+    pins = R.port_pins(intended, placed.core_width, placed.rows)
+    assert set(pins) == set(intended.ports)
+
+    left = {n: p for n, p in pins.items() if p.x < 0}
+    right = {n: p for n, p in pins.items() if p.x > placed.core_width}
+    bottom = {n: p for n, p in pins.items() if p.y < 0}
+    assert set(bottom) == {"clk", "rst_n"}
+    assert set(left) == {"enable"}
+    assert set(right) == {f"O[{i}]" for i in range(8)} | {"success"}
+
+    for side in (left, right):
+        assert len({p.x for p in side.values()}) == 1
+        assert all(0 < p.y < placed.rows * R.ROW_HEIGHT for p in side.values())
+    assert len({p.y for p in bottom.values()}) == 1
+    # Name order runs down the right-hand column, so O[0] sits above O[7]
+    ordered = [right[f"O[{i}]"].y for i in range(8)]
+    assert ordered == sorted(ordered, reverse=True)
+
+
 def test_rebuild_is_byte_identical(tmp_path, spec, built):
     """layout-guide.md §10 point 8. Any set iteration or unseeded randomness
     in the generator shows up here and nowhere else.
@@ -225,9 +251,15 @@ def test_routed_geometry_has_no_shorts(intended, spec):
     )
     # One met4 line per *link*, not per net: a net's pins are joined in a
     # chain of neighbouring pairs, so a net with n pins uses n-1 lines. See
-    # route.signal's docstring for why one line per net does not scale.
+    # route.signal's docstring for why one line per net does not scale. A
+    # port spends one more, joining its die-edge pin to the chain, and that
+    # link replaces the stub a single-pin net would otherwise have needed.
     signal_nets = [n for n in intended.nets if n not in intended.power_nets]
-    links = sum(max(1, len(intended.nets[n]) - 1) for n in signal_nets)
+    ports = R.port_pins(intended, placed.core_width, placed.rows)
+    links = sum(
+        max(1, len(intended.nets[n]) - 1 + (1 if n in ports else 0))
+        for n in signal_nets
+    )
     assert result.tracks_used == links
     assert result.tracks_used > len(signal_nets)
 
