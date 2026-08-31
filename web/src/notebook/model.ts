@@ -33,6 +33,10 @@ export type Vector =
 
 export type Verdict =
   | { kind: "PROVEN"; method: "exhaustive" | "structural"; cases: number }
+  /** A deterministic replay of ONE stimulus -- see sequential.ts's header. It
+   *  is not quantified over inputs, so it carries the sequence it is about and
+   *  is never labelled the way an exhaustive sweep is. `cases` counts cycles. */
+  | { kind: "PROVEN"; method: "replay"; cases: number; sequence: string }
   | {
       kind: "DISPROVEN";
       counterexample: Vector | null;
@@ -43,12 +47,18 @@ export type Verdict =
   | { kind: "LIKELY"; method: "sampled"; cases: number }
   | { kind: "UNKNOWN"; reason: string };
 
+/** How a PROVEN verdict was reached. Named so scoring.ts can price every one
+ *  of them exhaustively, and adding a fourth is a compile error there. */
+export type ProvenMethod = Extract<Verdict, { kind: "PROVEN" }>["method"];
+
 export type Tone = "green" | "amber" | "red" | "grey";
 
 export interface VerdictStyle {
   tone: Tone;
-  /** What the player reads. `PROVEN` says how many cases; `LIKELY` says how
-   *  many vectors found nothing, and never contains the word "proven". */
+  /** What the player reads. An exhaustive `PROVEN` says how many cases; a
+   *  replay says which sequence and how many cycles, and claims nothing beyond
+   *  it; `LIKELY` says how many vectors found nothing. Only the first says
+   *  "proven" -- the other two are not quantified over a space of inputs. */
   label: string;
   /** Disproven claims stay in the notebook struck through, with a timestamp.
    *  A disproof is a result, not a mistake to be swept up. */
@@ -60,6 +70,20 @@ const COUNT = new Intl.NumberFormat("en-US");
 export function verdictStyle(verdict: Verdict): VerdictStyle {
   switch (verdict.kind) {
     case "PROVEN":
+      // Three different things, and the middle one is why this is not a
+      // two-way ternary any more. A replay settled ONE stimulus: it is real
+      // evidence, so it is green, but calling it "proven · 121 cases" would
+      // read as a sweep over 121 inputs, which is the confusion this whole
+      // module exists to prevent. It says what actually happened instead.
+      if (verdict.method === "replay") {
+        return {
+          tone: "green",
+          label:
+            `replayed under sequence ⟨${verdict.sequence}⟩ · ` +
+            `${COUNT.format(verdict.cases)} cycles`,
+          strike: false,
+        };
+      }
       return {
         tone: "green",
         label:

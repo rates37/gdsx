@@ -152,6 +152,38 @@ export class ModelStore {
   }
 }
 
+/**
+ * The longest run that agreed with the design on EVERY vector and was asked
+ * something real, or null if there has never been one.
+ *
+ * What the SCORE reads, where `badge()` is what the panel shows. The two are
+ * deliberately different questions. The badge is one binary statement -- "this
+ * model was validated over N vectors" -- and it is right for it to have a
+ * threshold. The score wants a slope, so it asks the weaker question: how far
+ * did your best clean run get? A run of 199 agreeing vectors is not a
+ * validated model and is also not nothing.
+ *
+ * `tested` drops the observables the design held at one value for the whole
+ * run: those were compared but nothing was asked about them.
+ */
+export interface CleanRun {
+  vectors: number;
+  tested: string[];
+}
+
+export function bestCleanRun(store: ModelStore): CleanRun | null {
+  let best: RunRecord | null = null;
+  for (const run of store.runs()) {
+    const constant = run.constant ?? [];
+    const clean = run.agreed === run.vectors && constant.length < run.watch.length;
+    if (!clean) continue;
+    if (best === null || run.vectors > best.vectors) best = run;
+  }
+  if (best === null) return null;
+  const constant = new Set(best.constant ?? []);
+  return { vectors: best.vectors, tested: best.watch.filter((name) => !constant.has(name)) };
+}
+
 export interface BadgeView {
   tone: "green" | "amber" | "red" | "grey";
   label: string;

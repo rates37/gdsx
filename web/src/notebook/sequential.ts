@@ -10,8 +10,9 @@
 //
 // The exception is timing, which is not quantified over sequences at all: it is
 // a claim about ONE stimulus, snapshotted into the claim when it was made. That
-// is a deterministic replay, so it genuinely is proven -- of that stimulus, which
-// is why the verdict is always rendered "under sequence ⟨name⟩".
+// is a deterministic replay: settled, and settled about that stimulus only. It
+// gets its own verdict method, `replay`, rather than borrowing `exhaustive` --
+// nothing was exhausted -- and is always rendered "under sequence ⟨name⟩".
 //
 // This runs on the main thread, unlike the combinational evaluator. A few
 // hundred stimuli of a few hundred cycles is tens of milliseconds against the
@@ -130,9 +131,11 @@ export function eventCycles(
 /**
  * A timing claim: a deterministic replay of the stimulus the claim carries.
  *
- * Proven, with `cases` counting the cycles simulated rather than a space of
- * inputs -- because the claim is not quantified over inputs. It is about this
- * sequence, and the notebook always shows it that way.
+ * Settled by `method: "replay"`, with `cases` counting the cycles simulated
+ * rather than a space of inputs -- because the claim is not quantified over
+ * inputs. It is about this sequence, so the verdict carries the sequence's name
+ * and the notebook always shows it that way. Deliberately NOT "exhaustive":
+ * that word is reserved for a sweep that really did visit every case.
  */
 export function checkTiming(
   ctx: SimContext,
@@ -146,7 +149,12 @@ export function checkTiming(
   const wanted = [...claimed].sort((a, b) => a - b);
 
   if (actual.join(",") === wanted.join(",")) {
-    return { kind: "PROVEN", method: "exhaustive", cases: stimulus.cycles };
+    return {
+      kind: "PROVEN",
+      method: "replay",
+      cases: stimulus.cycles,
+      sequence: stimulus.name,
+    };
   }
   return {
     kind: "DISPROVEN",

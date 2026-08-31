@@ -31,7 +31,7 @@ import { notebookFor } from "./notebook/store";
 import { score, scoreCard, coverage, type Coverage, type ScoreCard } from "./notebook/scoring";
 import { coverageBasis, type CoverageBasis } from "./notebook/basis";
 import type { WriteupSession } from "./notebook/writeup";
-import { ModelStore } from "./model/store";
+import { ModelStore, bestCleanRun } from "./model/store";
 import {
   onCleared,
   recordEngagement,
@@ -83,6 +83,27 @@ const ENGAGEMENT_TICK_MS = 15_000;
  *
  * Never stopped: the page owns the puzzle until it is unloaded.
  */
+/**
+ * The observables this puzzle asks a model to reproduce, for the score's model
+ * scope component (notebook/scoring.ts).
+ *
+ * Read off what the puzzle already declares rather than from a new manifest
+ * field: the lock the driver names, plus whatever its win check actually looks
+ * at. Both are already the objective the player is shown, so nothing here is a
+ * secret and nothing has to be authored twice. A `digest` check observes
+ * nothing at all -- its answer cannot be established by simulating -- so such a
+ * puzzle's required set is just the lock, and a puzzle with neither gets an
+ * empty set and loses the component rather than being scored zero on it.
+ */
+function requiredObservables(puzzle: PuzzleDescriptor): string[] {
+  const names = new Set<string>();
+  if (puzzle.driver.successNet) names.add(puzzle.driver.successNet);
+  const checks = puzzle.checks;
+  if (checks?.kind === "latch") names.add(checks.net);
+  if (checks?.kind === "bus-at") for (const bit of checks.bus) names.add(bit);
+  return [...names];
+}
+
 function startEngagementClock(puzzleId: string): void {
   let last = Date.now();
   setInterval(() => {
@@ -246,6 +267,10 @@ export async function bootWorkspace(
   // `setLanguage`, which only ever fills an empty source).
   const modelStore = new ModelStore(puzzle.id, "");
 
+  // What a model is asked to reproduce here, for the score's scope component.
+  // Derived once: it is a property of the puzzle, not of any run.
+  const required = requiredObservables(puzzle);
+
   /**
    * This puzzle's score. Assembled here because this is the one place holding
    * the progress record, the puzzle descriptor, the notebook and the model
@@ -275,9 +300,12 @@ export async function bootWorkspace(
       solved: Boolean(record?.solvedAt),
       coverage: found,
       claimPoints: score(notebook),
-      // The badge, not the latest run: a model that was validated and has
-      // since been edited was still validated (see model/store.ts).
-      modelValidated: modelStore.badge() !== null,
+      // The best clean run, not the badge and not the latest one: agreement
+      // is scored as a slope up to the badge's vector count, and a model that
+      // agreed all the way through and has since been edited still did
+      // (see model/store.ts's `bestCleanRun`).
+      model: bestCleanRun(modelStore),
+      requiredObservables: required,
       solveMs: record?.solveMs ?? null,
       parMinutes: puzzle.parMinutes,
       hintsTaken: record?.hintsTaken ?? 0,

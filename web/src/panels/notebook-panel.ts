@@ -39,7 +39,7 @@ import {
 import { notebookFor } from "../notebook/store";
 import { evidenceLog, type EvidenceRecord } from "../notebook/evidence";
 import { VerifyEngine, estimate } from "../notebook/engine";
-import { asPercent, coverage, pointsFor } from "../notebook/scoring";
+import { asPercent, coverage, coverageText, pointsFor } from "../notebook/scoring";
 import { coverageBasis } from "../notebook/basis";
 import { generateWriteup, type WriteupSession } from "../notebook/writeup";
 import { ModelStore } from "../model/store";
@@ -377,17 +377,17 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
 
         if (vocabulary) {
           const found = coverage(notebook, vocabulary.flops, coneNets);
-          const text =
-            `coverage ${asPercent(found.fraction)} · roles ${found.roles.done}/${found.roles.total}` +
-            ` · cone ${found.cone.done}/${found.cone.total}`;
-          coverageEl.textContent = text;
+          coverageEl.textContent =
+            `coverage ${asPercent(found.fraction)} · ${coverageText(found)}`;
           // Coverage, yes; score, no. §8 is explicit that points are shown
           // after solving and never as live pressure. It is shown HERE and
           // nowhere else: the same number in the title bar was read as a
           // score, which is why the toolbar's status slot no longer exists.
           coverageEl.title =
             "flops with a proven role claim, and the part of the success cone " +
-            "a settled claim names";
+            "a settled claim names. A structural claim only reads the netlist " +
+            "back, so a net named only that way counts as a fraction of one " +
+            "(shown as +N structural), not as explained.";
         }
       }
 

@@ -120,6 +120,36 @@ function checkVerdictsStayApart() {
   check(disproven.strike, "a disproven claim is kept struck through, not removed");
   check(!proven.strike && !likely.strike && !unknown.strike, "only DISPROVEN strikes");
   check(unknown.label.includes("too large"), "UNKNOWN must carry its reason");
+
+  // A replay is the third thing: settled (so green, not amber) but quantified
+  // over nothing, so it must not borrow either of the other two wordings. It
+  // says which sequence and how many cycles, and stops there.
+  const replay = verdictStyle({
+    kind: "PROVEN",
+    method: "replay",
+    cases: 121,
+    sequence: "burst-3",
+  });
+  check(replay.tone === "green", "a replay is settled evidence, so it is not amber");
+  check(!replay.strike, "a replay is not struck through");
+  check(
+    replay.label.includes("burst-3"),
+    `a replay must name the sequence it replayed; it says ${JSON.stringify(replay.label)}`,
+  );
+  check(replay.label.includes("121"), "a replay must say how many cycles it ran");
+  check(
+    !replay.label.toLowerCase().includes("proven"),
+    `a replay quantifies over nothing, so it must not say "proven"; it says ` +
+      JSON.stringify(replay.label),
+  );
+  check(
+    !replay.label.includes("cases"),
+    `a replay counts cycles, not cases; it says ${JSON.stringify(replay.label)}`,
+  );
+  check(
+    replay.label !== proven.label && replay.label !== likely.label,
+    "a replay must not share a label with an exhaustive proof or a sampled search",
+  );
 }
 
 function checkBudget() {

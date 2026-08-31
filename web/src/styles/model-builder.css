@@ -33,6 +33,15 @@
   color: var(--df-faint);
   font-size: 11px;
 }
+/* The scope rule, said in words and never as a running score -- see
+   model-panel.ts's renderBadge. Quieter than the badge detail: it is standing
+   advice about what a model is for, not news about this run. */
+.mb-badge-scope {
+  margin-top: 3px;
+  color: var(--df-faint);
+  font-size: 11px;
+  max-width: 62ch;
+}
 .mb-summary {
   display: flex;
   gap: 10px;

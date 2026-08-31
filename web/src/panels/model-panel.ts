@@ -216,12 +216,32 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
         const line = el("div", "mb-badge-line");
         line.append(el("span", `nb-verdict nb-tone-${view.tone}`, view.label));
         if (view.tone === "green") {
-          // Points are shown per item elsewhere in the notebook, so this is
-          // consistent -- and the number is the design's own statement that
+          // What the BADGE is worth, which is now the agreement half only: a
+          // badge run cleared VALIDATION_VECTORS with total agreement, so it
+          // takes all of `modelValidated` and this number is exact. Points are
+          // shown per item elsewhere in the notebook, so a per-item worth here
+          // is consistent -- and it is still the design's own statement that
           // explaining the design beats unlocking it.
           line.append(el("span", "mb-points", `+${POINTS.modelValidated}`));
         }
         badgeEl.append(line, el("div", "mb-badge-detail", view.detail));
+        // The scope half, in words and with no number attached. It has to be
+        // said -- a player who never hears it will model `success` alone and
+        // find out at the write-up -- but it cannot be said as points: what
+        // scope pays depends on which observables this run covered, so a
+        // running figure here would be both a live score (game-plan.md §8
+        // rules that out) and, most of the time, wrong. So this states the
+        // rule instead, the same way the objective states what to look for.
+        badgeEl.append(
+          el(
+            "div",
+            "mb-badge-scope",
+            "The score also asks how MUCH of the design your model reproduces, not " +
+              "only how many vectors agreed: a model returning " +
+              (options.successNet ? `${options.successNet} alone` : "one observable alone") +
+              " answers one question about it. Watch the signals the objective names.",
+          ),
+        );
       }
 
       function renderReport(): void {
