@@ -39,7 +39,8 @@ import {
 import { notebookFor } from "../notebook/store";
 import { evidenceLog, type EvidenceRecord } from "../notebook/evidence";
 import { VerifyEngine, estimate } from "../notebook/engine";
-import { asPercent, coverage, pointsFor, type Coverage } from "../notebook/scoring";
+import { asPercent, coverage, pointsFor } from "../notebook/scoring";
+import { coverageBasis } from "../notebook/basis";
 import { generateWriteup, type WriteupSession } from "../notebook/writeup";
 import { ModelStore } from "../model/store";
 
@@ -133,14 +134,9 @@ export interface NotebookPanelOptions {
    *  sections, or null while the puzzle is unsolved. A function because it is
    *  read at the moment the write-up is generated, and supplied by boot.ts
    *  because the par time and the hint text live on the puzzle descriptor,
-   *  which this panel deliberately does not import. */
-  session?: () => WriteupSession | null;
-  /** Called with each freshly computed coverage, so the post-solve score can
-   *  use it. Deliberately not a display hook any more: the cone denominator
-   *  needs a design call and a step through the success flop, which is this
-   *  panel's job, and boot.ts only caches the result. Nothing shows coverage
-   *  live outside this panel (game-plan.md §8). */
-  onCoverage?: (found: Coverage) => void;
+   *  which this panel deliberately does not import. Async because the score
+   *  awaits the same coverage basis this panel does (notebook/basis.ts). */
+  session?: () => Promise<WriteupSession | null>;
 }
 
 export function notebookPanel(options: NotebookPanelOptions): PanelDef {
@@ -392,7 +388,6 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
           coverageEl.title =
             "flops with a proven role claim, and the part of the success cone " +
             "a settled claim names";
-          options.onCoverage?.(found);
         }
       }
 
@@ -515,26 +510,28 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
       // it to the DOM (editable textarea, one-click download).
 
       exportBtn.addEventListener("click", () => {
-        if (!store) return;
-        // A fresh instance reads whatever is currently saved under this
-        // puzzle's key -- the same localStorage record the Model Builder
-        // panel writes, not a second copy of it.
-        const modelStore = new ModelStore(options.puzzleId, "");
-        const markdown = generateWriteup(
-          notebook,
-          evidence,
-          modelStore,
-          store,
-          {
-            successNet: options.successNet,
-            keyPort: options.keyPort,
-            puzzleId: options.puzzleId,
-          },
-          options.session?.() ?? null,
-        );
-        writeupText.value = markdown;
-        writeupEl.hidden = false;
-        formEl.hidden = true;
+        void (async () => {
+          if (!store) return;
+          // A fresh instance reads whatever is currently saved under this
+          // puzzle's key -- the same localStorage record the Model Builder
+          // panel writes, not a second copy of it.
+          const modelStore = new ModelStore(options.puzzleId, "");
+          const markdown = generateWriteup(
+            notebook,
+            evidence,
+            modelStore,
+            store,
+            {
+              successNet: options.successNet,
+              keyPort: options.keyPort,
+              puzzleId: options.puzzleId,
+            },
+            (await options.session?.()) ?? null,
+          );
+          writeupText.value = markdown;
+          writeupEl.hidden = false;
+          formEl.hidden = true;
+        })();
       });
 
       writeupClose.addEventListener("click", () => {
@@ -567,33 +564,12 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
           const vocab = await design.claimVocabulary();
           vocabulary = vocab.data;
 
-          // One cone call at load, for the coverage denominator. Not recomputed
-          // per claim -- coverage is a progress bar, not an analysis.
-          //
-          // The step through the flop is not optional. `success` is a port
-          // driven by a flop, so its own fan-in cone is a single `flop_q` leaf
-          // and a denominator of 1 would read 100% explained off one claim.
-          // What "the success cone" means is the cone of the flop's D, one cycle
-          // earlier -- the same step the cone walker makes explicit.
-          try {
-            const lock = options.successNet;
-            // No lock, no success cone: coverage falls back to the claims
-            // alone rather than being measured against an invented net.
-            if (lock === null) throw new Error("this puzzle declares no lock");
-            let root = lock;
-            const head = await design.cone(root, { depth: 1 });
-            if (head.data.leaf === "flop_q") {
-              const stepped = await design.flopDNet(root);
-              if (stepped.data.net) root = stepped.data.net;
-            }
-            const cone = await design.cone(root, { depth: 40 });
-            // The port itself counts as part of its own cone: a claim about
-            // `success` is a claim about the success cone in any sense a player
-            // means it, even though the D-cone walk starts below it.
-            coneNets = [...new Set([lock, ...collect(cone.data)])];
-          } catch {
-            coneNets = [];
-          }
+          // The coverage denominator (flops, and the success cone's nets),
+          // shared with boot.ts's scoring via the same memoised promise --
+          // see notebook/basis.ts for the cone walk and the "no lock, no
+          // cone" fallback this used to do inline.
+          const basis = await coverageBasis(design, options.successNet);
+          coneNets = basis.coneNets;
 
           engine = new VerifyEngine({
             design,
@@ -623,18 +599,6 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
       };
     },
   };
-}
-
-/** Every net named anywhere in a cone tree. */
-function collect(node: { net: string; children: { net: string; children: unknown[] }[] }): string[] {
-  const found: string[] = [];
-  const stack = [node];
-  while (stack.length) {
-    const current = stack.pop() as typeof node;
-    found.push(current.net);
-    for (const child of current.children) stack.push(child as typeof node);
-  }
-  return [...new Set(found)];
 }
 
 // ---- one builder per claim type ----------------------------------------

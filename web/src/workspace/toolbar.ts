@@ -54,7 +54,7 @@ export interface SubmitControl {
    *  so a rejection never carries one. Supplied by boot.ts, which is the only
    *  place holding the notebook, model store and progress record at once; this
    *  file computes nothing. */
-  scoreCard: () => ScoreCard | null;
+  scoreCard: () => Promise<ScoreCard | null>;
 }
 
 /** The level picker's data: what to offer, what is open, and what to do
@@ -787,7 +787,7 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
 
     submit
       .submit(submission)
-      .then((verdict) => {
+      .then(async (verdict) => {
         const parts = [verdict.accepted ? "✓ accepted" : `✗ ${verdict.reason}`];
         if (verdict.observed) parts.push(`observed: ${verdict.observed}`);
         let text = parts.join(" — ");
@@ -797,7 +797,7 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
           // why `coverage 0%` sat beside an accepted verdict: the breakdown
           // says what each part of the game was worth, which is the answer
           // that sentence was standing in for.
-          const card = control.scoreCard();
+          const card = await control.scoreCard();
           if (card) {
             text += `\nscore ${card.total} of ${card.available}`;
             text += " · see the Notebook's write-up for the breakdown";

@@ -48,6 +48,11 @@ export interface ModelPanelOptions {
   /** The port the driver says carries the key, for the printed call's
    *  stimulus. Null for a puzzle with no data input. */
   keyPort: string | null;
+  /** This puzzle's one Model Builder store, hoisted into boot.ts rather than
+   *  constructed here -- boot.ts reads its badge for scoring and subscribes
+   *  to it to re-score a solved puzzle when a run changes it, and neither can
+   *  do that against an instance only this panel holds. */
+  model: ModelStore;
 }
 
 export function modelPanel(options: ModelPanelOptions): PanelDef {
@@ -90,7 +95,14 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
       const callSlot = container.querySelector(".py-call-slot") as HTMLSpanElement;
 
       const STARTER = starterFor(options.successNet);
-      const model = new ModelStore(options.puzzleId, STARTER.javascript);
+      const model = options.model;
+      // Seed the starter for a model nothing has been written over yet.
+      // boot.ts constructs the shared instance with an empty starter (it does
+      // not know this puzzle's starter source, only this panel does via
+      // `starterFor`), so a fresh model's source is "" rather than
+      // pre-filled. Guarded here rather than relying on `setLanguage`'s own
+      // empty-source check so a saved model is not re-saved on every open.
+      if (model.source.trim() === "") model.setLanguage(model.language, STARTER[model.language]);
       let store: SimStore | null = null;
       let host: ModelHost | null = null;
       let report: DiffReport | null = null;

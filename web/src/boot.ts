@@ -28,7 +28,8 @@ import { registerPanel } from "./panels/register-host";
 import { replPanel } from "./panels/repl-panel";
 import { labels } from "./store/labels";
 import { notebookFor } from "./notebook/store";
-import { score, scoreCard, type Coverage, type ScoreCard } from "./notebook/scoring";
+import { score, scoreCard, coverage, type Coverage, type ScoreCard } from "./notebook/scoring";
+import { coverageBasis, type CoverageBasis } from "./notebook/basis";
 import type { WriteupSession } from "./notebook/writeup";
 import { ModelStore } from "./model/store";
 import {
@@ -196,12 +197,54 @@ export async function bootWorkspace(
     };
   };
 
-  // The notebook's latest coverage, reported by the panel that computes it --
-  // the cone denominator needs a design call and a step through the success
-  // flop, which is the Notebook panel's job and not worth doing twice. Null
-  // until the panel has measured it (it never opened this session), which the
-  // score reports as "not measured" rather than as 0%.
-  let latestCoverage: Coverage | null = null;
+  // ---- Python side. Analysis panels (netlist browser, cone walker) show
+  // their own "analysis engine starting" state until this resolves, per the
+  // fallback game-plan.md §9 explicitly allows -- they need a live design
+  // handle and there is no TS-side netlist model to fall back to. -------
+
+  const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
+  const api = wrap<GdsxWorker>(worker);
+
+  const timings: Record<string, number> = {};
+
+  const pyReady = (async () => {
+    await bundleReady;
+    timings.fetch_render_bin_ms = Math.round(tBundle - t0);
+    const tPy0 = performance.now();
+    await api.ready();
+    timings.pyodide_boot_ms = Math.round(performance.now() - tPy0);
+    pyLine = `python: ready in ${timings.pyodide_boot_ms} ms`;
+  })();
+
+  const designReady: Promise<DesignClient> = pyReady.then(() =>
+    createDesignClient(api, puzzle.assets.netlist),
+  );
+
+  // Coverage's denominator (§5): a design call and a step through the success
+  // flop, shared with the Notebook panel via the same memoised promise
+  // (notebook/basis.ts) rather than computed twice. Started as soon as the
+  // design handle exists, not gated on the Notebook panel ever having been
+  // opened -- a player who never opens it must still be scored against a
+  // measured cone, not a null one.
+  const basisReady: Promise<CoverageBasis> = designReady.then((design) =>
+    coverageBasis(design, successNet),
+  );
+
+  // One notebook instance for this puzzle, shared with every panel that also
+  // calls `notebookFor(puzzle.id)` (it is keyed by puzzle id, see
+  // notebook/store.ts) -- held here so the re-scoring below can subscribe to
+  // it directly.
+  const notebook = notebookFor(puzzle.id);
+
+  // The Model Builder's one instance for this puzzle (game-plan.md §6),
+  // hoisted here rather than constructed fresh per read: `currentScore` needs
+  // to read its badge, and the re-scoring below needs to subscribe to it.
+  // Built with an empty starter -- boot.ts does not know this puzzle's
+  // starter source, only the Model Builder panel does (`starterFor`), and an
+  // empty starter here changes nothing for a saved model (restored from
+  // localStorage over it) or an unsaved one (the panel seeds it via
+  // `setLanguage`, which only ever fills an empty source).
+  const modelStore = new ModelStore(puzzle.id, "");
 
   /**
    * This puzzle's score. Assembled here because this is the one place holding
@@ -211,17 +254,30 @@ export async function bootWorkspace(
    * An unsolved puzzle gets a card that says so and carries no points --
    * game-plan.md §8 shows a score only after solving, and `scoreCard` is where
    * that rule is enforced rather than at each of the surfaces below.
+   *
+   * Async because coverage's denominator is: `basisReady` is awaited so a
+   * solve is never scored against an unmeasured cone just because the
+   * analysis engine was still booting.
    */
-  const currentScore = (): ScoreCard => {
+  const currentScore = async (): Promise<ScoreCard> => {
     const record = solvedState(puzzle.id);
-    const notebook = notebookFor(puzzle.id);
+    let found: Coverage | null = null;
+    try {
+      const basis = await basisReady;
+      found = coverage(notebook, basis.flops, basis.coneNets);
+    } catch {
+      // The design handle never came up -- there is no cone to measure
+      // against, and the breakdown says so rather than reporting a 0% no one
+      // measured.
+      found = null;
+    }
     return scoreCard({
       solved: Boolean(record?.solvedAt),
-      coverage: latestCoverage,
+      coverage: found,
       claimPoints: score(notebook),
       // The badge, not the latest run: a model that was validated and has
       // since been edited was still validated (see model/store.ts).
-      modelValidated: new ModelStore(puzzle.id, "").badge() !== null,
+      modelValidated: modelStore.badge() !== null,
       solveMs: record?.solveMs ?? null,
       parMinutes: puzzle.parMinutes,
       hintsTaken: record?.hintsTaken ?? 0,
@@ -232,20 +288,40 @@ export async function bootWorkspace(
    *  (game-plan.md §8), or null before there is anything to summarise. The
    *  hints are quoted in full rather than counted, so the tiers are looked up
    *  here where the puzzle descriptor is. */
-  const currentSession = (): WriteupSession | null => {
+  const currentSession = async (): Promise<WriteupSession | null> => {
     const record = solvedState(puzzle.id);
     // No record at all means nothing has happened worth summarising -- not
     // one attempt, not one hint. An unsolved-but-attempted puzzle still gets
     // a Session section; only the Score half waits for the solve.
     if (!record) return null;
     return {
-      score: currentScore(),
+      score: await currentScore(),
       attempts: record.attempts,
       solveMs: record.solveMs ?? null,
       parMinutes: puzzle.parMinutes,
       hintsTaken: puzzle.hints.slice(0, record.hintsTaken),
     };
   };
+
+  /**
+   * Re-score and save whenever something the score depends on changes --
+   * a claim settled, a model run recorded -- and the puzzle is already
+   * solved. Everything the score rewards most (a validated model, settled
+   * claims, coverage) is often finished after the key is cracked, and without
+   * this none of that reached the main menu: `bestScore` was written once, at
+   * submit, and never again.
+   *
+   * `recordScore` takes the max with whatever is already saved, so this can
+   * only raise the saved score, never lower it.
+   */
+  const rescoreIfSolved = (): void => {
+    if (!solvedState(puzzle.id)?.solvedAt) return;
+    void currentScore().then((card) => {
+      if (card.solved) recordScore(puzzle.id, card.total);
+    });
+  };
+  notebook.subscribe(rescoreIfSolved);
+  modelStore.subscribe(rescoreIfSolved);
 
   // Always available, never gated behind progress (game-plan.md §8): the
   // control just exposes the puzzle's tiers and reads/writes the same
@@ -276,40 +352,17 @@ export async function bootWorkspace(
       // Scored after recording, because "solved" is one of the score's inputs
       // and this call is what makes it true. Persisted so the level menu --
       // a separate document that loads none of these stores -- can show it.
-      const card = currentScore();
+      const card = await currentScore();
       if (card.solved) recordScore(puzzle.id, card.total);
       const solved = solvedNow();
       if (solved) workspace.setSolved(solved);
       return verdict;
     },
-    scoreCard: () => {
-      const card = currentScore();
+    scoreCard: async () => {
+      const card = await currentScore();
       return card.solved ? card : null;
     },
   };
-
-  // ---- Python side. Analysis panels (netlist browser, cone walker) show
-  // their own "analysis engine starting" state until this resolves, per the
-  // fallback game-plan.md §9 explicitly allows -- they need a live design
-  // handle and there is no TS-side netlist model to fall back to. -------
-
-  const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-  const api = wrap<GdsxWorker>(worker);
-
-  const timings: Record<string, number> = {};
-
-  const pyReady = (async () => {
-    await bundleReady;
-    timings.fetch_render_bin_ms = Math.round(tBundle - t0);
-    const tPy0 = performance.now();
-    await api.ready();
-    timings.pyodide_boot_ms = Math.round(performance.now() - tPy0);
-    pyLine = `python: ready in ${timings.pyodide_boot_ms} ms`;
-  })();
-
-  const designReady: Promise<DesignClient> = pyReady.then(() =>
-    createDesignClient(api, puzzle.assets.netlist),
-  );
 
   // Which flops the puzzle's lock needs, derived once and shared by the panels
   // that offer it (Experiments' watch selector, Sticky Flops' suggestions).
@@ -379,16 +432,13 @@ export async function bootWorkspace(
         puzzleId: puzzle.id,
         successNet,
         keyPort: driver.keyPort,
-        onCoverage: (found) => {
-          latestCoverage = found;
-        },
         session: currentSession,
       }),
       // Both of M3's measurement panels run on the gate tape, so they are live
       // as soon as tape.bin lands and do not wait for Pyodide -- the sweep that
       // cracks a puzzle open is available before the analysis engine boots.
       experimentPanel({ storeReady, designReady, winCondition, puzzleId: puzzle.id, tapeUrl }),
-      modelPanel({ storeReady, puzzleId: puzzle.id, successNet, keyPort: driver.keyPort }),
+      modelPanel({ storeReady, puzzleId: puzzle.id, successNet, keyPort: driver.keyPort, model: modelStore }),
       registerPanel({
         designReady,
         puzzleId: puzzle.id,
