@@ -59,6 +59,12 @@ export function palette(): Palette {
     cyan: token("--df-cyan", "#6ad9e6"),
     layer: {
       instances: token("--df-layer-cells", "#8c94a8"),
+      substrate: token("--df-layer-substrate", "#3a3f4a"),
+      nwell: token("--df-layer-nwell", "#6b5b8c"),
+      diff: token("--df-layer-diff", "#8c6b4a"),
+      tap: token("--df-layer-tap", "#a88a5c"),
+      poly: token("--df-layer-poly", "#d94f70"),
+      licon1: token("--df-layer-licon1", "#bfbfbf"),
       li1: token("--df-layer-li1", "#6bbf6b"),
       met1: token("--df-layer-met1", "#598cf2"),
       met2: token("--df-layer-met2", "#f2735a"),

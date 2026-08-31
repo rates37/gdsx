@@ -93,8 +93,15 @@
   /* ---- die view layer colours -------------------------------------- */
   /* The legend swatches read from these; the 2D shader and the three.js
      materials carry their own copies in render/, and the two must be kept
-     in step by hand. Ordering is the metal stack, bottom to top. */
+     in step by hand. Ordering is the physical stack, bottom to top: the
+     device level first, then the interconnect. */
   --df-layer-cells: #8c94a8;
+  --df-layer-substrate: #3a3f4a;
+  --df-layer-nwell: #6b5b8c;
+  --df-layer-diff: #8c6b4a;
+  --df-layer-tap: #a88a5c;
+  --df-layer-poly: #d94f70;
+  --df-layer-licon1: #bfbfbf;
   --df-layer-li1: #6bbf6b;
   --df-layer-met1: #598cf2;
   --df-layer-met2: #f2735a;

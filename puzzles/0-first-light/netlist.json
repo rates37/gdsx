@@ -25,7 +25,7 @@
         "B": "O[5]",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "X": "n117"
+        "X": "n118"
       }
     },
     {
@@ -105,7 +105,7 @@
       "cell": "sky130_fd_sc_hd__dfrtp_2",
       "connections": {
         "CLK": "clk",
-        "D": "n122",
+        "D": "n123",
         "Q": "success",
         "RESET_B": "rst_n",
         "VGND": "VGND",
@@ -119,7 +119,7 @@
         "A": "success",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n118"
+        "Y": "n119"
       }
     },
     {
@@ -130,18 +130,18 @@
         "B": "O[2]",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n126"
+        "Y": "n127"
       }
     },
     {
       "name": "nand2_2_2",
       "cell": "sky130_fd_sc_hd__nand2_2",
       "connections": {
-        "A": "n117",
-        "B": "n140",
+        "A": "n118",
+        "B": "n143",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n136"
+        "Y": "n139"
       }
     },
     {
@@ -152,19 +152,19 @@
         "B": "O[1]",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n140"
+        "Y": "n143"
       }
     },
     {
       "name": "o21ai_2_1",
       "cell": "sky130_fd_sc_hd__o21ai_2",
       "connections": {
-        "A1": "n126",
-        "A2": "n136",
-        "B1": "n118",
+        "A1": "n127",
+        "A2": "n139",
+        "B1": "n119",
         "VGND": "VGND",
         "VPWR": "VPWR",
-        "Y": "n122"
+        "Y": "n123"
       }
     }
   ],
@@ -208,7 +208,7 @@
       "nor2_2_1/VPWR",
       "o21ai_2_1/VPWR"
     ],
-    "n117": [
+    "n118": [
       "and2_2_1/X",
       "nand2_2_2/A"
     ],
@@ -253,7 +253,7 @@
       "dfrtp_2_6/D",
       "nor2_2_1/A"
     ],
-    "n122": [
+    "n123": [
       "dfrtp_2_7/D",
       "o21ai_2_1/Y"
     ],
@@ -261,19 +261,19 @@
       "dfrtp_2_7/Q",
       "inv_2_1/A"
     ],
-    "n118": [
+    "n119": [
       "inv_2_1/Y",
       "o21ai_2_1/B1"
     ],
-    "n126": [
+    "n127": [
       "nand2_2_1/Y",
       "o21ai_2_1/A1"
     ],
-    "n140": [
+    "n143": [
       "nand2_2_2/B",
       "nor2_2_1/Y"
     ],
-    "n136": [
+    "n139": [
       "nand2_2_2/Y",
       "o21ai_2_1/A2"
     ]

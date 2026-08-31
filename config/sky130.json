@@ -93,6 +93,47 @@
       ]
     }
   ],
+  "device": [
+    {
+      "name": "nwell",
+      "drawing": [
+        64,
+        20
+      ],
+      "fill": true
+    },
+    {
+      "name": "diff",
+      "drawing": [
+        65,
+        20
+      ],
+      "fill": true
+    },
+    {
+      "name": "tap",
+      "drawing": [
+        65,
+        44
+      ],
+      "fill": true
+    },
+    {
+      "name": "poly",
+      "drawing": [
+        66,
+        20
+      ]
+    },
+    {
+      "name": "licon1",
+      "drawing": [
+        66,
+        44
+      ],
+      "via": true
+    }
+  ],
   "vias": [
     {
       "name": "mcon",
@@ -141,6 +182,37 @@
     }
   ],
   "stack": [
+    {
+      "name": "substrate",
+      "z": -0.8,
+      "thickness": 0.6
+    },
+    {
+      "name": "nwell",
+      "z": -0.2,
+      "thickness": 0.2
+    },
+    {
+      "name": "diff",
+      "z": 0.0,
+      "thickness": 0.12
+    },
+    {
+      "name": "tap",
+      "z": 0.0,
+      "thickness": 0.12
+    },
+    {
+      "name": "licon1",
+      "z": 0.12,
+      "thickness": 0.816,
+      "via": true
+    },
+    {
+      "name": "poly",
+      "z": 0.326,
+      "thickness": 0.18
+    },
     {
       "name": "li1",
       "z": 0.936,

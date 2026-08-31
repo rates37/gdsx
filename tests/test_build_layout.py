@@ -19,6 +19,7 @@ from gdsx.build import route as R
 from gdsx.build.build import build
 from gdsx.build.compare import compare
 from gdsx.build.groups import by_cone, by_register, register_prefix
+from gdsx.build import place as P
 from gdsx.build.place import LayoutSpec, ROW_HEIGHT, SITE, measure_widths, place
 from gdsx.build.spec import SpecError, load_spec
 from gdsx.functions import is_sequential
@@ -84,10 +85,77 @@ def test_no_floating_pins_and_no_shorts(extracted):
 
 def test_power_nets_are_one_each(extracted):
     """Rows alternate orientation, so all VPWR rails sit at odd multiples of
-    the row height and all VGND rails at even ones. Without the met2 straps
+    the row height and all VGND rails at even ones. Without the straps
     `route.power` draws, each rail would extract as its own net.
+
+    This is also the check that the met4/met5 mesh is wired correctly. A mesh
+    that shorted the two nets, or whose drops missed the rails, both show up
+    here: the first as one power net, the second as dozens.
     """
     assert extracted.power_nets == {"VPWR", "VGND"}
+
+
+def test_power_grid_is_a_perpendicular_mesh(intended, spec):
+    """The mesh the reference design has and the pack used to lack: straps
+    one way on one layer, the other way on the next, tied at every crossing
+    of the same net and dropped to the met1 rails.
+    """
+    placed = place(intended, spec, REFERENCE)
+    result = R.route(
+        intended, placed.placements, placed.cells,
+        R.build_pin_table(config.load(), REFERENCE),
+        placed.core_width, placed.rows,
+    )
+    assert result.grid_drops > 0
+    straps = {"v": [], "h": []}
+    for layer, datatype, pts in result.boundaries:
+        axis = {R.GRID_V: "v", R.GRID_H: "h"}.get((layer, datatype))
+        if axis is not None:
+            straps[axis].append(R._box(pts))
+    assert straps["v"] and straps["h"]
+
+    # every strap is the measured width, and runs the full extent of its axis
+    for x0, y0, x1, y1 in straps["v"]:
+        assert x1 - x0 == R.STRAP_WIDTH
+        assert (y0, y1) == (0, placed.rows * ROW_HEIGHT)
+    for x0, y0, x1, y1 in straps["h"]:
+        assert y1 - y0 == R.STRAP_WIDTH
+        assert (x0, x1) == (0, placed.core_width)
+
+    # straps come in VPWR/VGND pairs at the measured spacing, on both axes
+    for axis, boxes in straps.items():
+        i = 0 if axis == "v" else 1
+        centres = sorted((b[i] + b[i + 2]) // 2 for b in boxes)
+        assert len(centres) % 2 == 0
+        for lo, hi in zip(centres[::2], centres[1::2]):
+            assert hi - lo == R.STRAP_PAIR
+
+
+def test_channel_rows_clear_the_band_detector(intended):
+    """`place.CHANNEL_ROWS` exists to be wide enough that
+    `physical.placement.bands` splits on it. The two numbers live in different
+    layers and `build/` may not import `physical/`, so this is what stops them
+    drifting apart and silently un-banding every channelled puzzle.
+    """
+    from gdsx.physical.placement import BAND_GAP
+
+    assert P.BAND_GAP == BAND_GAP
+    assert P.CHANNEL_ROWS > BAND_GAP * P.ROWS_PER_ORIGIN_LINE
+
+
+def test_die_shape_follows_the_spec_aspect(intended, spec):
+    """A spec with no channels should get the aspect it asked for. `spread`
+    used to divide the row capacity without widening the core, so the achieved
+    ratio came out as `aspect / spread` and nothing reported it.
+    """
+    assert not spec.channels, "puzzle 1 is the channel-free fixture"
+    for spread in (1.0, 2.25, 5.0):
+        placed = place(intended, spec, REFERENCE, spread=spread)
+        achieved = placed.core_width / (placed.rows * ROW_HEIGHT)
+        assert abs(achieved - spec.aspect) / spec.aspect < 0.25, (
+            f"spread {spread}: asked 1:{1 / spec.aspect:.2f}, "
+            f"got 1:{1 / achieved:.2f}"
+        )
 
 
 def test_every_verilog_port_is_labelled(intended, extracted):

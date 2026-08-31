@@ -38,13 +38,22 @@ PREFIX = "sky130_fd_sc_hd__"
 DECAP = f"{PREFIX}decap_3"
 TAP = f"{PREFIX}tapvpwrvgnd_1"
 TAP_SPACING = 15000  # nm, "every ~15 um" per layout-guide.md §7.2 step 5
-# Empty rows for a visible block boundary (layout-guide.md §7.2). A channel is
-# only a boundary if `physical.placement.bands` splits on it, and that splits
-# where the spacing exceeds 4x the median -- which here is one origin line,
-# 5.44 um. Four empty rows leave a 10.88-16.32 um gap, under the 21.76 um
-# threshold, so the eight bands of puzzle 3 came back as one. Ten empty rows
-# clear it with margin in both the alignments the row packer produces.
-CHANNEL_ROWS = 10
+# Empty rows for a visible block boundary (layout-guide.md §7.2).
+#
+# A channel is only a boundary if `physical.placement.bands` splits on it, and
+# that splits where a gap exceeds `BAND_GAP` (4) times the median gap. Rows
+# alternate orientation and a mirrored row's origin is its top edge, so rows
+# pair up onto one origin line and the median gap is *two* rows, not one --
+# which is why `gdsx placement` reports a 5.44 um pitch for a 2.72 um row.
+# A channel therefore has to span more than 4 origin lines, or 8 rows; the
+# extra 2 give a margin in both the alignments the row packer produces.
+#
+# Derived rather than tuned, so that changing the row height or `BAND_GAP`
+# cannot silently stop the channels being detected. tests/test_build_layout.py
+# asserts this agrees with `physical.placement.BAND_GAP`.
+ROWS_PER_ORIGIN_LINE = 2
+BAND_GAP = 4  # == physical.placement.BAND_GAP, which build/ may not import
+CHANNEL_ROWS = BAND_GAP * ROWS_PER_ORIGIN_LINE + 2
 
 # Filler is cosmetic -- decap and tap carry no function and `lookup()` returns
 # None for both -- so it is budgeted rather than poured into every gap. A
@@ -53,7 +62,11 @@ CHANNEL_ROWS = 10
 # cells, which extraction then has to trace. The budget is a multiple of the
 # logic cell count, so the die stays plausibly populated without the filler
 # ever dominating the design it is decorating.
-FILLER_BUDGET = 2.0
+#
+# 1.2 is measured from samples/puzzle.gds -- 890 filler cells against 728
+# logic ones. It was 2.0, which is more filler than any real flow leaves and
+# made the pack's dies read as decap with some logic in them.
+FILLER_BUDGET = 1.2
 
 
 def measure_widths(reference: Path) -> dict[str, int]:
@@ -110,6 +123,7 @@ class PlacementResult:
     cells: dict[str, str]  # instance name -> full cell name, logic + filler
     core_width: int
     rows: int
+    logic_width: int = 0  # summed widths of the logic cells, for occupancy
 
 
 def _group_of(name: str, spec: LayoutSpec) -> str:
@@ -320,21 +334,27 @@ def place(
 
     # layout-guide.md §7.2 step 1 and §9's `fill`: the die holds `total_width`
     # of cells at `fill` utilisation, with the requested width/height ratio.
-    #   core_width  = sqrt(aspect * total_width * row_height / fill)
-    #   rows        = total_width / (fill * core_width)
+    #   core_width  = sqrt(aspect * total_width * spread * row_height / fill)
+    #   rows        = total_width * spread / (fill * core_width)
     # which together give core_width / (rows * row_height) == aspect.
     #
-    # `spread` thins the rows without touching `core_width`, which is the one
-    # way of adding die area that actually helps the router. Track supply is
-    # the core's height divided by the met4 pitch; track demand per net is the
-    # x-span of its own pins. Lowering `fill` grows both -- a wider core means
-    # wider nets -- and empirically does not converge until the die is
-    # ridiculous. Holding the width and adding rows grows supply alone. The
-    # router asks for this via `build()`'s retry loop, and the spread that
-    # succeeded is reported so an author can bake it into the spec.
+    # `spread` thins the rows, which is the one way of adding die area that
+    # actually helps the router. Track supply is the core's height divided by
+    # the track pitch; track demand per net is the x-span of its own pins.
+    # Lowering `fill` grows both -- a wider core means wider nets -- and
+    # empirically does not converge until the die is ridiculous. Adding rows
+    # grows supply alone. The router asks for this via `build()`'s retry loop,
+    # and the spread that succeeded is reported so an author can bake it in.
+    #
+    # `spread` belongs in the width as well as the capacity. It used to divide
+    # only the capacity, so every row it added made the die taller without
+    # making it wider and the achieved aspect came out as `aspect / spread` --
+    # 1:2.25 on a spec asking for 1:1. Widening by sqrt(spread) at the same
+    # time keeps the ratio and still adds the rows the router wanted, because
+    # rows grow as spread/width == sqrt(spread).
     total_width = sum(widths[cell_of[n]] for n in order)
     core_width = _round_up(
-        math.sqrt(spec.aspect * total_width * ROW_HEIGHT / spec.fill), SITE
+        math.sqrt(spec.aspect * total_width * spread * ROW_HEIGHT / spec.fill), SITE
     )
     widest = max((widths[cell_of[n]] for n in order), default=SITE)
     capacity = max(_round_up(core_width * spec.fill / spread, SITE), widest)
@@ -349,4 +369,4 @@ def place(
             members, row, widths, cell_of, core_width, placements, cells, per_row
         )
 
-    return PlacementResult(placements, cells, core_width, len(rows))
+    return PlacementResult(placements, cells, core_width, len(rows), total_width)

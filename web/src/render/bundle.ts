@@ -35,6 +35,15 @@ export interface RenderHeader {
   lod_levels: number;
   lod1_min_area: number;
   lods: Record<string, Record<string, LayerLod>>;
+  /** Which layers carry nets ("routing") and which are scenery ("device").
+   *  Absent in schema 1 bundles, where every layer was routing. */
+  layer_kind?: Record<string, "routing" | "device">;
+  /** Layers that cover regions rather than drawing wires. */
+  fill_layers?: string[];
+  /** Layers with no GDS geometry behind them -- the 3D substrate slab. The
+   *  2D view skips these: from above the substrate is an opaque rectangle
+   *  the size of the die. */
+  synthetic_layers?: string[];
   instances: Slice;
   cell_names: string[];
   n_nets: number;

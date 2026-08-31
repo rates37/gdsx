@@ -129,7 +129,14 @@ export function mountDie2D(
       const rendererInfo = view.rendererInfo();
       let repeat = 1;
 
-      for (const name of ["instances", ...bundle.header.layers]) {
+      // The substrate and anything else synthetic is 3D-only -- listing a
+      // toggle here for a layer the 2D view never draws is a dead control.
+      const synthetic2D = new Set(bundle.header.synthetic_layers ?? []);
+      const toggles = [
+        "instances",
+        ...bundle.header.layers.filter((n) => !synthetic2D.has(n)),
+      ];
+      for (const name of toggles) {
         const label = document.createElement("label");
         const box = document.createElement("input");
         box.type = "checkbox";

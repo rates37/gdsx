@@ -47,6 +47,27 @@ class ViaLayer:
 
 
 @dataclass(frozen=True)
+class DeviceLayer:
+    """A device-level layer: transistors, wells, contacts.
+
+    Nothing is traced on these -- they carry no nets and extraction ignores
+    them -- but they are most of what a GDS viewer draws, so the render bundle
+    carries them. They live inside the standard cells rather than at the top
+    level and have no pin or label purpose, which is why they are not
+    `RoutingLayer`s.
+    """
+
+    name: str
+    drawing: tuple[int, int]
+    # True for a layer that covers regions rather than drawing wires (a well,
+    # a diffusion tub). The viewer renders these flatter and further back.
+    fill: bool = False
+    # True for a contact layer, which is dropped from the zoomed-out level of
+    # detail and from the 3D view, exactly as the metal vias are.
+    via: bool = False
+
+
+@dataclass(frozen=True)
 class StackLayer:
     """One layer of the physical stack, for a 3D view."""
 
@@ -79,6 +100,9 @@ class TechConfig:
     # The physical layer stack, bottom to top. Empty for a tech config with no
     # 3D data (older configs, or one built by hand for a test)
     stack: tuple[StackLayer, ...] = ()
+    # Device-level layers, bottom to top. Empty for a config that predates
+    # them; every consumer must cope with that rather than assume.
+    device: tuple[DeviceLayer, ...] = ()
 
     def layer(self, name: str) -> RoutingLayer:
         # Return the routing-layer configuration with the given name
@@ -151,6 +175,13 @@ def from_raw(raw: dict) -> TechConfig:
         stack=tuple(
             StackLayer(s["name"], s["z"], s["thickness"], s.get("via", False))
             for s in raw.get("stack", ())
+        ),
+        device=tuple(
+            DeviceLayer(
+                d["name"], tuple(d["drawing"]),
+                d.get("fill", False), d.get("via", False),
+            )
+            for d in raw.get("device", ())
         ),
     )
 

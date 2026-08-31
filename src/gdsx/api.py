@@ -530,14 +530,22 @@ def extract(handle: str, *, progress: Progress | None = None) -> dict:
 def cache_key(gds_bytes: bytes) -> dict:
     """The IndexedDB key for a cached extraction of these GDS bytes
 
-    `sha256(gds_bytes) + schema_version`: the hash pins it to this exact
-    file, and `schema_version` pins it to this exact payload shape, so
-    bumping `SCHEMA_VERSION` invalidates every cached bundle without the JS
-    side having to know why. The JS side of the cache (reading/writing
-    IndexedDB) does not exist yet. This only defines the key.
+    `sha256(gds_bytes) + schema versions`: the hash pins it to this exact
+    file, and the versions pin it to this exact payload shape, so bumping
+    either invalidates every cached bundle without the JS side having to know
+    why. The JS side of the cache (reading/writing IndexedDB) does not exist
+    yet. This only defines the key.
+
+    **Both** versions are in the key. `SCHEMA_VERSION` here is the envelope's
+    -- `{"schema_version", "ok", "data"}` -- and it does not move when the
+    render bundle's own layout changes, which it has (device layers, schema 2).
+    A key carrying only the envelope version would serve a stale bundle from
+    cache after exactly the kind of change that most needs invalidating.
     """
     digest = hashlib.sha256(gds_bytes).hexdigest()
-    return {"key": f"{digest}-{SCHEMA_VERSION}"}
+    from . import render as render_module
+
+    return {"key": f"{digest}-{SCHEMA_VERSION}-r{render_module.SCHEMA_VERSION}"}
 
 
 #! the netlist, as the browser and cone walker see it

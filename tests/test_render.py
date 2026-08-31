@@ -50,9 +50,15 @@ def test_pack_unpack_round_trips(sample_render):
 
 
 def test_lod2_has_no_layer_geometry(sample_render):
+    """At L2 the die is drawn as cells and nothing else -- except the
+    substrate, which *is* the die: one rectangle, cheaper than the outline it
+    replaces, and without it the zoomed-out view has nothing under the cells.
+    """
+    synthetic = set(sample_render.header["synthetic_layers"])
     for layer, entry in sample_render.header["lods"]["2"].items():
-        assert entry["rects"]["count"] == 0
-        assert entry["shape_ids"]["count"] == 0
+        expected = 1 if layer in synthetic else 0
+        assert entry["rects"]["count"] == expected, layer
+        assert entry["shape_ids"]["count"] == expected, layer
 
 
 def test_lod1_never_has_more_rects_than_lod0(sample_render):
@@ -60,6 +66,48 @@ def test_lod1_never_has_more_rects_than_lod0(sample_render):
         n0 = sample_render.header["lods"]["0"][layer]["rects"]["count"]
         n1 = sample_render.header["lods"]["1"][layer]["rects"]["count"]
         assert n1 <= n0
+
+
+def test_device_layers_are_present_and_carry_no_nets(sample_render):
+    """The transistor level. Nothing is traced on it -- these layers exist so
+    the die looks like a die rather than metal hovering over nothing -- so
+    every shape on one must have net -1, or clicking a net would light up
+    scenery.
+    """
+    h = sample_render.header
+    kinds = h["layer_kind"]
+    device = [n for n in h["layers"] if kinds[n] == "device"]
+    assert device[:2] == ["substrate", "nwell"], device
+    assert set(device) >= {"substrate", "nwell", "diff", "poly"}
+
+    # bottom to top: every device layer sits below every routing layer
+    routing = [n for n in h["layers"] if kinds[n] == "routing"]
+    assert h["layers"] == device + routing
+
+    net_of_shape = _i32_array(sample_render, h["net_of_shape"])
+    for name in device:
+        entry = h["lods"]["0"][name]
+        for sid in _i32_array(sample_render, entry["shape_ids"]):
+            assert net_of_shape[sid] == -1, name
+
+
+def test_the_substrate_is_one_rect_covering_the_die(sample_render):
+    h = sample_render.header
+    entry = h["lods"]["0"]["substrate"]
+    assert entry["rects"]["count"] == 1
+    assert list(_i32_array(sample_render, entry["rects"])) == h["bbox"]
+    assert "substrate" in h["synthetic_layers"]
+
+
+def test_contacts_are_dropped_from_the_zoomed_out_level(sample_render):
+    """`licon1` is tens of thousands of sub-micron squares. They are real, and
+    they are in L0, but at L1 they are far under a pixel and would roughly
+    double the bundle to draw nothing -- so L1 drops them, exactly as it
+    would a metal via.
+    """
+    h = sample_render.header
+    assert h["lods"]["0"]["licon1"]["rects"]["count"] > 0
+    assert h["lods"]["1"]["licon1"]["rects"]["count"] == 0
 
 
 def test_tile_offsets_are_a_valid_csr(sample_render):
@@ -137,10 +185,30 @@ def test_stack_has_the_real_sky130_numbers(sample_render):
     }
     assert stack["met1"]["z"] == 1.366
     assert stack["met1"]["thickness"] == 0.36
-    # contiguous: each layer starts where the last one ended
+
     ordered = sample_render.header["stack"]
-    for a, b in zip(ordered, ordered[1:]):
-        assert round(a["z"] + a["thickness"], 6) == b["z"]
+    assert [s["name"] for s in ordered] == sorted(
+        (s["name"] for s in ordered), key=lambda n: stack[n]["z"]
+    ), "the stack must be listed bottom to top"
+
+    # The *interconnect* is contiguous: every metal's top is the bottom of the
+    # via tier above it, and that tier's top is the bottom of the next metal.
+    # The 3D view depends on this -- it fills each metal down to the layer
+    # below rather than drawing the via tiers, and a gap would show.
+    interconnect = [s for s in ordered if s["z"] >= stack["li1"]["z"]]
+    for a, b in zip(interconnect, interconnect[1:]):
+        assert round(a["z"] + a["thickness"], 6) == b["z"], (a["name"], b["name"])
+
+    # The device level is *not* contiguous in that sense and must not be
+    # forced to be. `diff` and `tap` are the same physical tier -- n-tap and
+    # p-tap diffusion -- so they share a z; and `licon1` runs from diffusion
+    # all the way up to li1, passing the poly tier rather than stacking on it,
+    # because a contact lands on both diffusion and poly. What must hold is
+    # that the device level reaches li1 without leaving a hole under it.
+    device = [s for s in ordered if s["z"] < stack["li1"]["z"]]
+    assert device, "the device level is what stops the metal floating"
+    top = max(round(s["z"] + s["thickness"], 6) for s in device)
+    assert top == stack["li1"]["z"]
 
 
 def test_instances_cover_every_cell_name_referenced(sample_render):

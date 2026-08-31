@@ -63,8 +63,18 @@ void main() {
   fragColour = c;
 }`;
 
-/** sky130-ish layer colours, in the KLayout spirit: li1 up through met5. */
+/** sky130-ish layer colours, in the KLayout spirit: substrate up through
+ * met5. Kept in step with `die3d.ts`'s `LAYER_COLOUR`. The device level is
+ * near-opaque and earthy so it reads as the solid thing the wiring sits on;
+ * the interconnect gets more transparent going up so the layers below stay
+ * visible through it. */
 const COLOURS: Record<string, [number, number, number, number]> = {
+  substrate: [0.23, 0.25, 0.29, 1.0],
+  nwell: [0.42, 0.36, 0.55, 0.95],
+  diff: [0.55, 0.42, 0.29, 0.95],
+  tap: [0.66, 0.54, 0.36, 0.95],
+  poly: [0.85, 0.31, 0.44, 0.92],
+  licon1: [0.75, 0.75, 0.75, 0.9],
   li1: [0.42, 0.75, 0.42, 0.75],
   met1: [0.35, 0.55, 0.95, 0.7],
   met2: [0.95, 0.45, 0.35, 0.65],
@@ -129,7 +139,8 @@ export class DieView {
   private readonly cols: number;
   private readonly rows: number;
   private readonly bbox: [number, number, number, number];
-  /** Layer names bottom (li1) to top (met5) -- draw order, and reverse pick order. */
+  /** Layer names bottom (substrate) to top (met5) -- draw order, and reverse
+   *  pick order. */
   private readonly layerOrder: string[];
   private readonly netOfShape: Int32Array;
   private readonly netNameById = new Map<number, string>();
@@ -172,7 +183,11 @@ export class DieView {
     this.bbox = h.bbox;
     this.cols = h.tile_grid.cols;
     this.rows = h.tile_grid.rows;
-    this.layerOrder = h.layers;
+    // Synthetic layers exist only for the 3D view -- the substrate slab is
+    // an opaque rectangle the size of the die, which from above would hide
+    // the whole design.
+    const synthetic = new Set(h.synthetic_layers ?? []);
+    this.layerOrder = h.layers.filter((n) => !synthetic.has(n));
     this.netOfShape = bundle.view(h.net_of_shape);
     for (const [id, name] of Object.entries(h.net_names)) {
       const n = Number(id);
@@ -191,7 +206,7 @@ export class DieView {
     for (let lod = 0; lod < h.lod_levels; lod++) {
       const perLayer = new Map<string, Batch>();
       const layers = h.lods[String(lod)] ?? {};
-      for (const name of h.layers) {
+      for (const name of this.layerOrder) {
         const slice = layers[name];
         if (!slice || slice.rects.count === 0) continue;
         const shapeIds = bundle.view(slice.shape_ids);

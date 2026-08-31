@@ -33,7 +33,8 @@ from .geo import types as g
 from .loader import Design
 
 #: Bumped whenever the bundle layout changes. Cached bundles invalidate on it.
-SCHEMA_VERSION = 1
+#: 2 added the device-level layers and the `layer_kind` map.
+SCHEMA_VERSION = 2
 
 #: L0 full detail, L1 small-rect collapse, L2 cells only (no per-layer geometry).
 LOD_LEVELS = 3
@@ -218,6 +219,42 @@ def _emit_layer(
     }
 
 
+#: The synthetic layer under everything: one rectangle covering the die. There
+#: is no GDS geometry for "the wafer", but every GDS viewer draws it, and
+#: without it the lowest real layer floats over nothing.
+SUBSTRATE = "substrate"
+
+
+def _device(
+    design: Design, new_shape
+) -> dict[str, list[tuple[Rect, int, int | None]]]:
+    """Device-level geometry: wells, diffusion, poly, contacts.
+
+    These carry no net -- nothing is traced on them -- so every shape gets a
+    net of `None` and is never highlighted. They are here because they are
+    two thirds of what a chip looks like: `li1` sits ~0.94 um above the
+    substrate, and with that space empty the metal reads as hovering rather
+    than as the top of something.
+
+    Device geometry is drawn inside the standard cells, so this walks the
+    hierarchy the same way `_lod0` does.
+    """
+    by_layer: dict[str, list[tuple[Rect, int, int | None]]] = {}
+    bbox = design.layout.cell_bbox(design.top)
+    by_layer[SUBSTRATE] = [
+        ((bbox.left, bbox.bottom, bbox.right, bbox.top), new_shape(None), None)
+    ]
+    for dl in getattr(design.tech, "device", ()):
+        idx = design.index_of(dl.drawing)
+        items: list[tuple[Rect, int, int | None]] = []
+        if idx is not None:
+            for shape in design.layout.shapes_rec(design.top, idx):
+                for rect in geo_clusters.rects_of(shape):
+                    items.append((rect, new_shape(None), None))
+        by_layer[dl.name] = items
+    return by_layer
+
+
 def build(
     design: Design,
     conn: Connectivity,
@@ -248,11 +285,34 @@ def build(
     lod1 = _lod1(design, lod0, cluster_bbox, new_shape, lod1_min_area)
     lod2: dict[str, list[tuple[Rect, int, int]]] = {rl.name: [] for rl in tech.routing}
 
+    # Device layers are LOD-independent in kind but not in cost: `licon1` is
+    # tens of thousands of sub-micron contacts, which are invisible at L1 and
+    # would double the bundle for nothing. So L1 keeps only what is still
+    # legible when zoomed out, by the same area rule the routing layers use,
+    # and L2 keeps only the substrate -- the one shape that is the die.
+    device0 = _device(design, new_shape)
+    contacts = {d.name for d in getattr(tech, "device", ()) if d.via}
+    device1 = {
+        name: ([] if name in contacts else rects)
+        for name, rects in device0.items()
+    }
+    device2 = {name: (device0[name] if name == SUBSTRATE else []) for name in device0}
+    for level, extra in ((lod0, device0), (lod1, device1), (lod2, device2)):
+        level.update(extra)
+
+    # Bottom to top: substrate, the device layers in stack order, then the
+    # routing layers. This is the draw order, the 2D pick order and the index
+    # the 3D explode keys off, so it has to be the physical order.
+    device_order = [SUBSTRATE] + [d.name for d in getattr(tech, "device", ())]
+    stack_pos = {s.name: i for i, s in enumerate(tech.stack)}
+    device_order.sort(key=lambda n: stack_pos.get(n, -1))
+    layer_order = device_order + [rl.name for rl in tech.routing]
+
     lods = {}
     for level, layers in enumerate((lod0, lod1, lod2)):
         lods[str(level)] = {
-            rl.name: _emit_layer(layers[rl.name], top_bbox, blob, tile_grid, tile_grid)
-            for rl in tech.routing
+            name: _emit_layer(layers[name], top_bbox, blob, tile_grid, tile_grid)
+            for name in layer_order
         }
 
     # net numbering: dense 0..n-1 over every net id `conn` actually produced,
@@ -306,7 +366,22 @@ def build(
             for s in tech.stack
         ],
         "tile_grid": {"cols": tile_grid, "rows": tile_grid},
-        "layers": [rl.name for rl in tech.routing],
+        "layers": layer_order,
+        # Which layers carry nets and which are scenery. A device layer is
+        # never highlighted, never picked, and never part of a net.
+        "layer_kind": {
+            **{name: "device" for name in device_order},
+            **{rl.name: "routing" for rl in tech.routing},
+        },
+        # Layers that cover regions rather than drawing wires, which the
+        # viewer renders flatter so they read as ground.
+        "fill_layers": [SUBSTRATE]
+        + [d.name for d in getattr(tech, "device", ()) if d.fill],
+        # Layers with no GDS geometry behind them, invented by this module.
+        # The 3D view wants the substrate slab under everything; the 2D view
+        # must not draw it, because from above it is an opaque rectangle the
+        # size of the die and it would hide the whole design.
+        "synthetic_layers": [SUBSTRATE],
         "lod_levels": LOD_LEVELS,
         "lod1_min_area": lod1_min_area,
         "lods": lods,

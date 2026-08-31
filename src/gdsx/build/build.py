@@ -35,19 +35,42 @@ class BuildReport:
     max_column_offset: int = 0
     max_track_offset: int = 0
     filler_cells: int = 0
+    logic_width: int = 0  # summed cell widths, for the occupancy figure
+    grid_drops: int = 0
     check: Comparison | None = None
 
     @property
     def ok(self) -> bool:
         return self.check is None or self.check.ok
 
+    @property
+    def height(self) -> int:
+        return self.rows * 2720
+
+    @property
+    def aspect(self) -> float:
+        """Achieved width:height. The spec asks for one; the router's spread
+        retry can only be paid for in die shape, so this is what came out."""
+        return self.core_width / self.height if self.height else 0.0
+
+    @property
+    def occupancy(self) -> float:
+        """Fraction of the core's row area holding a logic cell. The spec's
+        `fill` is the nominal figure; every step of spread dilutes it, so a
+        spec whose `fill` is far above this one is not describing the die."""
+        area = self.core_width * self.rows
+        return self.logic_width / area if area else 0.0
+
     def lines(self) -> list[str]:
         out = [
             f"{self.instances} instances, {self.nets} nets, "
             f"{self.filler_cells} filler cells",
             f"core {self.core_width} nm wide x {self.rows} rows "
-            f"({self.rows * 2720} nm), recipe {self.recipe}, "
+            f"({self.height} nm), recipe {self.recipe}, "
             f"row spread {self.spread}x",
+            f"shape: aspect 1:{1 / self.aspect:.2f} width:height, "
+            f"{100 * self.occupancy:.1f} % of the core occupied by logic",
+            f"power grid: {self.grid_drops} strap-to-rail drops",
             f"routing: {self.jogged_pins} pins needed a detour "
             f"(worst {self.max_column_offset} columns, "
             f"{self.max_track_offset} tracks off ideal)",
@@ -111,6 +134,8 @@ def build(
         max_column_offset=routed.max_column_offset,
         max_track_offset=routed.max_track_offset,
         filler_cells=len(placed.placements) - len(nl.instances),
+        logic_width=placed.logic_width,
+        grid_drops=routed.grid_drops,
     )
     if check:
         from .. import config as config_mod, loader, netlist as netlist_mod
@@ -121,15 +146,22 @@ def build(
 
 
 def _place_and_route(nl, spec, reference: Path, pin_table):
-    """Place, route, and if the router runs out of tracks, thin the rows and
-    try again.
+    """Place, route, and if the router runs out of resource, thin the design
+    and try again.
 
-    `SPREADS` holds the core width fixed and adds rows, which is the only
-    direction that adds routing resource without also adding demand -- see
-    `place()`. Each step is roughly 1.5x the last, so the sequence covers a
-    12x range in six tries; a design that still cannot route at 12x sparsity
-    has something wrong with it that more area will not fix, and the router's
-    own error is the right thing to surface at that point.
+    `spread` is effective utilisation: each step grows the core in both
+    directions, so the requested aspect survives and the die simply gets
+    emptier. The scarce resource it buys is riser columns -- a pin's own
+    column is exclusive, and both extra rows and extra width create more of
+    them. Each step is roughly 1.5x the last, so the sequence covers a 12x
+    range in six tries; a design that still cannot route at 12x has something
+    wrong with it that more area will not fix, and the router's own error is
+    the right thing to surface at that point.
+
+    A spread above 1.0 means the spec's `fill` is not what the die ended up
+    at, so `BuildReport` prints the achieved occupancy next to it. Lowering
+    `fill` until the spread settles at 1.0 gives a *denser* die than letting
+    the retry loop do it, because the loop can only overshoot in 1.5x steps.
     """
     last: RouteError | None = None
     for spread in SPREADS:

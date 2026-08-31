@@ -115,9 +115,16 @@ def test_extract_round_trips_through_load_netlist(handle):
 
 
 def test_cache_key_is_stable_and_sensitive_to_schema_version():
+    """Both schema versions have to be in the key. The envelope's does not
+    move when the render bundle's layout does, and a key carrying only the
+    envelope version would serve a stale bundle after exactly the kind of
+    change that most needs invalidating.
+    """
+    from gdsx import render
+
     key = unwrap(api.cache_key(SAMPLE.read_bytes()))["key"]
     assert key == unwrap(api.cache_key(SAMPLE.read_bytes()))["key"]
-    assert key.endswith(f"-{api.SCHEMA_VERSION}")
+    assert key.endswith(f"-{api.SCHEMA_VERSION}-r{render.SCHEMA_VERSION}")
     assert key != unwrap(api.cache_key(PUZZLE.read_bytes()))["key"]
 
 

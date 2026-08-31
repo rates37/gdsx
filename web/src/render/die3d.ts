@@ -33,6 +33,16 @@ import type { RenderBundle } from "./bundle";
  * drift slightly, e.g. per-layer opacity reads differently as a WebGL
  * blend vs. a three.js material). */
 const LAYER_COLOUR: Record<string, { hex: number; opacity: number }> = {
+  // Device level, in the KLayout/sky130 spirit: earthy and near-opaque, so it
+  // reads as the solid thing the metal sits on rather than as more wiring.
+  substrate: { hex: 0x3a3f4a, opacity: 1.0 },
+  nwell: { hex: 0x6b5b8c, opacity: 0.95 },
+  diff: { hex: 0x8c6b4a, opacity: 0.95 },
+  tap: { hex: 0xa88a5c, opacity: 0.95 },
+  poly: { hex: 0xd94f70, opacity: 0.92 },
+  licon1: { hex: 0xbfbfbf, opacity: 0.9 },
+  // Interconnect: progressively more transparent going up, so the lower
+  // layers stay visible through the ones above.
   li1: { hex: 0x6bbf6b, opacity: 0.85 },
   met1: { hex: 0x598cf2, opacity: 0.8 },
   met2: { hex: 0xf2735a, opacity: 0.78 },
@@ -54,15 +64,36 @@ const PULSE_COLOUR = 0xffffff;
  * look joined to it.
  */
 function drawnStackTop(
-  layerOrder: readonly string[],
+  drawnOrder: readonly string[],
   index: number,
   stackByName: Map<string, { z: number; thickness: number }>,
 ): number | null {
-  for (let i = index + 1; i < layerOrder.length; i++) {
-    const next = stackByName.get(layerOrder[i]);
+  for (let i = index + 1; i < drawnOrder.length; i++) {
+    const next = stackByName.get(drawnOrder[i]);
     if (next) return next.z;
   }
   return null;
+}
+
+/**
+ * How much to compress the z axis, given the die's lateral size.
+ *
+ * The stack is ~7 um tall whatever the die is. On the 200 um reference die
+ * that is 3 % of the width and reads as a chip; on a 26 um puzzle it is a
+ * quarter of the width and reads as a layer cake floating in space. Nothing
+ * is wrong with the geometry -- the small dies really are that proportion --
+ * but the point of the view is to look like a chip, so the z axis is squashed
+ * until the stack occupies about the same fraction of the frame it does on
+ * the reference die.
+ *
+ * Never *stretches*: a die big enough already is left at true scale, so the
+ * reference puzzle is unchanged and the compression only ever pulls the small
+ * dies back towards it.
+ */
+function zCompression(dieWidthUm: number, dieHeightUm: number, stackUm: number): number {
+  if (stackUm <= 0) return 1;
+  const lateral = Math.max(dieWidthUm, dieHeightUm);
+  return Math.min(1, lateral / (STACK_TO_DIE_RATIO * stackUm));
 }
 
 /** An angle folded into (-PI, PI]. */
@@ -76,8 +107,14 @@ function wrapAngle(radians: number): number {
 
 /** Rects below this, in microns, would render as a sliver or vanish. */
 const MIN_SIZE_UM = 0.03;
-/** How far apart the exploded view pulls adjacent stack layers, at factor 1. */
+/** How far apart the exploded view pulls adjacent stack layers, at factor 1.
+ *  Scaled by the same z compression as the stack itself, so exploding a
+ *  squashed die does not jump. */
 const EXPLODE_SEPARATION_UM = 3.0;
+/** The die's larger lateral dimension, in stack heights, that `zCompression`
+ *  aims for. Measured from the reference die: 200 um across a 6.6 um stack is
+ *  ~30, and that is the proportion the view is trying to reproduce. */
+const STACK_TO_DIE_RATIO = 26;
 /** How long the trace sweep dwells on each layer. */
 const TRACE_STEP_MS = 450;
 
@@ -121,7 +158,18 @@ export class Die3D {
   private readonly plane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
   private readonly dieWidthUm: number;
   private readonly dieHeightUm: number;
+  /** Height of the drawn stack *after* z compression, in scene units. */
   private readonly stackHeightUm: number;
+  /** Bottom of the drawn stack after compression -- the substrate sits below
+   *  z = 0, so this is negative and the camera has to know about it. */
+  private readonly stackFloorUm: number;
+  /** See `zCompression`. 1.0 on a die large enough not to need squashing. */
+  private readonly zScale: number;
+
+  /** Mid-height of the drawn stack -- what the camera orbits about. */
+  private get stackCentreUm(): number {
+    return this.stackFloorUm + this.stackHeightUm / 2;
+  }
   private readonly raycaster = new THREE.Raycaster();
 
   private highlightedNet = -1;
@@ -168,11 +216,25 @@ export class Die3D {
     const dieCy = ((by0 + by1) / 2) * h.dbu;
 
     const stackByName = new Map(h.stack.map((s) => [s.name, s]));
+    const stackFloor = h.stack.reduce((m, s) => Math.min(m, s.z), 0);
     const stackTop = h.stack.reduce((m, s) => Math.max(m, s.z + s.thickness), 0);
-    this.stackHeightUm = stackTop;
 
     const netOfShape = bundle.view(h.net_of_shape);
     const lod1 = h.lods["1"] ?? {};
+
+    // Only the layers that actually got geometry take part in the gap-filling
+    // below. A layer listed in the header but empty in this design -- a
+    // contact tier dropped at this LOD, or a metal the design never used --
+    // must not be treated as the ceiling of the layer beneath it, or that
+    // layer stops short and leaves exactly the floating gap the fill exists
+    // to close.
+    const drawnOrder = this.layerOrder.filter(
+      (name) => (lod1[name]?.rects.count ?? 0) > 0 && stackByName.has(name),
+    );
+
+    this.zScale = zCompression(this.dieWidthUm, this.dieHeightUm, stackTop - stackFloor);
+    this.stackHeightUm = (stackTop - stackFloor) * this.zScale;
+    this.stackFloorUm = stackFloor * this.zScale;
 
     // One box geometry, shared by every layer's InstancedMesh -- only the
     // per-instance matrix (position/scale) and colour differ.
@@ -233,13 +295,12 @@ export class Die3D {
       //
       // `explode` still separates them, so the true layer boundaries are one
       // slider away.
-      const nextDrawn = drawnStackTop(this.layerOrder, index, stackByName);
+      const nextDrawn = drawnStackTop(drawnOrder, drawnOrder.indexOf(name), stackByName);
       const floor = stackEntry.z;
-      const span = Math.max(
-        nextDrawn === null ? stackEntry.thickness : nextDrawn - floor,
-        MIN_SIZE_UM,
-      );
-      const cz = floor + span / 2;
+      const trueSpan =
+        nextDrawn === null ? stackEntry.thickness : Math.max(nextDrawn - floor, 0);
+      const span = Math.max(trueSpan * this.zScale, MIN_SIZE_UM);
+      const cz = floor * this.zScale + span / 2;
       const thickness = span;
 
       for (let i = 0; i < count; i++) {
@@ -271,7 +332,7 @@ export class Die3D {
       this.enabled.add(name);
     }
 
-    this.target = new THREE.Vector3(0, 0, this.stackHeightUm / 2);
+    this.target = new THREE.Vector3(0, 0, this.stackCentreUm);
     this.radius = Math.max(this.dieWidthUm, this.dieHeightUm, this.stackHeightUm) * 1.6 || 10;
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, this.radius * 20);
     this.camera.up.set(0, 0, 1);
@@ -315,7 +376,7 @@ export class Die3D {
     this.azimuth = Math.PI / 4;
     this.elevation = 0.6;
     this.radius = Math.max(this.dieWidthUm, this.dieHeightUm, this.stackHeightUm) * 1.6 || 10;
-    this.target.set(0, 0, this.stackHeightUm / 2);
+    this.target.set(0, 0, this.stackCentreUm);
     this.updateCamera();
   }
 
@@ -346,8 +407,8 @@ export class Die3D {
     this.target.x = Math.min(limitX, Math.max(-limitX, this.target.x));
     this.target.y = Math.min(limitY, Math.max(-limitY, this.target.y));
     this.target.z = Math.min(
-      this.stackHeightUm * 2,
-      Math.max(-this.stackHeightUm, this.target.z),
+      this.stackFloorUm + this.stackHeightUm * 2,
+      Math.max(this.stackFloorUm - this.stackHeightUm, this.target.z),
     );
     this.updateCamera();
   }
@@ -556,7 +617,8 @@ export class Die3D {
   setExplode(factor: number): void {
     this.explodeFactor = Math.min(1, Math.max(0, factor));
     for (const lm of this.layers.values()) {
-      lm.mesh.position.z = this.explodeFactor * lm.index * EXPLODE_SEPARATION_UM;
+      lm.mesh.position.z =
+        this.explodeFactor * lm.index * EXPLODE_SEPARATION_UM * this.zScale;
     }
   }
 
