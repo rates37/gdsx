@@ -1,4 +1,4 @@
-"""Acceptance test for gdsii_write.py, per layout-guide.md §7.1:
+"""Acceptance test for gdsii_write.py.
 
 Rebuild samples/puzzle.gds's top structure from copied cell structures plus
 freshly-authored boundaries/srefs/texts, and check that extracting the
@@ -41,9 +41,10 @@ def test_write_real64_round_trips(value, as_bytes):
 
 
 def test_units_1nm_matches_the_reference_file_exactly():
-    """layout-guide.md §7.1: copy the reference UNITS bytes verbatim, or
-    write an encoder and test it round-trips. This is the encoder; here is
-    the round-trip against the actual bytes samples/puzzle.gds ships with.
+    """The GDSII UNITS record must match the reference file's bytes exactly:
+    copy them verbatim, or write an encoder and test it round-trips. This is
+    the encoder; here is the round-trip against the actual bytes
+    samples/puzzle.gds ships with.
     """
     data = PUZZLE.read_bytes()
     pos = 0
@@ -103,9 +104,10 @@ def _canonical_nets(nl) -> dict[frozenset[str], tuple[str, ...]]:
 def test_round_trip_extracts_identically(tmp_path):
     """Same instances, same cell types, same connectivity partition, same
     ports (up to net renaming -- see `_canonical_nets`), same floating/
-    conflicts. This is exactly the equivalence layout-guide.md §8 defines:
-    "a bijection between their nets under which every instance's connections
-    agree", keyed on instance name since naming is deterministic.
+    conflicts. This is exactly the equivalence the build acceptance test
+    defines: a bijection between the two netlists' nets under which every
+    instance's connections agree, keyed on instance name since naming is
+    deterministic.
     """
     rebuilt = _rebuild(tmp_path)
 
@@ -143,7 +145,8 @@ def test_round_trip_extracts_identically(tmp_path):
 
 
 def test_rebuild_is_byte_identical_across_runs(tmp_path):
-    """layout-guide.md §10 point 8: no set iteration, no unseeded randomness"""
+    """Rebuilding twice must produce identical bytes: no set iteration, no
+    unseeded randomness."""
     dir_a, dir_b = tmp_path / "a", tmp_path / "b"
     dir_a.mkdir()
     dir_b.mkdir()

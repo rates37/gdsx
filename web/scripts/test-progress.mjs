@@ -11,10 +11,9 @@
 //   3. clearAll empties localStorage of every gdsx.* key and nothing else;
 //   4. every `gdsx.*` key literal/template actually assigned to a key-named
 //      variable anywhere in web/src is matched by a rule in KEY_RULES. This
-//      is the guard against the failure mode the work order calls out: a
-//      panel that starts persisting a new key outside the convention would
-//      otherwise silently survive clearPuzzle/clearAll instead of failing a
-//      test.
+//      is the guard against a panel that starts persisting a new key outside
+//      the convention: without this check it would silently survive
+//      clearPuzzle/clearAll instead of failing a test.
 //
 // No browser is available under plain Node, so a small in-memory Storage
 // stands in for localStorage -- installed before anything in this file reads

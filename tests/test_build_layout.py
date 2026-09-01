@@ -1,9 +1,8 @@
 """The layout generator, end to end: place, route, write, extract, compare.
 
-docs/game/layout-guide.md §8 and §10. The build itself is the interesting
-test -- the extractor is a complete oracle for whether the geometry is right,
-so most of what is asserted here is "extract the file we just wrote and check
-it is the netlist we put in".
+The build itself is the interesting test -- the extractor is a complete
+oracle for whether the geometry is right, so most of what is asserted here
+is "extract the file we just wrote and check it is the netlist we put in".
 """
 
 from __future__ import annotations
@@ -67,12 +66,12 @@ def extracted(built) -> Netlist:
     return N.build(loader.load(built, config.load()))
 
 
-# --- the acceptance test (layout-guide.md §8) ------------------------------
+# --- the acceptance test ----------------------------------------------------
 
 
 def test_extracted_netlist_matches_the_intended_one(intended, extracted):
-    """§8's whole table at once: counts, cell types, floating, shorts, net
-    count, connection isomorphism, ports.
+    """The whole comparison table at once: counts, cell types, floating,
+    shorts, net count, connection isomorphism, ports.
     """
     result = compare(intended, extracted)
     assert result.ok, str(result)
@@ -164,9 +163,9 @@ def test_every_verilog_port_is_labelled(intended, extracted):
 
 def test_ports_are_pins_on_the_die_edge(intended, spec):
     """Data inputs left, outputs right, clock and async reset along the
-    bottom -- puzzle-pack.md §0.2. Each side is one column (or row) of pins
-    outside the core, evenly pitched and in name order, so the die reads as a
-    chip rather than as a bag of interior labels.
+    bottom. Each side is one column (or row) of pins outside the core,
+    evenly pitched and in name order, so the die reads as a chip rather than
+    as a bag of interior labels.
     """
     placed = place(intended, spec, REFERENCE)
     pins = R.port_pins(intended, placed.core_width, placed.rows)
@@ -189,8 +188,9 @@ def test_ports_are_pins_on_the_die_edge(intended, spec):
 
 
 def test_rebuild_is_byte_identical(tmp_path, spec, built):
-    """layout-guide.md §10 point 8. Any set iteration or unseeded randomness
-    in the generator shows up here and nowhere else.
+    """Rebuilding from the same inputs must produce the same bytes. Any set
+    iteration or unseeded randomness in the generator shows up here and
+    nowhere else.
     """
     again = tmp_path / "again.gds"
     workdir = Path(tempfile.mkdtemp(prefix="warm_start_again_"))
@@ -238,7 +238,7 @@ def test_cells_in_a_row_never_overlap(intended, spec):
 
 def test_rows_alternate_orientation(intended, spec):
     """A mirrored row's origin is at the top of the row, so that it shares a
-    power rail with the row below (layout-guide.md §5).
+    power rail with the row below.
     """
     placed = place(intended, spec, REFERENCE)
     for p in placed.placements.values():
@@ -247,9 +247,10 @@ def test_rows_alternate_orientation(intended, spec):
 
 
 def test_utilisation_and_aspect_follow_the_spec(intended, spec):
-    """§9's `fill` is utilisation and `aspect` is the core's width/height. A
-    placer that abuts every row and pads only the tail gets the area right
-    and the utilisation wrong, which the router then cannot cope with.
+    """The spec's `fill` is utilisation and `aspect` is the core's
+    width/height. A placer that abuts every row and pads only the tail gets
+    the area right and the utilisation wrong, which the router then cannot
+    cope with.
     """
     placed = place(intended, spec, REFERENCE)
     widths = measure_widths(REFERENCE)
