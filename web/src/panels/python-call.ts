@@ -1,4 +1,4 @@
-// The `{ }` button every Python-backed panel carries (game-plan.md §4): it
+// The `{ }` button every Python-backed panel carries: it
 // shows the exact `gdsx.api` call behind the current view, copyable. No
 // panel formats this text itself -- they hand over the string `DesignClient`
 // already produced alongside the data, so what's shown is never a guess at

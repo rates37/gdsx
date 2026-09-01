@@ -55,8 +55,8 @@ import { assetUrl } from "./asset-url.ts";
 
 // The toolbar's menu bar, macOS/Windows style. The Notebook is deliberately
 // absent -- it is the only scored surface in the game, so it stays a
-// first-class toolbar button next to `guide` rather than hiding in a menu
-// (docs/game/web-ui-architecture.md §8). Every panel named here is always
+// first-class toolbar button next to `guide` rather than hiding in a menu.
+// Every panel named here is always
 // reachable; which of them the *default* layout opens is a separate list
 // (`defaultPanelIds` below), gated by the loaded puzzle's `tools_enabled`
 // through `panelsFor`.
@@ -72,8 +72,8 @@ const MENUS: MenuGroup[] = [
 const ENGAGEMENT_TICK_MS = 15_000;
 
 /**
- * Accumulate time-on-puzzle into the progress store, for §8's wall-clock
- * bonus.
+ * Accumulate time-on-puzzle into the progress store, for the write-up's
+ * wall-clock bonus.
  *
  * Two properties this has and a start-timestamp would not. A hidden tab does
  * not count, so a puzzle left open in a background tab overnight does not
@@ -163,8 +163,8 @@ export async function bootWorkspace(
   //: One URL, because the sweep worker fetches its own copy of the tape (a
   //: cache hit) rather than having one posted to it per sweep.
   const tapeUrl = assetUrl(puzzle.assets.tape);
-  //: What the notebook's coverage measures the explained fraction of, per
-  //: game-plan.md §5. Null for a puzzle with no lock (`parameter`), and
+  //: What the notebook's coverage measures the explained fraction of.
+  //: Null for a puzzle with no lock (`parameter`), and
   //: carried as null rather than defaulted to a name: the descriptor is the
   //: only thing that knows what this design calls its lock, and inventing
   //: `"success"` here would have been right by authoring convention rather
@@ -181,8 +181,8 @@ export async function bootWorkspace(
     });
 
   // The gate tape, same loading tier as the render bundle -- neither waits
-  // on Pyodide (game-plan.md §9: "300 ms fetch tape.bin + netlist.json ->
-  // sim, waveform, netlist browser live").
+  // on Pyodide: the target is a 300 ms fetch of tape.bin + netlist.json to
+  // get sim, waveform and netlist browser live.
   const tapeReady: Promise<GateTape> = fetch(tapeUrl)
     .then((r) => r.arrayBuffer())
     .then(parseTapeBundle);
@@ -220,9 +220,9 @@ export async function bootWorkspace(
   };
 
   // ---- Python side. Analysis panels (netlist browser, cone walker) show
-  // their own "analysis engine starting" state until this resolves, per the
-  // fallback game-plan.md §9 explicitly allows -- they need a live design
-  // handle and there is no TS-side netlist model to fall back to. -------
+  // their own "analysis engine starting" state until this resolves -- they
+  // need a live design handle and there is no TS-side netlist model to
+  // fall back to. -------
 
   const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
   const api = wrap<GdsxWorker>(worker);
@@ -242,7 +242,7 @@ export async function bootWorkspace(
     createDesignClient(api, assetUrl(puzzle.assets.netlist)),
   );
 
-  // Coverage's denominator (§5): a design call and a step through the success
+  // Coverage's denominator: a design call and a step through the success
   // flop, shared with the Notebook panel via the same memoised promise
   // (notebook/basis.ts) rather than computed twice. Started as soon as the
   // design handle exists, not gated on the Notebook panel ever having been
@@ -258,8 +258,8 @@ export async function bootWorkspace(
   // it directly.
   const notebook = notebookFor(puzzle.id);
 
-  // The Model Builder's one instance for this puzzle (game-plan.md §6),
-  // hoisted here rather than constructed fresh per read: `currentScore` needs
+  // The Model Builder's one instance for this puzzle, hoisted here rather
+  // than constructed fresh per read: `currentScore` needs
   // to read its badge, and the re-scoring below needs to subscribe to it.
   // Built with an empty starter -- boot.ts does not know this puzzle's
   // starter source, only the Model Builder panel does (`starterFor`), and an
@@ -278,8 +278,8 @@ export async function bootWorkspace(
    * store at once.
    *
    * An unsolved puzzle gets a card that says so and carries no points --
-   * game-plan.md §8 shows a score only after solving, and `scoreCard` is where
-   * that rule is enforced rather than at each of the surfaces below.
+   * a score is shown only after solving, and `scoreCard` is where that
+   * rule is enforced rather than at each of the surfaces below.
    *
    * Async because coverage's denominator is: `basisReady` is awaited so a
    * solve is never scored against an unmeasured cone just because the
@@ -313,8 +313,8 @@ export async function bootWorkspace(
     });
   };
 
-  /** The score, the timings and the hint text for the write-up's summary
-   *  (game-plan.md §8), or null before there is anything to summarise. The
+  /** The score, the timings and the hint text for the write-up's summary,
+   *  or null before there is anything to summarise. The
    *  hints are quoted in full rather than counted, so the tiers are looked up
    *  here where the puzzle descriptor is. */
   const currentSession = async (): Promise<WriteupSession | null> => {
@@ -352,7 +352,7 @@ export async function bootWorkspace(
   notebook.subscribe(rescoreIfSolved);
   modelStore.subscribe(rescoreIfSolved);
 
-  // Always available, never gated behind progress (game-plan.md §8): the
+  // Always available, never gated behind progress: the
   // control just exposes the puzzle's tiers and reads/writes the same
   // per-puzzle progress record `submitControl` below writes attempts into.
   const hintsControl: HintsControl = {

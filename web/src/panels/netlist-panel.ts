@@ -1,4 +1,4 @@
-// The Netlist Browser (game-plan.md §4.3): a virtualised table over every
+// The Netlist Browser: a virtualised table over every
 // instance and every net, filterable, cross-highlighting the die view on
 // hover and opening the Cone Walker on click. This is the panel that turns
 // "728 instances, ~5,000 nets" from an abstraction into something you can

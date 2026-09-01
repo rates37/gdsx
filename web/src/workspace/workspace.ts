@@ -2,7 +2,7 @@
 // localStorage. Panels register a `component` id -> factory; the shell
 // itself knows nothing about what a die view or a net list is.
 //
-// Per game-plan.md §3, panels are floatable/resizable/dockable and the
+// Panels are floatable/resizable/dockable and the
 // layout persists per browser, not per puzzle -- a player who drags the
 // notebook wide once should not have to redo that every session.
 
@@ -38,7 +38,7 @@ export interface PanelDef {
 
 /** One menu bar dropdown: a label and the panel ids it lists, in order.
  *  The Notebook is deliberately never named in a group -- it has its own
- *  toolbar button (§8 of web-ui-architecture.md). */
+ *  toolbar button. */
 export interface MenuGroup {
   label: string;
   items: string[];
@@ -180,7 +180,7 @@ export class Workspace {
 
   /**
    * The default arrangement: every panel in `order` as a tab in a single
-   * group, first one active. game-plan.md §3 sketches a multi-pane cockpit,
+   * group, first one active. A multi-pane cockpit is the sketched intent,
    * and the workspace can still be dragged into one -- but opening on a
    * dozen panes at once gives every one of them too little room to be read,
    * so the shipped default is one panel at a time and the tab strip as the

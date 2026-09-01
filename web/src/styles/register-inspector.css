@@ -1,4 +1,4 @@
-/* ---- register inspector (§4.5) ------------------------------------ */
+/* ---- register inspector: flop state, one row per register ---------- */
 .ri-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
 .ri-loading, .ri-hint { padding: 8px; color: var(--df-faint); font-size: 11px; }
 .ri-hint.bad { color: var(--df-coral); }
@@ -60,7 +60,7 @@
 .ri-truth-cell { min-width: 18px; text-align: center; }
 .ri-truth-value { border-left: 1px solid var(--df-edge); padding-left: 8px; color: var(--df-blue); }
 
-/* ---- requirements panel (§4.9) ------------------------------------- */
+/* ---- requirements panel --------------------------------------------- */
 .rq-summary { font-size: 12px; margin-bottom: 8px; color: var(--df-ink-2); }
 .rq-conflicts { color: var(--df-coral); font-size: 11px; margin-bottom: 8px; }
 .rq-section { margin-bottom: 16px; }
@@ -80,7 +80,7 @@
 .rq-choice-bullet { color: var(--df-faint); }
 .rq-choice-chip { font-size: 11px; }
 
-/* ---- register decoder panel (§4.11) -------------------------------- */
+/* ---- register decoder panel ------------------------------------------ */
 .rd-hint { padding: 8px; color: var(--df-faint); font-size: 11px; }
 .rd-hint.bad { color: var(--df-coral); }
 .rd-group-title { font-weight: 600; font-size: 13px; margin: 6px 0; }
@@ -98,7 +98,7 @@
 .rd-orbit-states { display: flex; flex-wrap: wrap; gap: 6px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-ink-3); margin-top: 4px; }
 .rd-select-row { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-ink-3); }
 
-/* ---- sticky flops panel (§4.12) ------------------------------------ */
+/* ---- sticky flops panel ----------------------------------------------- */
 .sf-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
 .sf-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
 .sf-count { color: var(--df-ink-3); font-size: 11px; }

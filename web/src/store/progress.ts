@@ -48,15 +48,15 @@ export interface ProgressRecord {
   /** How many hint tiers have been revealed, highest tier taken plus one.
    *  Tiers are revealed in order (workspace/toolbar.ts's `HintsControl`), so
    *  this single count is the whole history -- there is no "took tier 2 but
-   *  not tier 1" to represent. 0 if none have been taken. Scoring (game-plan
-   *  §8's "hints taken" penalty) reads this; this file only records it. */
+   *  not tier 1" to represent. 0 if none have been taken. Scoring's
+   *  "hints taken" penalty reads this; this file only records it. */
   hintsTaken: number;
   /** Milliseconds spent with this puzzle open and the tab actually visible --
    *  see `recordEngagement`. Keeps accumulating after a solve. 0 on a record
    *  written before this field existed. */
   engagedMs: number;
   /** `engagedMs` at the moment of the first accepted verdict, frozen there.
-   *  This, not `engagedMs`, is what §8's wall-clock bonus is measured against:
+   *  This, not `engagedMs`, is what the wall-clock bonus is measured against:
    *  how long the solve took, not how long the tab has been open since.
    *  Absent while unsolved, and on a record solved before this field existed. */
   solveMs?: number;
@@ -136,7 +136,7 @@ export function recordSolved(puzzleId: string, verdict: Verdict): void {
  * Add `ms` of engaged time to `puzzleId` -- time the puzzle was open and the
  * tab was actually visible. Called by boot.ts's heartbeat.
  *
- * Engaged rather than calendar time on purpose: §8's wall-clock component is a
+ * Engaged rather than calendar time on purpose: the wall-clock component is a
  * *bonus*, and a player who leaves the tab open overnight has not spent that
  * night solving. Accumulated in small increments rather than derived from a
  * start timestamp so that closing the tab loses at most one interval, with no

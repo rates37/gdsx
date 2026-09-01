@@ -36,7 +36,7 @@ export interface MenuEntry {
   solvedOn: string | null;
   /** Every submit attempt, accepted or not. 0 for an untouched puzzle. */
   attempts: number;
-  /** The best score this puzzle has been solved with (game-plan.md §8), or
+  /** The best score this puzzle has been solved with, or
    *  null when there is none: unsolved, or solved before scoring existed. The
    *  menu shows the number and nothing else -- the breakdown lives in the
    *  write-up, which needs the design loaded. */

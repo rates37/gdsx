@@ -1,6 +1,6 @@
 // GENERATED FILE -- do not edit by hand.
 // Run `uv run python scripts/gen_types.py` to regenerate.
-// Source: src/gdsx/api.py (contract: docs/game/game-plan.md §4b)
+// Source: src/gdsx/api.py
 
 export interface ChoiceOption {
   literals: LeafValue[];

@@ -1,4 +1,4 @@
-// The Experiment Runner's engine (game-plan.md §4.7): a baseline, a set of
+// The Experiment Runner's engine: a baseline, a set of
 // perturbations, a watch set, and the matrix that falls out.
 //
 // This is `gdsx.sim.sensitivity` run in the browser, and it is deliberately a
@@ -23,7 +23,7 @@
 //     baseline it was measured under and the panel prints it.
 //
 // The two self-checks from `sensitivity.map` are computed here rather than left
-// to the panel (§4.10: they must be surfaced as warnings): an element that
+// to the panel, which surfaces them as warnings: an element that
 // reacts to nothing, and a run that moves nothing. Both usually mean the watch
 // set or the window is wrong, and finding that out immediately is worth more
 // than a correct-looking matrix.
@@ -231,8 +231,7 @@ function plan(ctx: ExperimentContext, recipe: RecipeId, params: RecipeParams): M
   if (recipe === "gap") {
     // A single `first` reproduces the original one-row-per-gap sweep. A range
     // makes each row one (first, gap) pair, so the matrix that falls out is
-    // the same one the walkthrough assembles by hand from 24 separate runs
-    // (docs/game/original-puzzle-walkthrough.md §7).
+    // the same one the walkthrough assembles by hand from 24 separate runs.
     const single = params.firstFrom === params.firstTo;
     for (let first = params.firstFrom; first <= params.firstTo; first++) {
       for (let gap = params.minGap; gap <= params.maxGap; gap++) {
@@ -412,7 +411,7 @@ function valueScan(
 
 /**
  * `sensitivity.map`'s two self-checks, which are part of the result rather than
- * an optional extra (§4.10): a watched element that reacts to no run, and a run
+ * an optional extra: a watched element that reacts to no run, and a run
  * that moves no watched element. Either usually means the watch set or the
  * window is wrong.
  */

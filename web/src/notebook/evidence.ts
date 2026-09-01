@@ -1,5 +1,5 @@
-// Evidence: what the Experiment Runner puts in the notebook (game-plan.md
-// §4.7, "results are tabular and exportable to the notebook as evidence").
+// Evidence: what the Experiment Runner puts in the notebook -- results are
+// tabular and exportable to the notebook as evidence.
 //
 // Evidence is not a claim, and the distinction is the same one `LIKELY` and
 // `PROVEN` draw. A claim is an assertion the game checks and scores; a piece of
@@ -11,7 +11,7 @@
 //   * evidence has no verdict. It has a result and the conditions it was taken
 //     under, and the panel prints both;
 //   * evidence is append-only, like verdicts, because the write-up at the end
-//     (§8) is an account of an investigation and an experiment you ran and then
+//     is an account of an investigation and an experiment you ran and then
 //     thought better of is part of that account.
 //
 // What it carries is deliberately a summary rather than the whole matrix: the

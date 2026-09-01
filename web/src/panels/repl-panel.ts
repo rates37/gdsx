@@ -1,4 +1,4 @@
-// The Python REPL drawer (game-plan.md §4.14): Pyodide with `gdsx` preloaded
+// The Python REPL drawer: Pyodide with `gdsx` preloaded
 // and the current design bound to `nl`, `sim`, `design` -- full library
 // access, including everything the GUI does not surface. History persists
 // per puzzle; snippets from any panel's `{ }` button paste in here (copy from

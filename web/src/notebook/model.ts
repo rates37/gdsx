@@ -2,7 +2,7 @@
 // function that decides how a verdict looks.
 //
 // There is one rule this file exists to enforce, and it is the whole
-// intellectual point of the game (game-plan.md §5):
+// intellectual point of the game:
 //
 //     LIKELY must never be displayed as PROVEN.
 //
@@ -169,7 +169,7 @@ export type ClaimKind = Claim["kind"];
 
 export interface VerdictRecord {
   verdict: Verdict;
-  /** Epoch milliseconds. Shown next to a disproof, per §5. */
+  /** Epoch milliseconds. Shown next to a disproof. */
   at: number;
   /** The assumptions the plan was built under, from the library. */
   notes: string[];

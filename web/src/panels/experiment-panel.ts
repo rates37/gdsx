@@ -1,4 +1,4 @@
-// The Experiment Runner (game-plan.md §4.7): pick a baseline, a perturbation
+// The Experiment Runner: pick a baseline, a perturbation
 // set and a watch set, get a matrix.
 //
 // This panel absorbed the former Sensitivity panel, which was this same
@@ -20,7 +20,7 @@
 //    shows the real `sensitivity` call rather than a paraphrase of one.
 // 2. **The self-checks are shown, not logged.** An element that reacts to no
 //    run, or a run that moves nothing, is displayed as a warning above the
-//    matrix (§4.10 requires exactly this). Both usually mean the watch set or
+//    matrix. Both usually mean the watch set or
 //    the window is wrong, and a correct-looking matrix built on either is worse
 //    than no matrix.
 // 3. **Every result names its baseline.** "Cycle 7 writes flop 50" is a fact

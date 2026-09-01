@@ -43,7 +43,7 @@ export const CORE_PANELS: readonly PanelId[] = ["die-view", "netlist", "waveform
 
 /**
  * `tools_enabled` key -> panel id. Mostly aliasing: the panel consolidation
- * (docs/game/web-ui-architecture.md §2) merged six former panels into three,
+ * merged six former panels into three,
  * and no manifest was rewritten to match, so several keys collapse onto the
  * same panel on purpose.
  */

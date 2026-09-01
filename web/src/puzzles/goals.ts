@@ -6,7 +6,7 @@
 // puzzle that is open -- and they must say it the same way, which is why the
 // table is here rather than in either of them.
 
-/** The answer kinds of game-plan.md §6b. */
+/** The answer kinds. */
 export const ANSWER_GOAL: Record<string, string> = {
   sequence: "find the input sequence",
   constant: "recover a value",

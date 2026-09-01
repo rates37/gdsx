@@ -1,5 +1,5 @@
-// The vectors a model is judged on (game-plan.md §6: "random sets of varying
-// density, plus structured near-misses").
+// The vectors a model is judged on: random sets of varying
+// density, plus structured near-misses.
 //
 // Both halves matter and they find different bugs:
 //

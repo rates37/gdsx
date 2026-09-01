@@ -4,7 +4,7 @@
 // `bundleReady` in main.ts for the loading sequence this depends on.
 //
 // Not a panel in its own right. `die-view-panel.ts` owns the panel and
-// mounts either this or the 3D view into it, per game-plan.md §4.1's
+// mounts either this or the 3D view into it, per the
 // `[2D|3D]` toggle; this module knows nothing about that choice beyond
 // being told to tear itself down when the player switches away.
 

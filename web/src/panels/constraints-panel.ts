@@ -1,4 +1,4 @@
-// The Constraints panel (game-plan.md §4.13, needs L38): accumulates
+// The Constraints panel: accumulates
 // constraint rows the player has derived -- from the Sensitivity panel's row
 // clicks (via `constraintsInbox`), typed in directly, or produced by one of
 // the two generators below -- into one `analysis.constraints.System`, and

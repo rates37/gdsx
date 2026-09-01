@@ -45,7 +45,7 @@ export function normaliseAnswer(value) {
  *
  * The `<puzzle>:<field>:` prefix is domain separation, so two puzzles whose
  * answers happen to coincide do not ship the same hash and advertise the
- * fact. It is not a security measure -- game-plan.md §1 rules anti-cheat out
+ * fact. It is not a security measure -- anti-cheat is ruled out
  * as a non-goal, and a SHA-256 of a short number is trivially reversed by
  * anyone who wants to. The point is only to keep the answer out of plain
  * sight in a file the player can open.

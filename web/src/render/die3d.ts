@@ -1,9 +1,9 @@
 // three.js Die View 3D: the same render bundle as `dieview.ts`, extruded
-// through the real sky130 z-stack (`header.stack`) -- the game-plan.md §4.2
+// through the real sky130 z-stack (`header.stack`) -- the 3D
 // sibling of the 2D die view.
 //
 // One `THREE.InstancedMesh` per routing layer, LOD1 only (the perf budget's
-// hard cap -- §9 "3D view: 30 fps min, LOD1 cap, instanced boxes"). Each
+// hard cap -- 30 fps min, LOD1 cap, instanced boxes). Each
 // layer's rects are flattened out of their tile buckets into one flat
 // instance buffer; three.js instancing does not need the 2D view's
 // per-tile-draw-call trick, since a whole layer is one `drawArraysInstanced`

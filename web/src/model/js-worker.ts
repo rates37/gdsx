@@ -1,7 +1,7 @@
 // Runs a player's JavaScript model. One `evaluate(pulses)` per vector.
 //
-// In a worker for two reasons, and neither of them is anti-cheat (§1: there is
-// none, and the solution ships with the puzzle):
+// In a worker for two reasons, and neither of them is anti-cheat -- there is
+// none, and the solution ships with the puzzle:
 //
 //   * a model with an accidental infinite loop is a normal thing to write while
 //     you are working one out, and it must cost you a click rather than the
@@ -9,8 +9,8 @@
 //   * a few hundred model calls should not compete with the die view for the
 //     main thread.
 //
-// `pulses` arrives as a `Set<number>`, matching the Python signature in
-// game-plan.md §6 rather than quietly handing JS an array and Python a set.
+// `pulses` arrives as a `Set<number>`, matching the Python signature
+// rather than quietly handing JS an array and Python a set.
 
 export interface ModelRequest {
   id: number;

@@ -1,6 +1,6 @@
 // Points and coverage. Every tunable number in the game is in this file.
 //
-// Two rules from game-plan.md §8, and one from §5:
+// Two rules for scoring, and one for coverage:
 //
 //   * Score is computed continuously and SHOWN only after solving. Live points
 //     turn an investigation into a timed exam, which is the opposite of what
@@ -14,7 +14,7 @@
 // Coverage is measured continuously and shown in the Notebook panel, where
 // the claims that move it live. It is deliberately NOT in the title bar any
 // more: a number pinned beside the submit button is received as a score
-// whatever it is labelled, which is the live pressure §8 rules out, and
+// whatever it is labelled, which is the live pressure ruled out above, and
 // `coverage 0%` next to an accepted verdict was being read as a bug rather
 // than as "you have not written anything down".
 
@@ -48,7 +48,7 @@ export const POINTS = {
   readOut: 2,
   /** Nothing was learned. */
   unknown: 0,
-  /** §8's ordering, and the design's whole opinion: explaining the design
+  /** The ordering, and the design's whole opinion: explaining the design
    *  outscores unlocking it. A model that agrees with the gate tape over every
    *  generated vector is the most valuable thing a player produces, and solving
    *  is required but cheap. Awarded by the Model Builder, not by a claim --
@@ -75,20 +75,20 @@ export const POINTS = {
   /** Required, and low. You can brute-force your way to the flag; you cannot
    *  brute-force a good score. */
   solved: 10,
-  /** §8's "high": the full coverage fraction, scaled. Second only to a
+  /** The "high" tier: the full coverage fraction, scaled. Second only to a
    *  validated model, and worth more than any amount of claim-writing --
    *  explaining the whole design beats explaining five things about it
    *  very thoroughly. */
   coverageMax: 25,
-  /** §8's "medium", and a CAP rather than a weight: `pointsFor` is summed over
+  /** The "medium" tier, and a CAP rather than a weight: `pointsFor` is summed over
    *  every claim and is otherwise unbounded, so without this, twenty
-   *  structural claims outscore a validated model and §8's stated ordering
+   *  structural claims outscore a validated model and the stated ordering
    *  quietly inverts. Two exhaustive proofs reach it. */
   claimsMax: 20,
-  /** §8's "small bonus, capped". Full marks at or under par, nothing at twice
+  /** A small bonus, capped. Full marks at or under par, nothing at twice
    *  par -- see `timeBonus`. */
   timeMax: 5,
-  /** §8's "small penalty, never blocking", per tier revealed. Charged even on
+  /** A small penalty, never blocking, per tier revealed. Charged even on
    *  a hint taken after solving: the tiers are analyses you could have run,
    *  and reading one is reading one.
    *
@@ -186,7 +186,7 @@ export interface Coverage {
 }
 
 /**
- * §5's definition: half the fraction of flops with a proven role claim, half
+ * Coverage's definition: half the fraction of flops with a proven role claim, half
  * the fraction of the success cone explained.
  *
  * "Explained" counts claims that were *settled* -- proven or disproven -- not
@@ -267,7 +267,7 @@ export function asPercent(fraction: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// The score (§8). Assembled here, shown only after a solve -- see
+// The score. Assembled here, shown only after a solve -- see
 // workspace/toolbar.ts's accepted verdict and notebook/writeup.ts.
 // ---------------------------------------------------------------------------
 
@@ -286,13 +286,13 @@ export interface ScoreLine {
 
 export interface ScoreCard {
   /** 0..`available`. Floored at `POINTS.solved` for a solved puzzle, so hints
-   *  can never take back the points solving earned (§8: "never blocking"). */
+   *  can never take back the points solving earned -- never blocking. */
   total: number;
   /** 100, less any component this puzzle cannot offer: 5 for one that declares
    *  no par time, 10 for one that names no observable of its own. */
   available: number;
   lines: ScoreLine[];
-  /** False produces an empty card: §8 shows a score only after solving. */
+  /** False produces an empty card: a score is shown only after solving. */
   solved: boolean;
   /** True when the puzzle was solved with nothing in the notebook -- no
    *  settled claims and no coverage. Not a penalty and not an error: the
@@ -348,7 +348,7 @@ export interface ScoreInput {
 }
 
 /**
- * §8's "small bonus, capped": full marks at or under par, falling linearly to
+ * A small bonus, capped: full marks at or under par, falling linearly to
  * nothing at twice par, and nothing beyond.
  *
  * A bonus and never a penalty, which is the whole shape of it -- a slow solve
@@ -374,7 +374,7 @@ export function asDuration(ms: number): string {
  *
  * Pure and store-free -- every input is already computed by its owner -- so
  * this is callable from a test with no browser, like everything else in this
- * file. §8's ordering is in the weights, not here: model (30 + 10) beats
+ * file. The ordering is in the weights, not here: model (30 + 10) beats
  * coverage (25) beats claims (20) beats solving (10) beats the time bonus (5).
  */
 export function scoreCard(input: ScoreInput): ScoreCard {
@@ -480,7 +480,7 @@ export function scoreCard(input: ScoreInput): ScoreCard {
 
   const raw = lines.reduce((sum, line) => sum + line.earned, 0);
   return {
-    // §8: hints are "never blocking". Taking every tier can cost a player the
+    // Hints are "never blocking". Taking every tier can cost a player the
     // points they earned by explaining the design, but never the ones they
     // earned by solving it.
     total: Math.max(POINTS.solved, raw),

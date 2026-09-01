@@ -200,7 +200,7 @@
   color: var(--df-gold);
   border-left-color: var(--df-gold-edge);
 }
-/* The write-up (game-plan.md §8): editable, so a textarea, not a
+/* The write-up: editable, so a textarea, not a
    preview -- the player owns this copy the moment it is generated. */
 .nb-writeup {
   display: flex;

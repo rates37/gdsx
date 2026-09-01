@@ -6,8 +6,7 @@
    grid off at the fold).
 
    The marker classes below are the ones a test or a driver script may select
-   on; they are listed in docs/game/web-ui-architecture.md alongside the panel
-   ids for the same reason.
+   on, alongside the panel ids, for the same reason.
 */
 .menu-screen {
   position: absolute;

@@ -83,8 +83,8 @@ export interface ReplResult {
 
 // Defines `_gdsx_repl_eval(handle, source)` once, in Pyodide's global
 // namespace, rather than re-building a multi-line exec/eval dance from JS on
-// every keystroke. `nl`, `sim`, `design` are bound to the open design, per
-// game-plan.md §4.14 -- the same three names the panel's own text promises.
+// every keystroke. `nl`, `sim`, `design` are bound to the open design --
+// the same three names the panel's own text promises.
 //
 // The namespace those names live in is created once per design and kept for
 // the session. It used to be rebuilt on every call, which meant a name the

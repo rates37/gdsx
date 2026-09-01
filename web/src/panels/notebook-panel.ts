@@ -1,4 +1,4 @@
-// The Notebook (game-plan.md §5): the panel that makes justified belief the
+// The Notebook: the panel that makes justified belief the
 // scored object, and the game's central mechanic.
 //
 // Three things it does that a list of notes would not:
@@ -123,11 +123,11 @@ export interface NotebookPanelOptions {
   designReady: Promise<DesignClient>;
   storeReady: Promise<SimStore>;
   puzzleId: string;
-  /** The net whose fan-in cone coverage is measured against, per §5. */
+  /** The net whose fan-in cone coverage is measured against. */
   /** Null for a puzzle with no lock. Coverage is then measured over the
    *  claims alone, there being no success cone to measure against. */
   successNet: string | null;
-  /** The sequence-editor port the write-up prints as the final key (§8).
+  /** The sequence-editor port the write-up prints as the final key.
    *  Null for a puzzle with no data input, where there is no key to print. */
   keyPort: string | null;
   /** The solve's score, timings and hints for the write-up's summary
@@ -379,7 +379,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
           const found = coverage(notebook, vocabulary.flops, coneNets);
           coverageEl.textContent =
             `coverage ${asPercent(found.fraction)} · ${coverageText(found)}`;
-          // Coverage, yes; score, no. §8 is explicit that points are shown
+          // Coverage, yes; score, no. Points are shown
           // after solving and never as live pressure. It is shown HERE and
           // nowhere else: the same number in the title bar was read as a
           // score, which is why the toolbar's status slot no longer exists.
@@ -501,7 +501,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
         else formEl.hidden = true;
       });
 
-      // ---- the write-up (game-plan.md §8) -------------------------------
+      // ---- the write-up --------------------------------------------------
       //
       // Generated fresh from the current state of every store each time the
       // button is pressed -- nothing about it is persisted separately, because

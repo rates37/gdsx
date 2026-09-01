@@ -1,6 +1,6 @@
 // A queue of constraint-row candidates a player has measured elsewhere in the
 // app -- today, just the Sensitivity panel's "this element reacts to these
-// cycles" rows -- for the Constraints panel (§4.13) to turn into rows of a
+// cycles" rows -- for the Constraints panel to turn into rows of a
 // `System`. Modelled on `highlightBus`/`coneRootBus`: a plain pub/sub
 // singleton, no framework, so the two panels do not need to know about each
 // other directly.

@@ -1,4 +1,4 @@
-// Coverage's denominator (§5): the flop vocabulary and the nets of the
+// Coverage's denominator: the flop vocabulary and the nets of the
 // success cone. Shared by boot.ts, which needs it to score a submission, and
 // the Notebook panel, which needs it to show the live coverage line -- one
 // cone call, not two, and neither has to wait on the other's.
@@ -68,7 +68,7 @@ async function computeBasis(
 
 /**
  * The flop vocabulary and the nets of the success cone -- everything
- * `coverage()` needs as its denominator, per §5. Memoised per design handle:
+ * `coverage()` needs as its denominator. Memoised per design handle:
  * boot.ts starts this as soon as the design is ready so a solve is never
  * scored against an unmeasured cone, and the Notebook panel awaits the same
  * promise to show the live coverage line, rather than each computing its own.

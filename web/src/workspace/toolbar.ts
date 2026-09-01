@@ -31,14 +31,13 @@ export interface GuideControl {
  * Supplied by main.ts, which owns the descriptor and the running `SimStore`
  * a `sequence`/`constant` answer needs simulated; the toolbar only draws the
  * widget `checks.kind` calls for and reports what `submit` returns. This is
- * deliberately not an eleventh panel (game-plan.md §8 puts the result in the
- * notebook, not a new tab) -- it is the toolbar button 10.1 left this slot
+ * deliberately not an eleventh panel -- the result belongs in the
+ * notebook, not a new tab -- it is the toolbar button 10.1 left this slot
  * for, beside `guide`.
  */
 export interface SubmitControl {
   /** Null hides the button entirely: a puzzle whose answer kind has no
-   *  `checks` derivation yet (game-plan.md §6b lists more kinds than this
-   *  block covers) cannot offer a widget that means anything. */
+   *  `checks` derivation yet cannot offer a widget that means anything. */
   checks: PuzzleChecks | null;
   /** The sequence editor's input ports, in the order a `sequence` answer's
    *  one-field-per-port widget offers them. Unused for every other kind. */
@@ -50,7 +49,7 @@ export interface SubmitControl {
   submit: (submission: Submission) => Promise<Verdict>;
   /** The score to show beside an accepted verdict, read AFTER `submit`
    *  resolves so it sees the solve that call just recorded. Null when the
-   *  puzzle is not solved -- game-plan.md §8 shows a score only after solving,
+   *  puzzle is not solved -- a score is shown only after solving,
    *  so a rejection never carries one. Supplied by boot.ts, which is the only
    *  place holding the notebook, model store and progress record at once; this
    *  file computes nothing. */
@@ -99,7 +98,7 @@ export interface SolvedState {
  * and popover. Absent entirely for a puzzle baked before hints.json existed
  * (empty `tiers`), same convention as `submit`'s `checks: null`.
  *
- * game-plan.md §8 is explicit that hints are always available and never
+ * Hints are always available and never
  * gated behind progress -- there is deliberately no "unlock" state here, only
  * "not yet revealed" and "revealed". A revealed tier stays revealed: taking a
  * hint is a decision the player made, so `revealedCount` is backed by
@@ -135,8 +134,8 @@ export interface Readiness {
  *  rather than an exposed element: the toolbar owns its own markup.
  *
  *  There is deliberately no general status line. The one thing that ever
- *  wrote to it was the notebook's live coverage percentage, which game-plan
- *  §8 rules out as live pressure (see notebook/scoring.ts) -- so the slot went
+ *  wrote to it was the notebook's live coverage percentage, which is ruled
+ *  out as live pressure (see notebook/scoring.ts) -- so the slot went
  *  with it rather than staying as an empty affordance looking for a user. */
 export interface ToolbarHandle {
   readiness: (state: Readiness) => void;
@@ -507,7 +506,7 @@ function attachGuideButton(button: HTMLButtonElement, guide?: GuideControl): voi
  * rather than a layout sized for four short lines.
  *
  * Always rendered when the puzzle has any tiers at all: no solved-state or
- * attempt-count gate, per game-plan.md §8. Removed entirely for a puzzle with
+ * attempt-count gate. Removed entirely for a puzzle with
  * none, same convention as `attachSubmitButton`'s `checks: null`.
  */
 function attachHintsButton(slot: HTMLSpanElement, hints?: HintsControl): void {
@@ -677,7 +676,7 @@ function valueField(name: string): { row: HTMLElement; get: () => string } {
 }
 
 /**
- * The submit button and its popover: the widget game-plan.md §6b describes,
+ * The submit button and its popover: the widget
  * chosen by `checks.kind` -- one bit-string field per input port for
  * `sequence`, a value+radix field for `constant`, one value+radix field per
  * named parameter for `parameter`. Absent entirely when the puzzle has
@@ -685,7 +684,7 @@ function valueField(name: string): { row: HTMLElement; get: () => string } {
  *
  * Verification is `submit.submit()`'s job, not this function's -- it only
  * collects the fields into a `Submission`, shows what came back, and never
- * scores it (game-plan.md §8's weights are a separate piece of work). A
+ * scores it (the weights are a separate piece of work). A
  * rejection shows `verdict.reason` AND `verdict.observed` together: this
  * audience wants the measurement, not a buzzer.
  */

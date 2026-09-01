@@ -1,4 +1,4 @@
-// The Sequence Editor (game-plan.md §4.8): one paintable track per input
+// The Sequence Editor: one paintable track per input
 // port. Click to toggle a cell, drag to paint a run of them, import/export
 // as a bit string so a derived key round-trips with the REPL (or, today,
 // with a walkthrough document).

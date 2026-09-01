@@ -1,4 +1,4 @@
-// The Register Inspector (game-plan.md §4.5): `analyse.find_registers` +
+// The Register Inspector: `analyse.find_registers` +
 // `sequential` classification + `guards` in one view, plus two things
 // neither of those give on their own:
 //

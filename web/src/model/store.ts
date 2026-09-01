@@ -1,8 +1,8 @@
 // What the Model Builder remembers: the player's source, and every run of it
 // against the design.
 //
-// The badge (game-plan.md §6: "awards a badge at 100% over N vectors — model
-// validated — which is worth more points than solving") is the highest-scoring
+// The badge -- awarded at 100% over N vectors, model
+// validated, worth more points than solving -- is the highest-scoring
 // thing in the game, so what it says has to be exact:
 //
 //   * it is awarded for **agreement over N vectors**, and its label always

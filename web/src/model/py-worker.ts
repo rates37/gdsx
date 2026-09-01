@@ -30,7 +30,7 @@ export type ModelReply =
   | { id: number; ok: false; error: string };
 
 // Defines the player's model in a namespace of its own, then evaluates every
-// vector into JSON. `evaluate` is called with a real `set[int]`, per §6.
+// vector into JSON. `evaluate` is called with a real `set[int]`.
 const HARNESS = `
 import json
 

@@ -419,7 +419,7 @@ body {
   border-color: var(--df-gold-edge);
   color: var(--df-gold);
 }
-/* ---- submit surface: value against the checks block (web-ui-architecture.md §8) --- */
+/* ---- submit surface: value against the checks block ----------------- */
 .gdsx-submit-btn.on {
   border-color: var(--df-teal-edge);
   color: var(--df-teal);

@@ -228,7 +228,7 @@ export function menuUrl(href: string = location.href): string {
  * Pyodide worker -- and a fresh document is a guaranteed-clean teardown of
  * all of it. The cost is one Pyodide boot, which the loading tiers already
  * cover: the die view, waveform and sequence editor come up off the render
- * bundle and the tape without waiting for Python (game-plan.md §9).
+ * bundle and the tape without waiting for Python.
  */
 export function openPuzzle(id: string): void {
   rememberPuzzle(id);

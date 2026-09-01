@@ -1,4 +1,4 @@
-// The Model Builder (game-plan.md §6): write a behavioural model, diff it
+// The Model Builder: write a behavioural model, diff it
 // against the real gate tape, find out exactly how it is wrong.
 //
 // The loop this panel exists to produce: your model is wrong → you find out
@@ -229,8 +229,8 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
         // said -- a player who never hears it will model `success` alone and
         // find out at the write-up -- but it cannot be said as points: what
         // scope pays depends on which observables this run covered, so a
-        // running figure here would be both a live score (game-plan.md §8
-        // rules that out) and, most of the time, wrong. So this states the
+        // running figure here would be both a live score, which is ruled
+        // out, and, most of the time, wrong. So this states the
         // rule instead, the same way the objective states what to look for.
         badgeEl.append(
           el(

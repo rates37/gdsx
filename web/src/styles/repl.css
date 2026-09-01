@@ -1,4 +1,4 @@
-/* ---- python REPL drawer (§4.14) ------------------------------------ */
+/* ---- python REPL drawer ---------------------------------------------- */
 .repl-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 .repl-loading { padding: 8px; color: var(--df-faint); font-size: 11px; }
 .repl-body { display: flex; flex-direction: column; height: 100%; min-height: 0; }

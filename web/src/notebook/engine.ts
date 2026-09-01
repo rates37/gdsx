@@ -1,6 +1,6 @@
 // One claim in, one verdict out.
 //
-// This is the seam described in game-plan.md §5: `gdsx.api.claim_plan` decides
+// This is the seam where `gdsx.api.claim_plan` decides
 // what it would take to settle a claim, and this decides where that work runs
 // and turns its result into a `Verdict`. Three destinations, and the reason each
 // is where it is:

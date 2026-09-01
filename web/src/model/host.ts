@@ -1,5 +1,5 @@
 // One interface over "run this model on these vectors", whichever language it
-// is written in (game-plan.md §6: "Python (Pyodide) or JS, their choice").
+// is written in: Python (Pyodide) or JS, their choice.
 //
 // Both hosts are workers, and the host owns the timeout: a model that never
 // returns is terminated and the worker replaced, so a runaway loop costs one

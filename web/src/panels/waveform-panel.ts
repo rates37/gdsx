@@ -1,4 +1,4 @@
-// The Waveform panel (game-plan.md §4.6): a watch list over any net or flop,
+// The Waveform panel: a watch list over any net or flop,
 // backed directly by `SimStore`'s history so scrubbing is an array lookup,
 // not a re-simulation -- the whole point of compiling to a tape in the first
 // place. Indexed nets (`O[0]`..`O[7]`) can be watched as one grouped bus row
@@ -20,7 +20,7 @@
 //   answer as a waveform without ever stating it.
 //
 // Not built here: clicking a cycle driving a die-view heat overlay of every
-// high net (§4.6's third bullet). That needs the die view to highlight a
+// high net. That needs the die view to highlight a
 // *set* of nets, not the single selection it supports today -- a real
 // extension, scoped out of this pass. Hovering a watched net's name still
 // cross-highlights it via the same bus the die view and netlist browser use.

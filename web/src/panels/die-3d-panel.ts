@@ -1,4 +1,4 @@
-// The 3D half of the Die View: game-plan.md §4.2. Same `render.bin` bundle
+// The 3D half of the Die View. Same `render.bin` bundle
 // as the 2D view (`die-panel.ts`), extruded through the sky130 z-stack with
 // three.js. Mirrors `die-panel.ts`'s structure: the DOM is built lazily once
 // the bundle resolves, and disposal tears down GL resources so switching back

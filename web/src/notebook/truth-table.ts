@@ -1,12 +1,12 @@
-// A flop's D-cone, enumerated: game-plan.md §4.5's "truth table for any
-// flop's D-cone over its leaves -- the `evalnet` enumeration, exposed."
+// A flop's D-cone, enumerated: a truth table for any
+// flop's D-cone over its leaves -- the `evalnet` enumeration, exposed.
 //
 // This is NOT a new evaluator. It is `verify.ts`'s `SliceRunner` -- the same
 // bit-parallel machine the notebook's `function` claim runs, held to
 // `web/src/sim/execute.py`'s equivalent by the golden slice tests -- pointed
 // at a plain `SliceView` from `gdsx.api.cone_slice` instead of a claim job.
 // Writing a second cone-enumeration loop here would be exactly the mistake
-// docs/game/agent-guide.md Rule 4 warns about, just one level up from gate
+// of adding another traversal implementation, just one level up from gate
 // traversal instead of at it.
 //
 // Small cones (<= EXHAUSTIVE_CEILING free leaves) enumerate every case, exact.

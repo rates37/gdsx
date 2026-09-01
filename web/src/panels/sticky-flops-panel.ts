@@ -1,4 +1,4 @@
-// The Sticky Flops panel (game-plan.md §4.12, needs L37): every one-way latch
+// The Sticky Flops panel: every one-way latch
 // (`sequential.sticky`), with two columns the player fills in themselves.
 //
 // The rule this panel exists to keep, stated directly in the design brief:

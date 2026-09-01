@@ -1,5 +1,5 @@
 // The Die View panel: one panel, two renderers, a `[2D | 3D]` toggle between
-// them -- the control game-plan.md §4.1 draws inside the die view itself.
+// them -- the control draws inside the die view itself.
 // They read the same `render.bin` and cross-highlight through the same net
 // bus, so which one is on screen is a view preference, not a different
 // workspace tab.

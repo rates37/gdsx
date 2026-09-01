@@ -1,4 +1,4 @@
-// The Cone Walker (game-plan.md §4.4) -- the single most-used panel in the
+// The Cone Walker -- the single most-used panel in the
 // game. Three things make it that:
 //
 // 1. Truncated nodes never look like leaves. `ConeNode.truncated` exists

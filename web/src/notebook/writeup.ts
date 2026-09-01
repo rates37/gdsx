@@ -1,7 +1,7 @@
-// The write-up (game-plan.md §8): "On completion the game generates a
+// The write-up: on completion the game generates a
 // Markdown document from the notebook: claims in the order proven, the
 // evidence attached to each, the experiments run, the model source, and the
-// final key. The player can edit and export it."
+// final key. The player can edit and export it.
 //
 // This module only assembles Markdown from data that already lives in the
 // notebook, evidence log, model store and sim store -- it invents nothing new
@@ -42,7 +42,7 @@ export interface WriteupOptions {
 }
 
 /**
- * The half of §8's write-up that is not about the design: the score, and how
+ * The half of the write-up that is not about the design: the score, and how
  * the session went.
  *
  * Optional, and passed in rather than derived, for two reasons. The score
@@ -123,7 +123,7 @@ function renderEvidence(record: EvidenceRecord): string {
 }
 
 /**
- * §8's score, as a table of what each part of the game was worth.
+ * The score, as a table of what each part of the game was worth.
  *
  * The breakdown rather than the number, on purpose: a bare "63/100" is a
  * grade, and this document is meant to be an account of a session. Every row
@@ -144,7 +144,7 @@ function renderScore(score: ScoreCard): string[] {
   if (score.bare) {
     // A solve with an empty notebook is a real solve. This says what the other
     // points are FOR rather than leaving a low number to read as a failure --
-    // §8's weights are an opinion about what is worth doing, not a judgement
+    // the weights are an opinion about what is worth doing, not a judgement
     // of how this player did it.
     out.push("");
     out.push(
@@ -239,11 +239,11 @@ export function generateWriteup(
   out.push("---");
   out.push("");
 
-  // ---- 1b. score and session (§8) ----------------------------------------
+  // ---- 1b. score and session ------------------------------------------
   //
   // First, because this is the summary a player re-reads. Both are omitted
   // without a session, and the score is omitted for an unsolved puzzle --
-  // §8 shows a score only after solving, and a write-up exported mid-session
+  // a score is shown only after solving, and a write-up exported mid-session
   // is a working document, not a result.
   if (session) {
     if (session.score.solved) out.push(...renderScore(session.score));

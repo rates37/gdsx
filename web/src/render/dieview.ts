@@ -1,5 +1,5 @@
 // WebGL2 die view: pan, zoom, layer toggles, LOD switching, and net
-// highlighting -- the game-plan.md §4.1 2D Die View.
+// highlighting -- the 2D Die View.
 //
 // Every layer is one instanced draw of a unit quad, with the per-instance
 // rectangle read straight out of the bundle's Int32Array as integer database

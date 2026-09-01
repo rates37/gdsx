@@ -6,7 +6,7 @@
 
    `tokens.css` comes first and is the only file allowed to contain a raw hex
    value: the palette, the two typefaces and the border radius all resolve
-   there. The reasoning is in docs/game/design-language.md. */
+   there. */
 @import "./tokens.css";
 @import "./shell.css";
 @import "./menu.css";
