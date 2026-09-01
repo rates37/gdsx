@@ -11,6 +11,8 @@
 // to reopen it by itself (see `chooseRoute`), but so the menu can offer it as
 // Continue.
 
+import { assetUrl } from "../asset-url.ts";
+
 export interface PuzzleDriver {
   clockPort: string;
   resetPort: string | null;
@@ -106,7 +108,7 @@ export interface PuzzleDescriptor {
   hints: HintTier[];
 }
 
-const INDEX_URL = "/puzzles/index.json";
+const INDEX_URL = assetUrl("puzzles/index.json");
 const LAST_PLAYED_KEY = "gdsx.puzzle.last.v1";
 const PARAM = "puzzle";
 

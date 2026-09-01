@@ -211,7 +211,7 @@ eq(original.driver.initialLevels, { enable: 1, rst_n: 1 }, "default input levels
 eq(original.driver.keyPort, "I", "key port changed");
 eq(original.driver.successNet, "success", "success net changed");
 check(original.driver.cycles >= 121, "the window must cover the puzzle's 121 input cycles");
-eq(original.assets.tape, "/puzzles/original-puzzle/tape.bin", "tape URL");
+eq(original.assets.tape, "puzzles/original-puzzle/tape.bin", "tape URL");
 
 // ---- 3. shapes the single-track puzzle does not have --------------------
 

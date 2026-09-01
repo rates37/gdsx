@@ -10,7 +10,9 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    // `import.meta.env.BASE_URL`, read by src/asset-url.ts.
+    "types": ["vite/client"]
   },
   "include": ["src"]
 }

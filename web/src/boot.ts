@@ -51,6 +51,7 @@ import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
 import { menuUrl, openPuzzle, rememberPuzzle, type PuzzleDescriptor } from "./puzzles/catalog";
 import { panelsFor } from "./puzzles/tools";
+import { assetUrl } from "./asset-url.ts";
 
 // The toolbar's menu bar, macOS/Windows style. The Notebook is deliberately
 // absent -- it is the only scored surface in the game, so it stays a
@@ -161,7 +162,7 @@ export async function bootWorkspace(
   const driver = puzzle.driver;
   //: One URL, because the sweep worker fetches its own copy of the tape (a
   //: cache hit) rather than having one posted to it per sweep.
-  const tapeUrl = puzzle.assets.tape;
+  const tapeUrl = assetUrl(puzzle.assets.tape);
   //: What the notebook's coverage measures the explained fraction of, per
   //: game-plan.md §5. Null for a puzzle with no lock (`parameter`), and
   //: carried as null rather than defaulted to a name: the descriptor is the
@@ -171,7 +172,7 @@ export async function bootWorkspace(
   //: they do without one.
   const successNet = driver.successNet;
 
-  const bundleReady: Promise<RenderBundle> = fetch(puzzle.assets.render)
+  const bundleReady: Promise<RenderBundle> = fetch(assetUrl(puzzle.assets.render))
     .then((r) => r.arrayBuffer())
     .then((buf) => {
       tBundle = performance.now();
@@ -238,7 +239,7 @@ export async function bootWorkspace(
   })();
 
   const designReady: Promise<DesignClient> = pyReady.then(() =>
-    createDesignClient(api, puzzle.assets.netlist),
+    createDesignClient(api, assetUrl(puzzle.assets.netlist)),
   );
 
   // Coverage's denominator (§5): a design call and a step through the success
@@ -540,7 +541,7 @@ export async function bootWorkspace(
    *  game does at load. */
   async function analyseBaked(): Promise<Envelope> {
     await pyReady;
-    const netlistJson = await fetch(puzzle.assets.netlist).then((r) => r.text());
+    const netlistJson = await fetch(assetUrl(puzzle.assets.netlist)).then((r) => r.text());
     const opened = (await api.call("load_netlist", netlistJson)) as Envelope<{
       handle: string;
     }>;
@@ -558,7 +559,7 @@ export async function bootWorkspace(
    *  design being extracted is the same one every time. */
   async function analyseFromGds(): Promise<Envelope> {
     await pyReady;
-    const gds = await fetch("/samples/puzzle.gds").then((r) => r.arrayBuffer());
+    const gds = await fetch(assetUrl("samples/puzzle.gds")).then((r) => r.arrayBuffer());
     const opened = (await api.call("open_design", new Uint8Array(gds))) as Envelope<{
       handle: string;
     }>;

@@ -25,7 +25,8 @@
     "test:progress": "node --experimental-strip-types scripts/test-progress.mjs",
     "test:menu": "node --experimental-strip-types scripts/test-menu.mjs",
     "test:constraint-rules": "node --experimental-strip-types scripts/test-constraint-rules.mjs",
-    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:scoring && npm run test:coverage-plumbing && npm run test:puzzles && npm run test:guide && npm run test:progress && npm run test:menu && npm run test:constraint-rules"
+    "test:base-path": "node scripts/test-base-path.mjs",
+    "test": "npm run test:sim && npm run test:notebook && npm run test:experiments && npm run test:model && npm run test:writeup && npm run test:scoring && npm run test:coverage-plumbing && npm run test:puzzles && npm run test:guide && npm run test:progress && npm run test:menu && npm run test:constraint-rules && npm run test:base-path"
   },
   "dependencies": {
     "@types/three": "^0.185.4",

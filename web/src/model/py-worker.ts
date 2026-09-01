@@ -17,6 +17,8 @@
 
 import { loadPyodide, type PyodideInterface } from "pyodide";
 
+import { assetUrl } from "../asset-url.ts";
+
 export interface ModelRequest {
   id: number;
   source: string;
@@ -66,7 +68,7 @@ let ready: Promise<PyodideInterface> | null = null;
 
 function boot(): Promise<PyodideInterface> {
   if (!ready) {
-    ready = loadPyodide({ indexURL: "/pyodide/" }).then((pyodide) => {
+    ready = loadPyodide({ indexURL: assetUrl("pyodide/") }).then((pyodide) => {
       pyodide.runPython(HARNESS);
       return pyodide;
     });

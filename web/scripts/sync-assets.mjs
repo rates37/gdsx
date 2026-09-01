@@ -65,6 +65,27 @@ for (const wheel of wheels) {
   copy(path.join(distDir, wheel), path.join(wheelOut, wheel));
 }
 
+// The worker has to know the wheel's filename to micropip-install it, and
+// that filename embeds the version from pyproject.toml. It used to be
+// spelled out in web/src/worker.ts, where a `uv version --bump` broke the
+// running app while every build and test stayed green. Write it down here
+// instead -- this script is the only thing that knows the real name,
+// because it is the thing that copied it. The worker fetches this file.
+//
+// A manifest rather than a directory listing on purpose: GitHub Pages does
+// not serve one, so there is nothing to glob or parse at runtime.
+//
+// `wheels` is sorted only by readdir order; if a stale wheel from an older
+// version is still sitting in ../dist, pick the newest by mtime so the
+// manifest names the wheel that was just built.
+const newest = wheels
+  .map((name) => ({ name, mtime: statSync(path.join(distDir, name)).mtimeMs }))
+  .sort((a, b) => b.mtime - a.mtime)[0].name;
+writeFileSync(
+  path.join(wheelOut, "manifest.json"),
+  JSON.stringify({ schema_version: 1, wheel: newest }, null, 2) + "\n",
+);
+
 // 3. Puzzle assets -> public/samples/: the baked netlist, the baked render
 // bundle the die view draws (`uv run python scripts/bake_render.py`), the
 // baked gate tape the waveform and sequence editor run (`uv run python

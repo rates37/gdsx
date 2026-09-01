@@ -15,10 +15,16 @@
    Self-hosted, latin subset, variable. The app already ships Pyodide and the
    render bundles locally and must work from a file:// build with no network,
    so a webfont CDN is not an option.
+
+   The files live in src/styles/fonts/ rather than public/fonts/, and the
+   url()s below are relative rather than site-root-absolute, so that Vite
+   resolves them at build time: it fingerprints them into the asset graph and
+   rewrites these references against the deploy base path. A '/fonts/...'
+   URL is opaque to Vite and 404s under a sub-path deploy (GitHub Pages).
 */
 @font-face {
   font-family: "Fraunces";
-  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  src: url("./fonts/fraunces-latin.woff2") format("woff2");
   font-weight: 300 700;
   font-style: normal;
   font-display: swap;
@@ -27,7 +33,7 @@
 }
 @font-face {
   font-family: "Spline Sans Mono";
-  src: url("/fonts/spline-sans-mono-latin.woff2") format("woff2");
+  src: url("./fonts/spline-sans-mono-latin.woff2") format("woff2");
   font-weight: 300 600;
   font-style: normal;
   font-display: swap;

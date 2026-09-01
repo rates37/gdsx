@@ -280,10 +280,14 @@ export function describe(dir, manifest, solution, hints = {}) {
     parMinutes: parMinutes(manifest),
     answerKind: solution.answer_kind ?? manifest.answer_kind ?? null,
     toolsEnabled: manifest.tools_enabled ?? [],
+    // Relative to the deploy root, with no leading slash: these are joined
+    // to the app's base path by web/src/asset-url.ts at fetch time, so the
+    // index stays valid whether the app is served from a site root or from
+    // a GitHub Pages project sub-path.
     assets: {
-      netlist: `/puzzles/${dir}/netlist.json`,
-      render: `/puzzles/${dir}/render.bin`,
-      tape: `/puzzles/${dir}/tape.bin`,
+      netlist: `puzzles/${dir}/netlist.json`,
+      render: `puzzles/${dir}/render.bin`,
+      tape: `puzzles/${dir}/tape.bin`,
     },
     driver: describeDriver(solution),
     checks: describeChecks(id, solution),

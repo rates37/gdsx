@@ -5,6 +5,8 @@
 import { expose } from "comlink";
 import { loadPyodide, type PyodideInterface } from "pyodide";
 
+import { assetUrl } from "./asset-url.ts";
+
 export interface Envelope<T = unknown> {
   schema_version: number;
   ok: boolean;
@@ -15,7 +17,7 @@ export interface Envelope<T = unknown> {
 let pyodideReady: Promise<PyodideInterface> | null = null;
 
 async function boot(): Promise<PyodideInterface> {
-  const pyodide = await loadPyodide({ indexURL: "/pyodide/" });
+  const pyodide = await loadPyodide({ indexURL: assetUrl("pyodide/") });
   // pyyaml is gdsx's one hard runtime dependency. Load it through Pyodide's
   // own package loader (which resolves against pyodide-lock.json at the same
   // origin) rather than letting micropip go looking on PyPI for it -- PyPI
@@ -23,12 +25,25 @@ async function boot(): Promise<PyodideInterface> {
   // to install into a wasm runtime.
   await pyodide.loadPackage(["micropip", "pyyaml"]);
   const micropip = pyodide.pyimport("micropip");
+  // The wheel's filename embeds the package version, so it is not something
+  // this file can spell: bumping `version` in pyproject.toml would break the
+  // app at runtime with a build that still passed. scripts/sync-assets.mjs
+  // writes the name it actually copied into this manifest.
+  const manifestUrl = assetUrl("wheel/manifest.json");
+  const manifestResponse = await fetch(manifestUrl);
+  if (!manifestResponse.ok) {
+    throw new Error(
+      `gdsx: no wheel manifest at ${manifestUrl} ` +
+        `(${manifestResponse.status}) -- run \`npm run sync-assets\``,
+    );
+  }
+  const { wheel } = (await manifestResponse.json()) as { wheel: string };
   // pyyaml is already satisfied by loadPackage above, so this resolves no
   // further dependencies over the network -- everything comes from the
-  // same-origin /wheel/ and /pyodide/ URLs.
-  await micropip.install(`${self.location.origin}/wheel/gdsx-0.1.0-py3-none-any.whl`, {
-    deps: true,
-  });
+  // same-origin wheel/ and pyodide/ URLs. The URL is base-relative rather
+  // than origin-absolute: under a sub-path deploy `self.location.origin`
+  // drops the base and micropip 404s.
+  await micropip.install(assetUrl(`wheel/${wheel}`), { deps: true });
   return pyodide;
 }
 
