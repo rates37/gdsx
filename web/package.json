@@ -16,6 +16,7 @@
     "prebuild:measure": "node scripts/sync-assets.mjs --samples",
     "build:measure": "tsc -b && vite build",
     "preview": "vite preview",
+    "deploy": "node scripts/deploy.mjs",
     "sync-assets": "node scripts/sync-assets.mjs --samples",
     "measure": "node scripts/measure-m0.mjs",
     "extract-dockview-css": "node scripts/extract-dockview-css.mjs",
