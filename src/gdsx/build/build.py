@@ -1,5 +1,5 @@
 """The layout-generation driver: Verilog + a layout spec in, `design.gds`
-out. See docs/game/layout-guide.md §7.4.
+out.
 """
 
 from __future__ import annotations
@@ -95,13 +95,13 @@ def build(
 
     `reference` is the GDS the standard-cell geometry is copied from --
     `samples/puzzle.gds` for every puzzle in the pack, since it is the only
-    self-contained cell library in the repository (layout-guide.md §3).
+    self-contained cell library in the repository.
 
     With `check`, the written file is read back and extracted, and the result
-    compared against the netlist that went in (layout-guide.md §8). That
-    doubles the build time and is the only thing that actually proves the
-    geometry is right, so it is on by default from the CLI and off for
-    callers that do their own checking.
+    compared against the netlist that went in. That doubles the build time
+    and is the only thing that actually proves the geometry is right, so it
+    is on by default from the CLI and off for callers that do their own
+    checking.
     """
     tech = tech or load_tech()
     nl = synth.from_verilog(source, top, workdir, recipe)
@@ -181,7 +181,7 @@ def _place_and_route(nl, spec, reference: Path, pin_table):
         return placed, routed, spread
     raise RouteError(
         f"{last} -- still unroutable at {SPREADS[-1]}x row spread, so this is "
-        f"not a density problem. See docs/game/layout-guide.md section 7.3."
+        f"not a density problem."
     )
 
 

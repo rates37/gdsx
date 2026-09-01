@@ -1,11 +1,11 @@
 """Group labels for a `LayoutSpec`, derived from a flattened netlist.
 
-docs/game/layout-guide.md §9 gets group labels from the RTL's module
-hierarchy, by synthesising with `Recipe(flatten=False)` and splitting yosys's
-cell names on their module path. That works when there is a hierarchy to
-keep. Several puzzles in the pack are a single flat module, and for those §9
-names the fallback: "label groups by walking the netlist from each register
-bank", which is what this does.
+Group labels normally come from the RTL's module hierarchy, by synthesising
+with `Recipe(flatten=False)` and splitting yosys's cell names on their
+module path. That works when there is a hierarchy to keep. Several puzzles
+in the pack are a single flat module, and for those the fallback is to
+label groups by walking the netlist from each register bank, which is what
+this does.
 
 A flop is labelled by the register its `Q` net is named after -- yosys keeps
 the RTL's register name where it can. Every other cell is labelled by the

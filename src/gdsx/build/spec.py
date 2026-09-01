@@ -1,7 +1,7 @@
 """Reading a `LayoutSpec` from a JSON file.
 
-docs/game/layout-guide.md §9 defines the spec as a dataclass whose `groups`
-field is a full instance-name -> label map. That map cannot be written by
+The spec is a dataclass whose `groups` field is a full instance-name ->
+label map. That map cannot be written by
 hand: instance names come out of synthesis, so they are only known once the
 netlist exists. What an author actually knows is which *register* belongs to
 which group, so that is what the file carries, and `groups` is derived from
@@ -70,7 +70,7 @@ def load_spec(path: Path, nl) -> LayoutSpec:
     if unknown:
         raise SpecError(f"{path}: unknown field(s) {sorted(unknown)}")
     if "fill" not in data:
-        raise SpecError(f"{path}: 'fill' is required -- it is §9's utilisation")
+        raise SpecError(f"{path}: 'fill' is required -- it is the target utilisation")
 
     by_prefix = data.get("groups_by_prefix", {})
     cone_roots = data.get("groups_by_cone", [])

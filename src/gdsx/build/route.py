@@ -1,4 +1,4 @@
-"""A router: connects placed instances per docs/game/layout-guide.md §7.3.
+"""A router: connects placed instances on met1-met3, one net at a time.
 
 The scheme:
 
@@ -48,9 +48,9 @@ time smears a row's wiring over every line it has. Offering the lines already
 carrying a run nearby -- within `TRACK_POOL_REACH`, so the sharing never costs
 more riser than it saves -- packs a row into a few visible channels instead.
 Two runs that do not overlap in x then cost one line between them rather than
-two. That is §7.3's interval-graph colouring, and it is the difference between
-a die that reads as wiring and one that reads as noise. It is an ordering
-heuristic only: every candidate is still checked against emitted geometry.
+two. That is interval-graph colouring, and it is the difference between a die
+that reads as wiring and one that reads as noise. It is an ordering heuristic
+only: every candidate is still checked against emitted geometry.
 
 **Allocation is checked against emitted geometry, not argued.** Every
 rectangle this module emits is inserted into a per-layer occupancy index
@@ -342,9 +342,10 @@ def port_pins(nl: Netlist, core_width: int, n_rows: int) -> dict[str, Point]:
     edge, evenly pitched along it, in name order -- costs one extra track link
     per port and makes the die view say what the interface is.
 
-    Sides follow docs/game/puzzle-pack.md section 0.2. Within a side the first
-    name is placed at the top (or, along the bottom, at the left), so a bus
-    runs in index order the way a pin list does.
+    Inputs go on the left, outputs on the right, and clock/reset control
+    signals along the bottom. Within a side the first name is placed at the
+    top (or, along the bottom, at the left), so a bus runs in index order the
+    way a pin list does.
     """
     control = _control_nets(nl)
     left: list[str] = []
@@ -383,7 +384,7 @@ def port_pins(nl: Netlist, core_width: int, n_rows: int) -> dict[str, Point]:
 class RouteResult:
     boundaries: list[tuple[int, int, list[Point]]] = field(default_factory=list)
     texts: list[tuple[int, int, str, int, int]] = field(default_factory=list)
-    # diagnostics, for the build report -- see layout-guide.md §10 point 9
+    # diagnostics, for the build report
     jogged_pins: int = 0
     max_column_offset: int = 0
     max_track_offset: int = 0
@@ -393,7 +394,7 @@ class RouteResult:
 
 class RouteError(RuntimeError):
     """No legal track or column was available. Widen the core or add tracks
-    (layout-guide.md §7.3: "area is free").
+    -- area is free.
     """
 
 
@@ -602,8 +603,8 @@ class _Router:
         does not work out.
 
         Lines already carrying a run in this net's own rows are offered
-        first. This is the interval-graph colouring §7.3 asks for, and it is
-        what stops the die looking like noise: two runs that do not overlap
+        first. This is interval-graph colouring, and it is what stops the
+        die looking like noise: two runs that do not overlap
         in x cost one grid line between them rather than two, so a row's
         wiring settles into a few shared channels instead of smearing across
         all eight lines the row has. Correctness does not depend on it --
@@ -844,7 +845,7 @@ def route(
     # before the local nets that can settle anywhere -- and a port's link runs
     # from the die edge to somewhere inside the core, which is wider still and
     # wants a track line while the layer is empty. Ties break on name, so the
-    # result is deterministic (layout-guide.md §10 point 8).
+    # result is deterministic.
     order = sorted(
         pins_of,
         key=lambda n: (

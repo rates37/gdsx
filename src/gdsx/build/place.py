@@ -1,5 +1,5 @@
 """A row placer: a `Netlist` plus a `LayoutSpec` in, per-instance coordinates
-out. See docs/game/layout-guide.md §7.2 and §9.
+out.
 
 Not a quality placer: no wirelength objective, no annealing, no legalisation
 loop. Cells go down in spec order, row by row.
@@ -24,10 +24,9 @@ from pathlib import Path
 
 from ..geo import gdsii
 
-# Measured from samples/puzzle.gds -- see docs/game/layout-guide.md §5.
-# Re-measured while implementing this module; all four numbers matched the
-# document exactly, so they are trusted constants here rather than derived
-# at runtime on every call.
+# Measured from samples/puzzle.gds. Re-measured while implementing this
+# module; all four numbers matched exactly, so they are trusted constants
+# here rather than derived at runtime on every call.
 DBU_UM = 0.001
 SITE = 460  # nm, the x placement grid
 ROW_HEIGHT = 2720  # nm
@@ -37,8 +36,8 @@ TAP_OVERHANG = 190  # nm, left/right only, for tapvpwrvgnd_1
 PREFIX = "sky130_fd_sc_hd__"
 DECAP = f"{PREFIX}decap_3"
 TAP = f"{PREFIX}tapvpwrvgnd_1"
-TAP_SPACING = 15000  # nm, "every ~15 um" per layout-guide.md §7.2 step 5
-# Empty rows for a visible block boundary (layout-guide.md §7.2).
+TAP_SPACING = 15000  # nm -- tap cells go in every ~15 um, the sky130 row rule
+# Empty rows for a visible block boundary.
 #
 # A channel is only a boundary if `physical.placement.bands` splits on it, and
 # that splits where a gap exceeds `BAND_GAP` (4) times the median gap. Rows
@@ -72,15 +71,15 @@ FILLER_BUDGET = 1.2
 def measure_widths(reference: Path) -> dict[str, int]:
     """Full cell name -> width in database units, measured from `reference`.
 
-    layout-guide.md §5: width = (bbox width - 2*overhang), *snapped* to the
-    site grid -- "do not compute a width as bbox_width - 0.48", the tap cell
-    has different overhangs and some cells' raw bbox width is a site or two
-    off after subtracting the nominal overhang (dfxtp_2 measures 7720 nm
-    exactly this way, 16.78 sites, not 17 -- rounding is required, not
-    optional, confirmed against real measurements while building this).
-    Correctness is established downstream instead, per the document's own
-    cross-check: consecutive x origins in a placed row must differ by
-    exactly the left cell's width (see place()'s test coverage).
+    width = (bbox width - 2*overhang), *snapped* to the site grid -- do not
+    compute a width as bbox_width - 0.48 directly, since the tap cell has
+    different overhangs and some cells' raw bbox width is a site or two off
+    after subtracting the nominal overhang (dfxtp_2 measures 7720 nm exactly
+    this way, 16.78 sites, not 17 -- rounding is required, not optional,
+    confirmed against real measurements while building this). Correctness is
+    established downstream instead: consecutive x origins in a placed row
+    must differ by exactly the left cell's width (see place()'s test
+    coverage).
     """
     lay = gdsii.read_file(reference)
     widths: dict[str, int] = {}
@@ -98,7 +97,7 @@ def measure_widths(reference: Path) -> dict[str, int]:
 @dataclass(frozen=True)
 class LayoutSpec:
     """The pack's layout intent, translated into something a placer can
-    execute. See layout-guide.md §9 for the field-by-field rationale.
+    execute.
     """
 
     fill: float
@@ -148,8 +147,7 @@ def _connectivity_order(nl, names: list[str]) -> dict[str, int]:
     short.
 
     Deterministic: seeds are taken in name order and neighbours are visited
-    in name order, so the same netlist always produces the same layout
-    (layout-guide.md §10 point 8).
+    in name order, so the same netlist always produces the same layout.
     """
     members = set(names)
     adjacency: dict[str, set[str]] = {n: set() for n in names}
@@ -203,7 +201,7 @@ def _ordered_instances(nl, names: list[str], spec: LayoutSpec) -> list[str]:
     if spec.mode == "scattered":
         # The named group (spec.order[0]) is scattered via a seeded
         # permutation across the whole core; everything else stays banded.
-        # layout-guide.md §9: "Use a fixed seed and record it".
+        # A fixed seed is used and recorded, so the scatter is reproducible.
         scattered_group = spec.order[0] if spec.order else None
         rest = sorted(
             (n for n in names if _group_of(n, spec) != scattered_group),
@@ -229,7 +227,7 @@ def _round_up(value: float, grid: int) -> int:
 
 def _row_y(row: int, mirror: bool) -> int:
     # A mirrored row's origin is at the row's top, so adjacent rows share a
-    # power rail -- confirmed by measurement, layout-guide.md §5.
+    # power rail -- confirmed by measurement.
     return (row + 1) * ROW_HEIGHT if mirror else row * ROW_HEIGHT
 
 
@@ -272,16 +270,16 @@ def _lay_out_row(
     """Place one row's cells across the full core width, with the row's spare
     space shared out evenly between them rather than left as one tail gap.
 
-    This is the one place this module departs from layout-guide.md §7.2's
-    letter, which says to abut a row's cells and pad the tail. Spreading them
-    is what actually delivers §9's `fill`: with the cells abutted, a row is a
-    dense block of pins with an empty strip beside it, and the router cannot
-    get a met2 riser across that block -- every column within it is claimed
-    by a pin for the whole height of the row. Spread out at 30 % fill, the
-    same row leaves roughly six columns free between neighbours, which is
-    what makes vertical routing across a row possible at all. The spare space
-    is filled with decap, plus a tap roughly every 15 um; `lookup()` returns
-    None for both, so extraction ignores them (§7.2 step 5).
+    This departs from the simpler approach of abutting a row's cells and
+    padding the tail. Spreading them is what actually delivers the target
+    `fill`: with the cells abutted, a row is a dense block of pins with an
+    empty strip beside it, and the router cannot get a met2 riser across that
+    block -- every column within it is claimed by a pin for the whole height
+    of the row. Spread out at 30 % fill, the same row leaves roughly six
+    columns free between neighbours, which is what makes vertical routing
+    across a row possible at all. The spare space is filled with decap, plus
+    a tap roughly every 15 um; `lookup()` returns None for both, so
+    extraction ignores them.
     """
     mirror = row % 2 == 1
     y = _row_y(row, mirror)
@@ -332,8 +330,8 @@ def place(
     names = [i.name for i in nl.instances]
     order = _ordered_instances(nl, names, spec)
 
-    # layout-guide.md §7.2 step 1 and §9's `fill`: the die holds `total_width`
-    # of cells at `fill` utilisation, with the requested width/height ratio.
+    # The die holds `total_width` of cells at `fill` utilisation, with the
+    # requested width/height ratio.
     #   core_width  = sqrt(aspect * total_width * spread * row_height / fill)
     #   rows        = total_width * spread / (fill * core_width)
     # which together give core_width / (rows * row_height) == aspect.

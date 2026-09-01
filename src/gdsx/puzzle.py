@@ -354,7 +354,7 @@ def _tracks(solution: dict) -> list[_Track]:
     of `driver.input_port` and `key.bits`, and no stimulus at all. The last
     is not an error -- an autonomous design is driven by its clock and its
     reset and nothing else, and its answer is a value it computes rather than
-    a stimulus (game-plan.md §6b).
+    a stimulus.
     """
     driver = solution["driver"]
     key = solution.get("key") or {}
@@ -587,7 +587,7 @@ def _check_field(nl, solution: dict, field_spec: dict) -> Check:
 
     The comparison is deliberately exact and offers no partial credit: for
     the genre this kind exists to serve, a nearly-right polynomial is a wrong
-    polynomial (puzzle-pack.md §2).
+    polynomial.
     """
     name = field_spec["name"]
     label = f"field {name!r}"
@@ -668,8 +668,7 @@ def _check_parameter(nl, solution: dict) -> list[Check]:
     There is no `success` pin to lean on here and none is looked for: a
     `parameter` puzzle asks what the design *is* -- a polynomial, a divider
     ratio, a state some astronomically distant cycle from now -- and an
-    autonomous design that answers that question has no lock to raise
-    (game-plan.md §6b, puzzle-pack.md §2).
+    autonomous design that answers that question has no lock to raise.
     """
     fields = solution.get("answer", {}).get("fields")
     if not fields:
@@ -726,7 +725,7 @@ def _check_model(nl, solution: dict) -> Check:
         # Nets and flop state under the same names the tape exposes, so a
         # puzzle may watch a bank's flops and not only its output bus --
         # `success` is 0 on almost every vector, and a model that agrees only
-        # on `success` agrees by accident (puzzle-pack.md §9).
+        # on `success` agrees by accident.
         return {**sim.step(vector), **sim.state}
 
     result = diff_models(tape, netlist_step, vectors, watch=list(watch))
@@ -908,8 +907,7 @@ def verify(puzzle_dir: Path) -> VerifyResult:
                 "answer kind supported",
                 False,
                 f"answer_kind {kind!r} is not implemented yet -- 'sequence', "
-                f"'constant', 'parameter' and 'model' are. See game-plan.md "
-                f"section 6b.",
+                f"'constant', 'parameter' and 'model' are.",
             )
         ]
     )

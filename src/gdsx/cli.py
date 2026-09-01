@@ -489,7 +489,7 @@ def puzzle_build(
         "--spec",
         exists=True,
         dir_okay=False,
-        help="a layout spec JSON file (see docs/game/layout-guide.md §9)",
+        help="a layout spec JSON file (groups, fill, and placement options)",
     ),
     out: Path = typer.Option(..., "-o", "--out", help="the design.gds to write"),
     reference: Path = typer.Option(
@@ -511,9 +511,9 @@ def puzzle_build(
     """Synthesise, place and route RTL into a design.gds.
 
     Runs yosys for synthesis and this repository's own placer and router for
-    the rest -- see docs/game/layout-guide.md, which specifies the flow. The
-    OpenLane path that produced samples/puzzle.gds is not reproducible here
-    (no `openlane` binary and no local PDK), and is not what this builds.
+    the rest. The OpenLane path that produced samples/puzzle.gds is not
+    reproducible here (no `openlane` binary and no local PDK), and is not
+    what this builds.
     """
     import tempfile
 

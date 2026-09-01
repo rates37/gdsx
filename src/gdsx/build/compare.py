@@ -1,16 +1,16 @@
-"""Structural comparison of two netlists -- docs/game/layout-guide.md §8.
+"""Structural comparison of two netlists.
 
 The build loop needs an oracle: does the GDS that came out extract to the
 netlist that went in? Everything cheap is checked first (instance count, cell
 multiset, floating pins, shorts, net count), and then the strong check --
 "every instance's pin->net map agrees, up to renaming".
 
-§8 suggests keying on instance name, on the grounds that `netlist.build`
-assigns them deterministically. That holds when comparing two extractions of
-the same layout; it does not hold here, because the netlist going *in* comes
-from `synth` and names an inverter `inv_1` where extraction names it
-`inv_2_7`. So the bijection has to be solved for on both sides, instances as
-well as nets.
+Keying on instance name would seem natural, on the grounds that
+`netlist.build` assigns them deterministically. That holds when comparing two
+extractions of the same layout; it does not hold here, because the netlist
+going *in* comes from `synth` and names an inverter `inv_1` where extraction
+names it `inv_2_7`. So the bijection has to be solved for on both sides,
+instances as well as nets.
 
 That is a graph isomorphism in principle, and in practice it is not hard:
 the two graphs are the same graph, the ports are labelled identically in
@@ -193,7 +193,7 @@ def _search(ge, ga, ie, ne, ia, na, budget) -> dict[str, str] | None:
 
 def compare(expected: Netlist, actual: Netlist) -> Comparison:
     """Check that `actual` (extracted from a built GDS) implements `expected`
-    (what the placer was given), per layout-guide.md §8's table.
+    (what the placer was given).
     """
     out = Comparison()
     say = out.problems.append

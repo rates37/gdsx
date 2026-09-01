@@ -34,7 +34,7 @@ GATE_MAP = {
 }
 
 # no ORNOT (-> or2b), no NMUX (-> mux2i): neither has geometry in
-# samples/puzzle.gds, see docs/game/layout-guide.md §3
+# samples/puzzle.gds
 GATES = "AND,NAND,OR,NOR,XOR,XNOR,ANDNOT,MUX,AOI3,OAI3,AOI4,OAI4"
 
 # FFs we can map. Everything else has to be legalised into these.
@@ -43,12 +43,12 @@ GATES = "AND,NAND,OR,NOR,XOR,XNOR,ANDNOT,MUX,AOI3,OAI3,AOI4,OAI4"
 # deliberately absent from GATE_MAP. Legalising latches into a shape we then
 # refuse lets `to_netlist` raise a message naming the RTL problem (an
 # incompletely-assigned combinational block); dropping it here instead makes
-# yosys fail first, with an error about cell types. See layout-guide.md §4.
+# yosys fail first, with an error about cell types.
 LEGALIZE = "dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PN0_ 0 -cell $_DFF_PN1_ 1 -cell $_DLATCH_P_ 0"
 
 # base cell name -> drive-strength suffix that actually has geometry in
-# samples/puzzle.gds (docs/game/layout-guide.md §3). Everything not listed
-# here is "_2"; only these four deviate.
+# samples/puzzle.gds. Everything not listed here is "_2"; only these four
+# deviate.
 DRIVE_SUFFIX = {
     "mux2": "1",
     "conb": "1",
@@ -86,12 +86,12 @@ def _unmappable_message(cell: dict) -> str:
             f"geometry in this cell library. Almost always this is an "
             f"incompletely-assigned combinational always block in the RTL: "
             f"assign every output on every path, or make the block "
-            f"`always @(posedge clk)`. See docs/game/layout-guide.md section 4."
+            f"`always @(posedge clk)`."
         )
     return (
         f"no mapping for yosys cell {kind}. Either add it to GATE_MAP with a "
         f"sky130 cell that has geometry, or remove whatever gate produces it "
-        f"from GATES. See docs/game/layout-guide.md section 3 for the palette."
+        f"from GATES."
     )
 
 

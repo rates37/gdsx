@@ -121,15 +121,13 @@ def _ascii(s: str) -> bytes:
 
 
 # 1 database unit = 1 nm, 1 user unit = 1 micron -- verbatim match to
-# samples/puzzle.gds's own UNITS record (measured, see layout-guide.md §7.1:
-# "either read the reference file's raw UNITS bytes ... or write an encoder
-# and test it round-trips"; this is the encoder, tested against those bytes).
+# samples/puzzle.gds's own UNITS record, measured from the reference file's
+# raw UNITS bytes; this is the encoder, tested against those bytes.
 UNITS_1NM = write_real64(0.001) + write_real64(1e-9)
 
 # A fixed, all-zero BGNLIB/BGNSTR timestamp. GDSII's 12-int16 date fields are
 # mod-time and access-time; using real timestamps here would make every
-# rebuild differ, breaking the byte-identical rebuild requirement (layout
-# guide.md §10 point 8).
+# rebuild differ, breaking the byte-identical rebuild requirement.
 _NO_TIMESTAMP = _int16([0] * 12)
 
 
@@ -236,8 +234,7 @@ def write_gds(
     PATH elements, not BOUNDARY rectangles, so both element kinds have to
     round-trip for a rebuild to extract the same netlist. `placements` are
     `Cell` srefs into the copied structures. Structures are copied in sorted
-    order, so the output is deterministic across runs for the same inputs --
-    required by layout-guide.md §10 point 8.
+    order, so the output is deterministic across runs for the same inputs.
     """
     data = Path(reference_path).read_bytes()
     ranges = gdsii.structure_byte_ranges(data)
