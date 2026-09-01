@@ -289,8 +289,7 @@ reset();
 // A dotted Python module path handed to `pyimport` or built for the Pyodide
 // bridge (`gdsx.api`, `gdsx.api.cone(...)`, `gdsx.core.serial.to_dict`) also
 // starts with "gdsx." but is never assigned to a key-named variable, so this
-// scan does not see it -- confirmed by hand when this test was written
-// (docs/game/web-ui-architecture.md links this file for the current list).
+// scan does not see it -- confirmed by hand when this test was written.
 
 function listTsFiles(dir) {
   const out = [];

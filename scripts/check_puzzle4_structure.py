@@ -1,4 +1,5 @@
-"""Puzzle 4 (Nine Lives)'s bake assertion, from docs/game/puzzle-pack.md §4.
+"""Puzzle 4 (Nine Lives)'s bake assertion: the check that proves the puzzle's
+claim about its own state machine, rather than just asserting it.
 
 The assertion has three parts:
 
@@ -163,9 +164,9 @@ def main() -> int:  # noqa: C901 - one report, read top to bottom
         return _report(failures, unsatisfiable)
 
     # Number the states so that the reset state is S0 and the accepting state
-    # is S8, which is the numbering puzzle-pack.md §4 uses. The rest keep
-    # netlist order. Nothing depends on the labels; they make the printed
-    # relation readable.
+    # is S8, matching the "nine lives, S0 through S8" framing the puzzle is
+    # named after. The rest keep netlist order. Nothing depends on the
+    # labels; they make the printed relation readable.
     rest = [f for f in state_flops if f not in (hot[0], accepting[0])]
     state_flops = [hot[0], *rest, accepting[0]]
     s0, s8 = 0, STATES - 1

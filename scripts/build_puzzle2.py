@@ -8,7 +8,15 @@ Equivalent to:
         --top polynomial --spec puzzles/2-polynomial/layout.json \\
         -o puzzles/2-polynomial/design.gds
 
-See docs/game/layout-guide.md §12 step 4 and docs/game/puzzle-pack.md §2.
+This is an author-time wrapper, run by hand to regenerate the puzzle's
+committed `design.gds` whenever its RTL or layout spec changes. REFERENCE
+(`samples/puzzle.gds`) supplies the standard-cell geometry the generator
+copies from -- it is the only self-contained cell library in the repository.
+`build()` is run with `check=True`, so the GDS it just wrote is read back and
+extracted, and the result compared against the netlist that went in; that is
+the only thing that actually proves the generated geometry is right, and it
+is worth the extra build time for a script run by hand rather than on
+every commit.
 """
 
 from __future__ import annotations

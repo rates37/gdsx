@@ -1,4 +1,5 @@
-"""Puzzle 3 (Gatekeeper)'s bake assertion, from docs/game/puzzle-pack.md §3.
+"""Puzzle 3 (Gatekeeper)'s bake assertion: the check that proves the puzzle's
+claim about its clock-gated register banks, rather than just asserting it.
 
 The assertion has three parts. Two are checked here; the third -- that the
 intended stimulus raises `success` on the extracted netlist -- is what
@@ -10,9 +11,10 @@ completeness.
        sequential leaf other than that bank's own flops.
     3. The intended stimulus raises `success` on the extracted netlist.
 
-Part 1 cannot hold: the cell palette this repository can build from
-(layout-guide.md §3, the 69 structures inside samples/puzzle.gds) contains no
-clock-gate cell of any kind. It is reported rather than skipped.
+Part 1 cannot hold: the cell palette this repository can build from -- the 69
+standard-cell structures inside samples/puzzle.gds, the only self-contained
+cell library available -- contains no clock-gate cell of any kind. It is
+reported rather than skipped.
 
 Usage: uv run python scripts/check_puzzle3_structure.py
 """
@@ -57,11 +59,11 @@ def main() -> int:
     print(f"1. clock-gate cells: {len(gates)} (assertion wants {BANKS})")
     if len(gates) != BANKS:
         unbuildable.append(
-            "no clock-gate cell exists in the 69-cell palette of "
-            "layout-guide.md §3, so the eight integrated clock gates "
-            "puzzle-pack.md §3 asks for cannot be built. The eight write "
-            "enables are feedback muxes instead, and `gdsx guards` recovers "
-            "all eight from them -- which part 2 below is the evidence for."
+            "no clock-gate cell exists in the 69-cell palette this repository "
+            "can build from, so the eight integrated clock gates the puzzle's "
+            "design calls for cannot be built. The eight write enables are "
+            "feedback muxes instead, and `gdsx guards` recovers all eight "
+            "from them -- which part 2 below is the evidence for."
         )
 
     # --- part 2: one bank's guard has a sequential leaf of its own -----------

@@ -1,7 +1,5 @@
-"""Puzzle 2's own bake assertion (docs/game/puzzle-pack.md §2, docs/game/
-layout-guide.md §10 point 7 / §12 step 5): the extracted netlist's 32 flops
-form a single chain under the Q -> D relation with exactly three XOR
-interruptions.
+"""Puzzle 2's own bake assertion: the extracted netlist's 32 flops form a
+single chain under the Q -> D relation with exactly three XOR interruptions.
 
 The synthesised design gates every flop's D input with a clock-enable mux
 (`D = mux(enable, hold-at-Q, real-next-value)`, since `s <= ...` has no else
@@ -12,11 +10,10 @@ position; "the Q -> D relation" for this puzzle means the mux's *other*
 input (A1, the value loaded when enabled), which is either the previous
 stage's Q directly or an XOR of two flops' Q's. This script checks that
 relation, not the literal one-hop D driver, and says so rather than silently
-redefining what puzzle-pack.md wrote.
+redefining the puzzle's own claim about itself.
 
-The other half of the pack's bake assertion -- 4096 simulated cycles
-matching a software Galois LFSR bit for bit -- is
-scripts/check_puzzle2_sim.py.
+The other half of the bake assertion -- 4096 simulated cycles matching a
+software Galois LFSR bit for bit -- is scripts/check_puzzle2_sim.py.
 
 Usage: uv run python scripts/check_puzzle2_structure.py
 """
@@ -129,11 +126,11 @@ def main() -> int:
     if len(last_stage_candidates) == 1:
         stage = next(iter(last_stage_candidates))
         print(f"all 3 taps' second XOR input is the same flop ({stage}) -- "
-              f"the chain's last stage, as puzzle-pack.md §2 describes")
+              f"the chain's last stage, as the puzzle's design intends")
     else:
         print(f"taps' second XOR inputs are NOT all the same flop: "
               f"{sorted(last_stage_candidates)} -- this differs from "
-              f"puzzle-pack.md §2's description")
+              f"what the puzzle's design intends")
     return 0
 
 

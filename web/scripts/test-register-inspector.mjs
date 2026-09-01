@@ -1,28 +1,30 @@
 // Regression test for the Register Inspector's virtualized list
 // (panels/virtual-list.ts + panels/register-inspector-panel.ts).
 //
-// scripts/solve/FINDINGS.md F19 reported that "the register list is
-// virtualised with recycled rows... the selection highlight follows the DOM
-// row, not the group", based on scripts/solve/10-pairs.mjs producing
-// duplicated and skipped ad-hoc groups. Reproducing it in a real browser
-// shows that report was wrong about the cause: the panel keys selection off
-// the RegisterEntry object itself (`reg === selected` in
-// register-inspector-panel.ts), which survives scrolling and DOM
-// recycling correctly. The duplicates and gaps came from 10-pairs.mjs's own
-// selector, `.ri-list-viewport [class*="row"], .ri-list-viewport > div >
-// div`, which also matches the `.vlist-rows` container (so index 0 was the
-// whole row stack, not a row -- clicking it landed wherever the browser's
-// default click point happened to fall) and the `.ri-row-name` /
-// `.ri-row-role` / `.ri-row-width` spans inside every row (`class*="row"`
-// matches all three), doubling every real match; and the script never
-// scrolled, so rows outside the initial render window were simply absent.
-// That script has been fixed to use `.ri-row` and to scroll through the
-// list; this test pins down the actual app behaviour so a future
+// An earlier manual test run reported that "the register list is virtualised
+// with recycled rows... the selection highlight follows the DOM row, not the
+// group", based on web/scripts/solve/10-pairs.mjs producing duplicated and
+// skipped ad-hoc groups. Reproducing it in a real browser shows that report
+// was wrong about the cause: the panel keys selection off the RegisterEntry
+// object itself (`reg === selected` in register-inspector-panel.ts), which
+// survives scrolling and DOM recycling correctly. The duplicates and gaps
+// came from 10-pairs.mjs's own selector, `.ri-list-viewport [class*="row"],
+// .ri-list-viewport > div > div`, which also matches the `.vlist-rows`
+// container (so index 0 was the whole row stack, not a row -- clicking it
+// landed wherever the browser's default click point happened to fall) and
+// the `.ri-row-name` / `.ri-row-role` / `.ri-row-width` spans inside every
+// row (`class*="row"` matches all three), doubling every real match; and the
+// script never scrolled, so rows outside the initial render window were
+// simply absent. That script has been fixed to use `.ri-row` and to scroll
+// through the list; this test pins down the actual app behaviour so a future
 // virtual-list change can't reintroduce a real version of the bug.
 //
-// Starts its own dev server and a headless browser, per
-// docs/game/web-ui-architecture.md §6: everything is wrapped in
-// try/finally, a hard watchdog is armed, and the 3D view is never opened.
+// Starts its own dev server and a headless browser. A Playwright script that
+// throws before `browser.close()` leaks a headless Chromium, and the die
+// view's unbounded animation loop then software-rasterises WebGL forever on
+// a machine with no GPU -- expensive enough to bring a laptop to its knees.
+// So everything here is wrapped in try/finally, a hard watchdog is armed via
+// `setTimeout(() => process.exit(2), ...)`, and the 3D view is never opened.
 //
 // Usage: node --experimental-strip-types scripts/test-register-inspector.mjs
 

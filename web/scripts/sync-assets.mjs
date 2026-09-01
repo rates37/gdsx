@@ -39,10 +39,11 @@ for (const name of wanted) {
   const src = path.join(pyodidePkg, name);
   if (existsSync(src)) copy(src, path.join(pyodideOut, name));
 }
-// Ship the pure-Python wheels Pyodide needs at runtime (pyyaml, gdsx's one
-// hard dependency) from a local cache, so micropip never has to reach a CDN
-// for them either. See scripts/fetch-pyyaml.mjs for how the cache is filled;
-// its sha256 must match the `pyyaml` entry in pyodide-lock.json above.
+// Ship the pure-Python wheels Pyodide needs at runtime -- micropip and
+// packaging (needed to install anything at all) plus pyyaml (gdsx's one hard
+// dependency) -- from a local cache, so micropip never has to reach a CDN for
+// them either. The cache is filled by hand with scripts/fetch-runtime-deps.mjs;
+// each wheel's sha256 must match its entry in pyodide-lock.json above.
 const extraDir = path.join(webDir, "node_modules", ".pyodide-extra");
 if (existsSync(extraDir)) {
   for (const name of readdirSync(extraDir)) {
@@ -102,7 +103,7 @@ writeFileSync(
 // game through step 4 like every other level; the only reader of /samples/
 // in the app is `spike.analyseFromGds()` in src/boot.ts, which fetches
 // samples/puzzle.gds and is reachable only from `globalThis.spike`, i.e.
-// only from scripts/measure-m0.mjs. So these six-odd MB were pure weight in
+// only from web/scripts/measure-m0.mjs. So these six-odd MB were pure weight in
 // a deployed bundle, and they are now opt-in: `npm run dev` and `npm run
 // build:measure` pass --samples, `npm run build` does not.
 //
@@ -136,7 +137,7 @@ if (withSamples) {
 // the same design -- and used to be written unconditionally, on the grounds
 // that the duplication was dev-only cost. It was not: it was in the deployed
 // bundle. They are now behind --samples, because the two things that do need
-// them are both local tooling. `scripts/measure-m0.mjs` reads
+// them are both local tooling. `web/scripts/measure-m0.mjs` reads
 // dist/samples/puzzle.render.bin by that exact path and drives
 // `spike.analyseFromGds()`, which fetches /samples/puzzle.gds; and the node
 // test scripts read the repo's samples/ directory directly, never public/.

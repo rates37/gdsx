@@ -42,7 +42,7 @@ SCHEMA_VERSION = 1
 
 # The 121-bit key, written MSB-first, one bit per rising clk starting the
 # cycle after rst_n deasserts. Verified against the extracted netlist, not
-# against the RTL -- see puzzle-solved-no-sat.md section 10.
+# against the RTL.
 PUZZLE_KEY = "0000000101010000100000000000010101010000000000001010000001000001000000100000101000010000000100000010000010010001010000000"
 
 

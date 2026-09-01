@@ -253,8 +253,8 @@ eq(busPuzzle.driver.successNet, "done", "the success net comes from the predicat
 // ---- 4. which screen a URL opens ----------------------------------------
 //
 // The whole routing rule: a puzzle the catalog has opens the workspace, and
-// everything else opens the menu. The deep links matter -- web/scripts/solve/
-// and docs/game/original-puzzle-walkthrough.md both drive
+// everything else opens the menu. The deep links matter -- the browser-driven
+// scripts under web/scripts/solve/ and the published walkthrough both drive
 // `?puzzle=original-puzzle` and expect the workspace, not a menu.
 
 const catalog = [warmStart, original];

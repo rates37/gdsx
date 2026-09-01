@@ -1,6 +1,6 @@
 // GENERATED FILE -- do not edit by hand.
 // Run `uv run python scripts/gen_types.py` to regenerate.
-// Source: src/gdsx/api.py
+// Source: src/gdsx/api.py -- these are the TS types for its public contract.
 
 export interface ChoiceOption {
   literals: LeafValue[];

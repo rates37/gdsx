@@ -2,17 +2,19 @@
 from design.gds, and a software Galois LFSR model -- on the same stimulus,
 and diff all three.
 
-docs/game/layout-guide.md §10 point 3 and §8's closing paragraph. The
-structural comparison in §8 proves the extracted netlist is the netlist that
-went into the placer; this proves that netlist is both the circuit the RTL
-describes and the LFSR the puzzle's answer assumes. A disagreement here is a
-synthesis or an RTL problem wearing a layout problem's clothes (§12), so it is
-worth separating from the layout checks.
+The generator's own self-check (build_puzzle2.py's `check=True` round-trip:
+extract the written GDS back and compare it against the netlist that went
+into the placer) already proves the extracted netlist is the netlist that
+went into the placer. This script instead proves that netlist is both the
+circuit the RTL describes and the LFSR the puzzle's answer assumes, by
+simulating all three and diffing. A disagreement here is a synthesis or an
+RTL problem wearing a layout problem's clothes, not a placement or routing
+bug, so it is worth keeping separate from the layout checks.
 
-Also implements the "4096 simulated cycles match a software Galois LFSR with
-mask 0xA3000000 bit for bit" half of puzzle-pack.md §2's bake assertion; the
-other half (single chain, three XOR interruptions) is
-scripts/check_puzzle2_structure.py.
+Also verifies, as puzzle 2's design intent requires, that 4096 simulated
+cycles match a software Galois LFSR with mask 0xA3000000 bit for bit; the
+other half of that requirement (single chain, three XOR interruptions) is
+checked in scripts/check_puzzle2_structure.py.
 
 Usage: uv run python scripts/check_puzzle2_sim.py [runs]
 """
@@ -33,7 +35,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PUZZLE_DIR = ROOT / "puzzles" / "2-polynomial"
 
 SAMPLE = re.compile(r"^[01xz]{8}$")
-CYCLES = 4096  # matches puzzle-pack.md's bake assertion
+CYCLES = 4096  # matches puzzle 2's design intent: the LFSR must agree with a software model for exactly this many cycles
 MASK = 0xA300_0000
 SEED = 0x1357_9BDF
 
@@ -157,8 +159,8 @@ def main() -> int:
                   f"RTL {rtl[first]!r} vs extracted {got[first]!r}")
 
     # The intended run additionally has to match the software Galois model
-    # bit for bit -- this is the other half of puzzle-pack.md's bake
-    # assertion. cases[0] holds rst_n low for indices 0-1 (the state is the
+    # bit for bit -- this is puzzle 2's design intent, checked directly rather
+    # than assumed. cases[0] holds rst_n low for indices 0-1 (the state is the
     # raw seed throughout, no step applied) and then free-runs from index 2
     # on, applying one LFSR step per cycle -- so RTL index i>=2 carries the
     # state after (i-1) steps.

@@ -1,5 +1,5 @@
-// Checks web/src/notebook/scoring.ts's `scoreCard` -- game-plan.md §8's
-// weights.
+// Checks web/src/notebook/scoring.ts's `scoreCard` and the scoring weights
+// it implements.
 //
 // The numbers themselves are meant to be tuned in scoring.ts, so this file
 // deliberately asserts almost nothing about their exact values. What it
@@ -7,16 +7,16 @@
 // which is a design decision that a well-meaning re-tune could silently
 // reverse:
 //
-//   1. §8's stated ORDERING: model > coverage > claims > solved > time.
+//   1. The stated ORDERING: model > coverage > claims > solved > time.
 //   2. Claim points are capped, so writing many cheap claims cannot outscore
 //      building a validated model.
 //   3. Hints never block: every tier revealed still leaves a solved puzzle
 //      with the points solving earned.
 //   4. A puzzle with no par omits the time component instead of scoring zero
 //      out of five, which would read as a slow solve.
-//   5. An unsolved puzzle has no score at all -- §8 shows one only after
-//      solving, and "0 points so far" is exactly the live pressure it rules
-//      out.
+//   5. An unsolved puzzle has no score at all -- a score is shown only after
+//      solving, and "0 points so far" is exactly the live pressure that
+//      rule exists to rule out.
 //   6. A solve with an empty notebook is a real solve, flagged `bare` so the
 //      write-up can say what the other points are for rather than presenting
 //      a 10/100 as a failure.
@@ -99,11 +99,11 @@ function totalOf(over) {
   return scoreCard(input(over)).total;
 }
 
-// ---- 1. §8's ordering --------------------------------------------------
+// ---- 1. the stated ordering ---------------------------------------------
 
 const bare = totalOf({ solveMs: 3 * PAR * 60_000 }); // no time bonus either
 // "Model" is now the two components together: full agreement over the whole
-// required set. It is that TOTAL that §8's ordering is about.
+// required set. It is that TOTAL that the ordering below is about.
 const perfectModel = { model: run(VALIDATION_VECTORS) };
 const model = totalOf(perfectModel) - totalOf({});
 const fullCoverage = totalOf({ coverage: cov(1) }) - totalOf({});

@@ -1,11 +1,15 @@
 """Simulate puzzle 1 twice -- from the RTL and from the extracted netlist --
 on the same stimulus, and diff.
 
-docs/game/layout-guide.md §10 point 3. The structural comparison in §8 proves
-the extracted netlist is the netlist that went in; this proves the netlist
-that went in is the circuit the RTL describes. A disagreement here is a
-synthesis or an RTL problem wearing a layout problem's clothes (§12), so it
-is worth separating from the layout checks.
+The generator's own self-check (build_puzzle1.py's `check=True` round-trip:
+extract the written GDS back and compare it against the netlist that went
+into the placer, checking instance counts, cell types, floating pins,
+net-name conflicts and graph isomorphism up to net renaming) already proves
+the extracted netlist is the netlist that went in. This script instead
+proves that the netlist that went in is the circuit the RTL describes, by
+simulating both and diffing. A disagreement here is a synthesis or an RTL
+problem wearing a layout problem's clothes, not a placement or routing bug,
+so it is worth keeping separate from the layout checks.
 
 Usage: uv run python scripts/check_puzzle1_sim.py [runs]
 """

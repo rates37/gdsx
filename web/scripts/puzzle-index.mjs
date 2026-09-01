@@ -153,9 +153,9 @@ function digest(id, fields) {
  *     predicate to derive a shape from. And `constant` when the predicate
  *     turns out to compare something other than the answer (see below).
  *
- * The hash is not an anti-cheat measure. game-plan.md §1 is explicit that
- * anti-cheat is a non-goal with "zero engineering spent on this", and a
- * SHA-256 of a 32-bit number falls to a few seconds of brute force. It buys
+ * The hash is not an anti-cheat measure -- anti-cheat is a deliberate
+ * non-goal for this game, and a SHA-256 of a 32-bit number falls to a few
+ * seconds of brute force. It buys
  * exactly one thing: the answer is not sitting in plain sight in a file the
  * player can open in a browser tab, for the cost of one digest call.
  */
@@ -215,9 +215,9 @@ function describeChecks(id, solution) {
 }
 
 /** hints.json's tiers, carried onto the descriptor unchanged -- an authored
- *  hint is not a spoiler (game-plan.md §8: hints are always available, they
- *  just cost), so unlike solution.json this file's content is meant to reach
- *  the player and needs no filtering. */
+ *  hint is not a spoiler: hints are always available to a player, they just
+ *  cost something to reveal, so unlike solution.json this file's content is
+ *  meant to reach the player and needs no filtering. */
 function describeHints(hints) {
   const tiers = hints.tiers;
   if (!Array.isArray(tiers)) return [];

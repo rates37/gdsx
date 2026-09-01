@@ -1,6 +1,6 @@
-// Checks the write-up generator (web/src/notebook/writeup.ts, game-plan.md
-// §8) against the one rule that must never break: PROVEN and LIKELY must
-// never render as each other, and a DISPROVEN claim must be visibly struck.
+// Checks the write-up generator (web/src/notebook/writeup.ts) against the
+// one rule that must never break: PROVEN and LIKELY must never render as
+// each other, and a DISPROVEN claim must be visibly struck.
 //
 // Builds fake stand-ins for Notebook, EvidenceLog, ModelStore and SimStore --
 // generateWriteup only calls a handful of methods on each (`.all()`,
@@ -214,7 +214,7 @@ check(
   "no model run yet must be stated as agreement-needed, not as a missing proof",
 );
 
-// ---- the session half of §8 ---------------------------------------------
+// ---- the session and score portion of the write-up -----------------------
 //
 // Score and Session are driven by an optional sixth argument, so every check
 // above ran without one -- which is itself the first property worth stating.
@@ -266,8 +266,8 @@ check(
   "the score must precede the claims timeline",
 );
 
-// §8: a score only after solving. An unsolved card must not print one, even
-// though the session (attempts, hints) is still worth summarising.
+// A score is shown only after solving. An unsolved card must not print one,
+// even though the session (attempts, hints) is still worth summarising.
 const mdUnsolvedScore = generateWriteup(
   fakeNotebook,
   fakeEvidence,

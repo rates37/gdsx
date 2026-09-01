@@ -163,7 +163,7 @@ def generate() -> str:
     header = (
         "// GENERATED FILE -- do not edit by hand.\n"
         "// Run `uv run python scripts/gen_types.py` to regenerate.\n"
-        "// Source: src/gdsx/api.py (contract: docs/game/game-plan.md §4b)\n"
+        "// Source: src/gdsx/api.py -- these are the TS types for its public contract.\n"
     )
     body = "\n\n".join(emitted[name] for name in sorted(emitted))
     return header + "\n" + body + "\n"

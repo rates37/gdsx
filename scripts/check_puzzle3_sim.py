@@ -1,11 +1,13 @@
 """Simulate puzzle 3 two ways -- RTL via iverilog and the netlist extracted
 from design.gds -- on the same stimulus, and diff them.
 
-docs/game/layout-guide.md §10 point 3 and §8's closing paragraph. The
-structural comparison in §8 proves the extracted netlist is the netlist that
-went into the placer; this proves that netlist is the circuit the RTL
-describes. A disagreement here is a synthesis or an RTL problem wearing a
-layout problem's clothes (§12), so it is worth separating from the layout
+The generator's own self-check (`gdsx puzzle build`'s `check=True` round-trip:
+extract the written GDS back and compare it against the netlist that went
+into the placer) already proves the extracted netlist is the netlist that
+went into the placer. This script instead proves that netlist is the circuit
+the RTL describes, by simulating both and diffing. A disagreement here is a
+synthesis or an RTL problem wearing a layout problem's clothes, not a
+placement or routing bug, so it is worth keeping separate from the layout
 checks.
 
 Run 0 is the intended key: arm at cycle 0, idle, privileged write at cycle 4.
