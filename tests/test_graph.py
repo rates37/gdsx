@@ -6,7 +6,7 @@ import re
 import sys
 
 import pytest
-from gdsx import analyse, loader, netlist, xref
+from gdsx import analyse, loader, netlist
 from gdsx.core.graph import CombinationalLoop, Graph, LeafKind
 from gdsx.core.netlist import Instance, Netlist
 from gdsx.sim import Simulator
@@ -156,40 +156,7 @@ def test_every_net_is_either_labelled_or_walkable(both):
             assert (graph.label(net) is None) is (graph.leaf(net) is None)
 
 
-#! traversal equivalence
-
-
-def test_support_matches_analyse_support(both):
-    for nl in both:
-        graph = Graph(nl)
-        for net in probe_nets(nl):
-            assert graph.support(net) == analyse.support(nl, net), net
-
-
-def test_cone_nets_matches_analyse_cone_nets(both):
-    for nl in both:
-        graph = Graph(nl)
-        for net in probe_nets(nl, 20):
-            for stop in (set(), _a_stop_set(graph, net)):
-                assert graph.cone({net}, stop=frozenset(stop)) == analyse.cone_nets(
-                    nl, {net}, stop
-                ), (net, stop)
-
-
-def test_cone_instances_matches_analyse_cone_instances(both):
-    for nl in both:
-        graph = Graph(nl)
-        for net in probe_nets(nl, 20):
-            for stop in (set(), _a_stop_set(graph, net)):
-                assert graph.cone(
-                    {net}, stop=frozenset(stop), returns="instances"
-                ) == analyse.cone_instances(nl, {net}, stop), (net, stop)
-
-
-def _a_stop_set(graph: Graph, net: str) -> set[str]:
-    """A stop set that actually bites: the immediate drivers of `net`."""
-    levels = graph.fanin(net, depth=1)
-    return set(levels[0]) if levels else set()
+#! traversal
 
 
 def test_a_stop_net_is_neither_returned_nor_expanded():
@@ -203,20 +170,6 @@ def test_a_stop_net_is_neither_returned_nor_expanded():
 def test_cone_rejects_an_unknown_returns_value():
     with pytest.raises(ValueError, match="returns"):
         Graph(chain()).cone({"z"}, returns="instance")
-
-
-def test_fanin_and_fanout_match_xref(both):
-    for nl in both:
-        graph = Graph(nl)
-        for net in probe_nets(nl, 20):
-            for through in (False, True):
-                for depth in (1, 3):
-                    assert graph.fanin(net, depth, through) == xref.fanin(
-                        nl, net, depth, through
-                    ), (net, depth, through)
-                    assert graph.fanout(net, depth, through) == xref.fanout(
-                        nl, net, depth, through
-                    ), (net, depth, through)
 
 
 def test_fanin_tree_keeps_the_gate_by_gate_shape():
@@ -300,25 +253,11 @@ def test_fanout_tree_honours_the_depth_and_expands_each_net_once(puzzle_netlist)
     assert len(expanded) == len(set(expanded)), "a re-converging net re-expanded"
 
 
-def test_between_matches_xref(both):
-    for nl in both:
-        graph = Graph(nl)
-        sources = {p for p, d in nl.ports.items() if d == "input"}
-        sinks = {p for p, d in nl.ports.items() if d == "output"}
-        for through in (False, True):
-            assert graph.between(sources, sinks, through_flops=through) == xref.between(
-                nl, sources, sinks, through
-            )
-
-
-def test_subgraph_matches_xref_sub_netlist(both):
+def test_subgraph_takes_the_name_it_is_given(both):
     for nl in both:
         graph = Graph(nl)
         sinks = {p for p, d in nl.ports.items() if d == "output"}
         chosen = graph.cone(sinks, returns="instances")
-        assert (
-            graph.subgraph(chosen).to_dict() == xref.sub_netlist(nl, chosen).to_dict()
-        )
         assert graph.subgraph(chosen, "slice").top == "slice"
 
 
@@ -329,7 +268,7 @@ def test_d_support_matches_the_survey_primitive(both):
             cell = graph.cell_of[flop]
             want = set().union(
                 *(
-                    analyse.support(nl, net)
+                    graph.support(net)
                     for net in analyse.data_nets(cell, graph.by_name[flop].connections)
                 ),
                 set(),

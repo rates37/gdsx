@@ -40,3 +40,8 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["tests"]
 markers = ["slow: exhaustive sweeps"]
+# A deprecation is a bug, not a note: the re-export shims are gone and nothing
+# should reintroduce one quietly. The suite raises no third-party deprecations,
+# so this needs no exemptions; add a narrow "ignore" line here if a dependency
+# ever starts emitting one, rather than dropping the filter.
+filterwarnings = ["error::DeprecationWarning"]

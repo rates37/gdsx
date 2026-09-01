@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass, field
 
 from .core.graph import Graph
@@ -38,63 +37,6 @@ def refs(nl: Netlist, net: str) -> Xref:
     found.drivers.sort(key=lambda r: (r.instance, r.pin))
     found.readers.sort(key=lambda r: (r.instance, r.pin))
     return found
-
-
-def fanin(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
-    """Nets upstream of `net`, level by level
-
-    Stops at flops by default: past a flop you are in the previous clock cycle,
-    which is a different question from "what used to compute this value".
-
-    Deprecated: use `core.graph.Graph.fanin`.
-    """
-    warnings.warn(
-        "gdsx.xref.fanin is deprecated; use gdsx.core.graph.Graph.fanin",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).fanin(net, depth, through_flops)
-
-
-def fanout(nl: Netlist, net: str, depth: int = 3, through_flops: bool = False):
-    """Nets downstream of `net`, level by level
-
-    Deprecated: use `core.graph.Graph.fanout`.
-    """
-    warnings.warn(
-        "gdsx.xref.fanout is deprecated; use gdsx.core.graph.Graph.fanout",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).fanout(net, depth, through_flops)
-
-
-def between(
-    nl: Netlist, sources: set[str], sinks: set[str], through_flops: bool = True
-) -> set[str]:
-    """Instances on a path from any source net to any sink net
-
-    Deprecated: use `core.graph.Graph.between`.
-    """
-    warnings.warn(
-        "gdsx.xref.between is deprecated; use gdsx.core.graph.Graph.between",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).between(sources, sinks, through_flops=through_flops)
-
-
-def sub_netlist(nl: Netlist, instances: set[str], name: str | None = None) -> Netlist:
-    """Carve `instances` out as a netlist in their own right
-
-    Deprecated: use `core.graph.Graph.subgraph`.
-    """
-    warnings.warn(
-        "gdsx.xref.sub_netlist is deprecated; use gdsx.core.graph.Graph.subgraph",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).subgraph(instances, name)
 
 
 def cone_report(nl: Netlist, net: str, depth: int, through_flops: bool) -> str:

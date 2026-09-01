@@ -5,6 +5,7 @@ import json
 import pytest
 import rtl_fixtures
 from gdsx import analyse, xref
+from gdsx.core.graph import Graph
 from gdsx.netlist import Instance, Netlist
 
 needs_yosys = pytest.mark.skipif(
@@ -58,29 +59,29 @@ def test_undriven_and_multiply_driven_are_flagged():
 
 def test_cones_walk_in_the_right_direction():
     nl = chain()
-    assert xref.fanin(nl, "y", depth=3) == [["b", "n1"], ["a"]]
-    assert xref.fanout(nl, "a", depth=3) == [["n1"], ["y"], ["z"]]
+    assert Graph.of(nl).fanin("y", depth=3) == [["b", "n1"], ["a"]]
+    assert Graph.of(nl).fanout("a", depth=3) == [["n1"], ["y"], ["z"]]
 
 
 @needs_yosys
 def test_cones_stop_at_flops_unless_told_otherwise(tmp_path):
     nl = rtl_fixtures.from_verilog(rtl_fixtures.COUNTER, "counter", tmp_path)
-    shallow = xref.fanin(nl, "q[3]", depth=6, through_flops=False)
-    deep = xref.fanin(nl, "q[3]", depth=6, through_flops=True)
+    shallow = Graph.of(nl).fanin("q[3]", depth=6, through_flops=False)
+    deep = Graph.of(nl).fanin("q[3]", depth=6, through_flops=True)
     assert sum(len(level) for level in deep) > sum(len(level) for level in shallow)
 
 
 def test_a_slice_is_the_intersection_of_both_directions():
     nl = chain()
     # b reaches y and z, but nothing on the path from a to y depends on the buffer
-    assert xref.between(nl, {"a"}, {"y"}) == {"inv_1", "nand2_1"}
-    assert xref.between(nl, {"b"}, {"y"}) == {"nand2_1"}
-    assert xref.between(nl, {"a"}, {"a"}) == set()
+    assert Graph.of(nl).between({"a"}, {"y"}) == {"inv_1", "nand2_1"}
+    assert Graph.of(nl).between({"b"}, {"y"}) == {"nand2_1"}
+    assert Graph.of(nl).between({"a"}, {"a"}) == set()
 
 
 def test_sub_netlist_gets_its_own_ports():
     nl = chain()
-    carved = xref.sub_netlist(nl, {"nand2_1"}, "just_the_nand")
+    carved = Graph.of(nl).subgraph({"nand2_1"}, "just_the_nand")
 
     assert carved.top == "just_the_nand"
     assert [i.name for i in carved.instances] == ["nand2_1"]
@@ -91,7 +92,7 @@ def test_sub_netlist_gets_its_own_ports():
 
 def test_a_slice_round_trips_through_json():
     """One command's output has to be another command's input"""
-    carved = xref.sub_netlist(chain(), {"inv_1", "nand2_1"}, "front")
+    carved = Graph.of(chain()).subgraph({"inv_1", "nand2_1"}, "front")
     again = json.loads(json.dumps(carved.to_dict()))
 
     assert again == carved.to_dict()
@@ -102,8 +103,8 @@ def test_slicing_a_real_design_keeps_it_analysable(tmp_path):
     """The slice has to survive being analysed, or it is not a netlist."""
 
     nl = rtl_fixtures.from_verilog(rtl_fixtures.TWO_REGISTERS, "two_regs", tmp_path)
-    instances = xref.between(nl, {"a_in", "b_in"}, {"eq"})
-    carved = xref.sub_netlist(nl, instances)
+    instances = Graph.of(nl).between({"a_in", "b_in"}, {"eq"})
+    carved = Graph.of(nl).subgraph(instances)
 
     assert 0 < len(carved.instances) <= len(nl.instances)
     registers = analyse.find_registers(carved)

@@ -16,11 +16,8 @@ Three steps:
 """
 
 from __future__ import annotations
-import warnings
 
-from .core.graph import Graph
 from .functions import data_nets, is_sequential
-from .netlist import Netlist
 
 from .analysis.registers import Register, Block, Analysis, find_registers, _survey
 from .analysis.bitorder import (
@@ -45,44 +42,3 @@ from .analysis.datapath import (
     split_datapath,
     analyse,
 )
-
-
-def support(nl: Netlist, net: str) -> set[str]:
-    """Everything the net depends on, stopping at flop outputs and ports
-    Returns a mix of instance names (flip flops) and net names (ports/constants)
-
-    Deprecated: use `core.graph.Graph.support`.
-    """
-    warnings.warn(
-        "gdsx.analyse.support is deprecated; use gdsx.core.graph.Graph.support",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).support(net)
-
-
-def cone_nets(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
-    """Every net feeding `nets`, walking back but never through `stop`
-
-    Deprecated: use `core.graph.Graph.cone`.
-    """
-    warnings.warn(
-        "gdsx.analyse.cone_nets is deprecated; use gdsx.core.graph.Graph.cone",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).cone(nets, stop=frozenset(stop))
-
-
-def cone_instances(nl: Netlist, nets: set[str], stop: set[str]) -> set[str]:
-    """Instances driving `nets`, walking back but never through `stop`
-
-    Deprecated: use `core.graph.Graph.cone(..., returns="instances")`.
-    """
-    warnings.warn(
-        "gdsx.analyse.cone_instances is deprecated; "
-        'use gdsx.core.graph.Graph.cone(..., returns="instances")',
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Graph.of(nl).cone(nets, stop=frozenset(stop), returns="instances")
