@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { REQUIRED, describe } from "./puzzle-index.mjs";
+import { FETCH_COMMAND, extraDir, missingWheels, requiredWheels } from "./pyodide-extra.mjs";
 
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoDir = path.dirname(webDir);
@@ -42,17 +43,40 @@ for (const name of wanted) {
 // Ship the pure-Python wheels Pyodide needs at runtime -- micropip and
 // packaging (needed to install anything at all) plus pyyaml (gdsx's one hard
 // dependency) -- from a local cache, so micropip never has to reach a CDN for
-// them either. The cache is filled by hand with scripts/fetch-runtime-deps.mjs;
-// each wheel's sha256 must match its entry in pyodide-lock.json above.
-const extraDir = path.join(webDir, "node_modules", ".pyodide-extra");
-if (existsSync(extraDir)) {
-  for (const name of readdirSync(extraDir)) {
-    if (name.endsWith(".whl")) copy(path.join(extraDir, name), path.join(pyodideOut, name));
-  }
-} else {
-  console.warn(
-    "warning: node_modules/.pyodide-extra missing pyyaml wheel; micropip will fall back to jsdelivr for it",
+// them either. The cache is filled by scripts/fetch-runtime-deps.mjs; each
+// wheel's sha256 must match its entry in pyodide-lock.json above.
+//
+// This is a hard failure, not a warning, and the warning it replaced was
+// wrong about the consequence. There is no CDN fallback to degrade to:
+// worker.ts calls `loadPackage(["micropip", "pyyaml"])` against an indexURL
+// that points at this same-origin directory, so a missing wheel 404s, the
+// following `pyimport("micropip")` throws ModuleNotFoundError, and the page
+// sits on its loading screen forever with nothing in the UI to say why. A
+// console.warn that scrolls past in a build log is not proportionate to that,
+// and an offline-first app has no legitimate build without these wheels --
+// so there is deliberately no flag to skip this.
+//
+// Checking filenames against the installed pyodide's own lock, rather than
+// just that the directory exists, is what makes a `pyodide` version bump
+// self-enforcing: the new lock names new files and the stale stage no longer
+// satisfies it.
+const extra = extraDir(webDir);
+const missing = missingWheels(webDir);
+if (missing.length > 0) {
+  throw new Error(
+    `Pyodide runtime wheels are missing from node_modules/.pyodide-extra:\n` +
+      missing.map((w) => `  - ${w.file_name}  (${w.name})`).join("\n") +
+      `\n\nThe app cannot boot without these -- it would hang on the loading screen.\n` +
+      `Run:  cd web && ${FETCH_COMMAND}\n` +
+      `(If you just changed the \`pyodide\` package version, that is why: the\n` +
+      ` staged wheels belong to the old one and must be re-fetched.)`,
   );
+}
+// Copy the wheels this pyodide version asks for by name, not every .whl in
+// the directory: a wheel left behind by an earlier pyodide version is dead
+// weight that would otherwise be served in the deployed bundle.
+for (const { file_name } of requiredWheels(webDir)) {
+  copy(path.join(extra, file_name), path.join(pyodideOut, file_name));
 }
 
 // 2. The gdsx wheel -> public/wheel/
@@ -64,8 +88,14 @@ const wheels = existsSync(distDir)
   ? readdirSync(distDir).filter((f) => f.endsWith(".whl"))
   : [];
 if (wheels.length === 0) {
+  // Deliberately not `uv build`: that builds a wheel that imports but cannot
+  // analyse anything, because config/ sits above the package and is left out.
+  // The failure surfaces only in the browser, at analysis time. build_wheel.py
+  // stages config/ into the package first -- see its docstring.
   throw new Error(
-    "No wheel found in ../dist. Run `uv build` at the repo root first.",
+    "No wheel found in ../dist.\n" +
+      "Run:  uv run python scripts/build_wheel.py   (at the repo root)\n" +
+      "or, for the whole chain in order:  cd web && npm run setup",
   );
 }
 for (const wheel of wheels) {

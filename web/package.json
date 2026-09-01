@@ -3,7 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "fetch-runtime-deps": "node scripts/fetch-runtime-deps.mjs",
     "predev": "node scripts/sync-assets.mjs --samples",
     "dev": "vite",
     "prebuild": "node scripts/sync-assets.mjs",
