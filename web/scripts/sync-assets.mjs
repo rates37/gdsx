@@ -1,6 +1,11 @@
 // Copies build outputs that must be served same-origin: the Pyodide runtime,
 // the gdsx wheel, and the baked puzzles. Run before `dev`/`build` so
 // nothing here depends on a CDN.
+//
+// `--samples` additionally stages the original puzzle under public/samples/,
+// which is a duplicate of public/puzzles/original-puzzle/ and exists only for
+// local tooling -- see step 3. `npm run dev` and `npm run build:measure` pass
+// it; `npm run build` does not, so the deployed bundle does not carry it.
 import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
@@ -11,6 +16,7 @@ import { REQUIRED, describe } from "./puzzle-index.mjs";
 const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoDir = path.dirname(webDir);
 const publicDir = path.join(webDir, "public");
+const withSamples = process.argv.includes("--samples");
 
 function copy(src, dest) {
   mkdirSync(path.dirname(dest), { recursive: true });
@@ -86,31 +92,56 @@ writeFileSync(
   JSON.stringify({ schema_version: 1, wheel: newest }, null, 2) + "\n",
 );
 
-// 3. Puzzle assets -> public/samples/: the baked netlist, the baked render
-// bundle the die view draws (`uv run python scripts/bake_render.py`), the
-// baked gate tape the waveform and sequence editor run (`uv run python
-// scripts/bake_tape.py`), and the GDS itself so re-extraction in the
-// browser can be timed.
-for (const name of [
-  "puzzle.netlist.json",
-  "puzzle.render.bin",
-  "puzzle.tape.bin",
-  "puzzle.gds",
-]) {
-  const src = path.join(repoDir, "samples", name);
-  if (existsSync(src)) {
-    copy(src, path.join(publicDir, "samples", name));
-  } else {
-    console.warn(`warning: ${src} not found, skipping`);
+// 3. Local-tooling copies of the original puzzle -> public/samples/: the
+// baked netlist, the baked render bundle the die view draws (`uv run python
+// scripts/bake_render.py`), the baked gate tape the waveform and sequence
+// editor run (`uv run python scripts/bake_tape.py`), and the GDS itself so
+// re-extraction in the browser can be timed.
+//
+// **No player path fetches any of these.** The original puzzle reaches the
+// game through step 4 like every other level; the only reader of /samples/
+// in the app is `spike.analyseFromGds()` in src/boot.ts, which fetches
+// samples/puzzle.gds and is reachable only from `globalThis.spike`, i.e.
+// only from scripts/measure-m0.mjs. So these six-odd MB were pure weight in
+// a deployed bundle, and they are now opt-in: `npm run dev` and `npm run
+// build:measure` pass --samples, `npm run build` does not.
+//
+// The rmSync is not tidiness. public/ persists between runs, and Vite copies
+// whatever is in it into dist -- so without it, a `npm run dev` followed by
+// a `npm run build` would ship the samples anyway, and the saving would
+// depend on which command you happened to run last.
+const samplesOut = path.join(publicDir, "samples");
+rmSync(samplesOut, { recursive: true, force: true });
+if (withSamples) {
+  for (const name of [
+    "puzzle.netlist.json",
+    "puzzle.render.bin",
+    "puzzle.tape.bin",
+    "puzzle.gds",
+  ]) {
+    const src = path.join(repoDir, "samples", name);
+    if (existsSync(src)) {
+      copy(src, path.join(samplesOut, name));
+    } else {
+      console.warn(`warning: ${src} not found, skipping`);
+    }
   }
 }
 
 // 4. Every baked puzzle -> public/puzzles/<dir>/, plus the index the level
-// picker reads. This is the multi-puzzle path; the /samples/ copies above
-// stay because `scripts/measure-m0.mjs` reads dist/samples/puzzle.render.bin
-// by that exact path and the node test scripts run against the repo's
-// samples/ directory. The overlap costs a few MB of dev output and keeps the
-// M0 numbers comparable to every earlier run.
+// picker reads. This is the multi-puzzle path, and the one the game plays
+// from: everything a player downloads comes from here.
+//
+// The /samples/ copies above overlap this directory -- original-puzzle is
+// the same design -- and used to be written unconditionally, on the grounds
+// that the duplication was dev-only cost. It was not: it was in the deployed
+// bundle. They are now behind --samples, because the two things that do need
+// them are both local tooling. `scripts/measure-m0.mjs` reads
+// dist/samples/puzzle.render.bin by that exact path and drives
+// `spike.analyseFromGds()`, which fetches /samples/puzzle.gds; and the node
+// test scripts read the repo's samples/ directory directly, never public/.
+// Keeping the path rather than repointing the measurement keeps the M0
+// numbers comparable to every earlier run.
 //
 // solution.json is NOT copied. Only the driver protocol derived from it goes
 // into index.json -- see puzzle-index.mjs for why. hints.json is also not
@@ -149,5 +180,6 @@ writeFileSync(
 
 console.log(
   `Synced pyodide runtime, gdsx wheel(s), and puzzle assets into public/ ` +
-    `(${index.length} puzzle(s): ${index.map((p) => p.id).join(", ")})`,
+    `(${index.length} puzzle(s): ${index.map((p) => p.id).join(", ")})` +
+    `${withSamples ? " + samples/ for local tooling" : ""}`,
 );

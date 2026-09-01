@@ -9,7 +9,7 @@
 // three's `WebGLRenderer` fails to initialise.
 
 import type { RenderBundle } from "../render/bundle";
-import { Die3D } from "../render/die3d";
+import type { Die3D } from "../render/die3d";
 import { highlightBus } from "../store/highlight";
 import { coneRootBus } from "../store/selection";
 import { openNetMenu } from "./net-menu";
@@ -87,7 +87,21 @@ export function mountDie3D(
   let tooltip: ReturnType<typeof netTooltip> | null = null;
 
   opts.bundleReady
-    .then((bundle) => {
+    .then(async (bundle) => {
+      if (disposed) return;
+
+      // three.js is ~800 kB of the app bundle and this is its only importer,
+      // so `die3d.ts` is pulled in here rather than at the top of the file:
+      // a player who never presses the 3D button never downloads it, and one
+      // who does pays for it while the "loading render.bin…" message is
+      // already on screen. The import above is `import type`, which Vite
+      // erases -- make it a value import again and the split silently
+      // disappears back into the entry chunk.
+      //
+      // Re-check `disposed` after the await as well as before it: the toggle
+      // is a button, and 2D/3D/2D inside the download window would otherwise
+      // build a view the dispose above has already run past.
+      const { Die3D } = await import("../render/die3d");
       if (disposed) return;
 
       try {

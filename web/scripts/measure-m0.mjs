@@ -6,10 +6,14 @@
 //   2. wall-clock api.analyse() on puzzle.gds inside Pyodide,
 //   3. frame rate at full-die zoom, per LOD, while panning.
 //
-// Run `npm run build` first; this drives the built bundle, not the dev server.
+// Run `npm run build:measure` first; this drives the built bundle, not the
+// dev server. It has to be `build:measure` rather than plain `build`: the
+// measurement reads dist/samples/, which the production build deliberately
+// leaves out (it is a duplicate of dist/puzzles/original-puzzle/ that no
+// player path fetches -- see scripts/sync-assets.mjs step 3).
 import { chromium } from "playwright";
 import { brotliCompressSync, gzipSync, constants } from "node:zlib";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +31,16 @@ const urlArg = args.indexOf("--url");
 const url = urlArg >= 0 ? args[urlArg + 1] : "http://localhost:4173/?puzzle=original-puzzle";
 
 const MB = (n) => `${(n / 1e6).toFixed(2)} MB`;
+
+// Fail here with the fix rather than three minutes later on a browser
+// timeout or a statSync throw at the last line of the report.
+if (!existsSync(path.join(distDir, "samples", "puzzle.render.bin"))) {
+  console.error(
+    "dist/samples/ is missing -- this measurement needs it.\n" +
+      "Run `npm run build:measure` (not `npm run build`, which excludes it).",
+  );
+  process.exit(1);
+}
 
 // ---- 1. on-disk transfer accounting ----------------------------------------
 
