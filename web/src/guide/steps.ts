@@ -170,7 +170,7 @@ export const STEPS: GuideStep[] = [
     body: [
       "Type {{success}} into the box and press {{walk}}. This is the fan-in cone: what drives this net, and what drives that, back towards the inputs.",
       "The walk stops at flops on purpose. Past a flop you are in the previous clock cycle, which is a different question — so crossing one is a deliberate click, {{step through flop}}, and it moves the {{T-1}} marker so you always know which cycle you are looking at.",
-      "A node marked {{···}} is truncated, not a leaf: there is more below and the walk stopped. Reading a truncated node as a primary input is the single most expensive mistake in this kind of work, so the panel refuses to let the two look alike.",
+      "A node marked {{···}} is truncated, not a leaf: there is more below and the walk stopped. This design is too small to produce one and the big puzzles are full of them, so learn the difference now — reading a truncated node as a primary input is the single most expensive mistake in this kind of work, and the panel refuses to let the two look alike.",
     ],
     goal: "walk the success cone",
     done: () => q(".cw-tree .cw-row") !== null,
@@ -181,8 +181,8 @@ export const STEPS: GuideStep[] = [
     title: "Step through the lock",
     body: [
       "{{success}} is a flop output, so the cone is one node deep and the only thing under it is the flop itself. Click {{step through flop ↦}}.",
-      "You are now one cycle earlier, looking at that flop's D input, and the {{T-1}} badge says so. It is an {{or2}}: one input is the comparator, the other is {{success}} itself. That self-feed is the stickiness, seen in the gates.",
-      "Expand the comparator side. It is a small tree of {{and2}} cells with one {{nor2}} in it, and its leaves are the six shift-register flops.",
+      "You are now one cycle earlier, looking at that flop's D input, and the {{T-1}} badge says so. The gate is an {{o21ai}}, function {{((~A1 & ~A2) | ~B1)}}, and its {{B1}} input is {{success}} itself arriving back through an inverter. That self-feed is what holds the lock once it is set — the design is self-holding, even though the Registers panel's sticky-flop detector does not name it, because it only recognises feedback that comes back the same way round it left.",
+      "The other two inputs are the comparator. Expand them: a pair of {{nand2}} cells over an {{and2}} and a {{nor2}}, and their leaves are the six shift-register flops. You can read this one by eye. You will not be able to on a real design, which is what the next step is for.",
     ],
     goal: "step through the success flop",
     done: () => q(".cw-cycle-badge") !== null,
@@ -192,9 +192,9 @@ export const STEPS: GuideStep[] = [
     panel: "cone-walker",
     title: "Flatten the tree — the answer falls out",
     body: [
-      "Click the row for the top {{and2}} of that comparator tree to make it the {{focus}}, then press {{flatten AND/OR tree}}.",
-      "Six leaves, every one of them forced, no choices left over: {{dfrtp_2_1.Q}} through {{dfrtp_2_6.Q}}, each pinned to a 1 or a 0. That is the entire unlock condition, and you have it without running the design once.",
-      "Now flatten the {{or2}} above it instead. You get two options rather than forced leaves — {{the comparator fires}}, or {{success is already set}} — because with a sticky latch that genuinely is a choice. Forced and choice are drawn apart on purpose; collapsing one into the other is a lie.",
+      "Click the {{o21ai}}'s own row to make it the {{focus}}, then press {{flatten AND/OR tree}}. Nothing is forced. You get one choice with two options: the inverter's output at 0, or both {{nand2}} outputs at 0. That is the self-hold and the comparator side by side — a lock that is already set does not care what the comparator says, so neither option is forced, and the panel will not pretend one of them is.",
+      "Take the comparator option. Both of those outputs have to be {{0}}, so flip the toggle beside the flatten button from {{→ 1}} to {{→ 0}} and flatten each of them in turn. Flattening for 1 and flattening for 0 are different questions, and this is the step where that matters.",
+      "The first forces two flops, the second forces four. Six leaves between them, every one forced, no choices left over: {{dfrtp_2_1.Q}} through {{dfrtp_2_6.Q}}, each pinned to a 1 or a 0. That is the entire unlock condition, and you have it without running the design once. Forced and choice are drawn apart on purpose — collapsing one into the other turns \"must\" into \"might\", which is a lie.",
     ],
     goal: "flatten a cone",
     done: () => q(".cw-flatten-panel:not([hidden]) .rq-leaf") !== null,
@@ -229,7 +229,7 @@ export const STEPS: GuideStep[] = [
     title: "Drive the input",
     body: [
       "One track per input port, one cell per cycle. Click to toggle a bit, drag to paint a run of them. With {{auto-run}} on, the trace recomputes on every edit.",
-      "Paint the six bits you derived, starting at cycle 0, first-driven bit first. Watch {{O}} in the waveform fill up as the word shifts in.",
+      "Paint the six bits you derived, starting at cycle 0. Mind which end is which: {{dfrtp_2_1}} takes its D straight from {{I}}, so it holds the most recent bit and {{dfrtp_2_6}} holds the oldest — the value you want in {{dfrtp_2_6}} is the one you drive first. This particular word reads the same in both directions, so you cannot get it wrong here; on the larger puzzles you can, and it is the commonest way to be right about the answer and still fail. Watch {{O}} in the waveform fill up as the word shifts in.",
       "The readout on the right says whether {{success}} latched and at which cycle. When it does, you have solved it — the tutorial's design is small enough to brute-force in 64 tries, and you did it in one.",
     ],
     goal: "make success latch",
