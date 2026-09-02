@@ -180,8 +180,11 @@ check(
 );
 
 // Model section: validated language must be agreement-over-N, never "proven".
+// Sliced to the end of the document rather than to the key section's heading,
+// which is named for whether an answer was accepted and so is not a fixed
+// string to cut on.
 const modelHeading = md.indexOf("## Model");
-const modelSection = md.slice(modelHeading, md.indexOf("## Final key"));
+const modelSection = md.slice(modelHeading);
 check(modelSection.includes(String(VALIDATION_VECTORS)), "a validated model must quote its vector count");
 check(!/\bproven\b/i.test(modelSection), "the model section must never say 'proven' -- agreement is not a proof");
 check(modelSection.includes("function evaluate(pulses)"), "the model source must appear verbatim");
@@ -190,10 +193,28 @@ check(modelSection.includes("function evaluate(pulses)"), "the model source must
 check(md.includes("single-pulse sweep"), "evidence must be listed");
 check(md.includes("121 runs · 92 watched"), "evidence summary must be included");
 
-// Result banner + final key.
-check(md.includes("**Result: solved.**"), "a latched success net must report solved");
+// Result banner + the key.
+//
+// "Solved" is the RECORDED result -- an accepted submission -- and it reaches
+// the write-up only through the session argument. A latched lock is a
+// different fact, about the trace currently loaded, and the banner states it
+// separately. Conflating the two printed "solved" at a player whose design
+// latches its own lock unaided, and "not solved" directly above the score
+// table of a puzzle that had been solved. `md` is generated with no session at
+// all, so nothing has ever been submitted here.
+check(
+  md.includes("**Result: not solved.**"),
+  "with no session there is no accepted answer, whatever the trace does",
+);
+check(
+  md.includes("`success` latches high at cycle 6"),
+  "…but the banner still reports what the loaded sequence does",
+);
 check(md.includes("01010011"), "the key bit string must be rendered");
-check(md.includes("cycle 6"), "the banner must name the cycle success latched on");
+check(
+  md.includes("## Current sequence") && !md.includes("## Final key"),
+  "an unaccepted sequence is not a final key, and the heading must not call it one",
+);
 
 // No hardcoded work/ or L-number reference of the generator's own -- it may
 // only ever emit what the fakes above put into the notebook/evidence/model.
@@ -209,6 +230,10 @@ const mdUnsolved = generateWriteup(
   { successNet: "success", keyPort: "I", puzzleId: "two-stars" },
 );
 check(mdUnsolved.includes("**Result: not solved.**"), "an unlatched success net must report not solved");
+check(
+  mdUnsolved.includes("`success` does not latch high"),
+  "…and must say so of the loaded sequence too, in the net's own name",
+);
 check(
   mdUnsolved.includes(`Validation needs agreement on ${VALIDATION_VECTORS} vectors`),
   "no model run yet must be stated as agreement-needed, not as a missing proof",
@@ -247,6 +272,49 @@ const mdScored = generateWriteup(
   fakeSimStore(true),
   { successNet: "success", keyPort: "I", puzzleId: "two-stars" },
   session,
+);
+
+// The other side of the banner rule: an accepted answer says solved, and only
+// then is the sequence below it a "final key".
+check(mdScored.includes("**Result: solved.**"), "an accepted answer reports solved");
+check(
+  mdScored.includes("## Final key") && !mdScored.includes("## Current sequence"),
+  "…and its sequence is the final key",
+);
+
+// A solved puzzle reopened before its stimulus is applied: the recorded result
+// stands, and the banner reports the empty trace without contradicting it.
+// This is the shape that used to print "not solved" above a score table whose
+// last row read "Solved 10 of 10".
+const mdSolvedIdle = generateWriteup(
+  fakeNotebook,
+  fakeEvidence,
+  fakeModelStore(null),
+  fakeSimStore(false),
+  { successNet: "success", keyPort: "I", puzzleId: "two-stars" },
+  session,
+);
+check(mdSolvedIdle.includes("**Result: solved.**"), "a recorded solve survives an idle trace");
+check(
+  mdSolvedIdle.includes("`success` does not latch high"),
+  "…and the trace is still reported honestly beside it",
+);
+check(mdSolvedIdle.includes("## Score"), "…with its score table, which it no longer contradicts");
+
+// A puzzle with no lock has no net to say anything of. This used to
+// interpolate the literal string "null" into the banner.
+const mdNoLock = generateWriteup(
+  fakeNotebook,
+  fakeEvidence,
+  fakeModelStore(null),
+  fakeSimStore(false),
+  { successNet: null, keyPort: null, puzzleId: "polynomial" },
+);
+check(mdNoLock.includes("declares no lock"), "a puzzle with no lock says so");
+check(!/`null`|\bnull\b/.test(mdNoLock), "…and never prints the word null at a player");
+check(
+  !mdNoLock.includes("## Final key") && !mdNoLock.includes("## Current sequence"),
+  "…and has no key section, having no key port",
 );
 
 check(mdScored.includes("**63 of 100.**"), "the score is stated against what was available");

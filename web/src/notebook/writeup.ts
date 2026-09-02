@@ -27,11 +27,18 @@ import { asDuration, type ScoreCard } from "./scoring.ts";
 import type { HintTier } from "../puzzles/catalog.ts";
 
 export interface WriteupOptions {
-  /** The net the notebook's coverage is measured against, and whose latch
-   *  state decides "solved" -- the same constant every other panel that
-   *  needs it takes as a parameter (see `stickyFlopsPanel` in main.ts). */
-  /** Null for a puzzle with no lock, whose write-up reports no verdict --
-   *  there is nothing to latch. */
+  /** The net the notebook's coverage is measured against -- the same constant
+   *  every other panel that needs it takes as a parameter.
+   *
+   *  It is deliberately NOT what decides "solved". Whether the lock is latched
+   *  in the trace currently loaded and whether an answer was ever accepted are
+   *  two different facts, and this document states both separately: a design
+   *  whose shipped driver latches its own lock (an accumulator, say) would
+   *  otherwise print "solved" at a player who has done nothing, and a solved
+   *  puzzle reopened with an empty Sequence Editor would print "not solved"
+   *  directly above its own score table.
+   *
+   *  Null for a puzzle with no lock, which then has no latch to report. */
   successNet: string | null;
   /** The sequence-editor port whose contents are printed as the final key.
    *  Null for a puzzle with no data input at all -- an autonomous design's
@@ -181,6 +188,59 @@ function renderSession(session: WriteupSession): string[] {
   return out;
 }
 
+/**
+ * The result banner: two facts, kept apart.
+ *
+ * **Was an answer accepted?** That is the puzzle's recorded result, and it
+ * lives in the progress store, which reaches this module only through
+ * `session` -- no session at all means nothing has ever been submitted, so
+ * nothing has ever been accepted.
+ *
+ * **What does the sequence currently loaded do?** That is a fact about the
+ * trace on screen, and it is worth stating because the two can differ in both
+ * directions: a design can latch its own lock with no help from the player,
+ * and a solved puzzle can be reopened before its saved stimulus is applied.
+ */
+function renderResult(
+  simStore: SimStore,
+  opts: WriteupOptions,
+  accepted: boolean,
+): string[] {
+  const out: string[] = [];
+  out.push(
+    accepted
+      ? "**Result: solved.** An answer for this puzzle has been accepted."
+      : "**Result: not solved.** No answer has been accepted yet.",
+  );
+  out.push("");
+
+  if (opts.successNet === null) {
+    // No lock is not "not latched": there is no net to say it of. Saying it
+    // anyway is how this line used to print the word `null` at a player.
+    out.push("This design declares no lock, so there is no latch to report.");
+    out.push("");
+    return out;
+  }
+
+  const latchedAt = simStore.firstLatchedHigh(opts.successNet);
+  const keyBits = opts.keyPort === null ? null : bitString(simStore.bitsOf(opts.keyPort));
+  const where = keyBits === null ? "" : ` on \`${opts.keyPort}\``;
+  out.push(
+    latchedAt === null
+      ? `Under the sequence currently loaded${where}, \`${opts.successNet}\` does not latch high.`
+      : `Under the sequence currently loaded${where}, \`${opts.successNet}\` latches high at ` +
+          `cycle ${latchedAt}.`,
+  );
+  if (keyBits !== null) {
+    out.push("");
+    out.push("```");
+    out.push(keyBits);
+    out.push("```");
+  }
+  out.push("");
+  return out;
+}
+
 /** Assemble the write-up fresh from the current state of every store. Pure:
  *  called again it returns a new string, nothing here is persisted -- the
  *  notebook, evidence log and model store already are the persistence layer. */
@@ -203,12 +263,10 @@ export function generateWriteup(
     .sort((a, b) => a.history[0].at - b.history[0].at);
   const unsettled = claims.filter((r) => r.history.length === 0);
 
-  // A puzzle with no lock has nothing to latch, so it has no verdict to
-  // report -- not "not solved", which would be a claim about a net that does
-  // not exist.
-  const latchedAt =
-    opts.successNet === null ? null : simStore.firstLatchedHigh(opts.successNet);
-  const solved = latchedAt !== null;
+  // The recorded result, which is the only thing entitled to the word
+  // "solved": `scoreCard` sets it from the progress record's `solvedAt`, and
+  // no session at all means nothing has ever been submitted.
+  const accepted = session?.score.solved === true;
   const keyBits = opts.keyPort === null ? null : bitString(simStore.bitsOf(opts.keyPort));
 
   const out: string[] = [];
@@ -216,26 +274,7 @@ export function generateWriteup(
   // ---- 1. result banner --------------------------------------------------
   out.push(`# ${opts.puzzleId} — write-up`);
   out.push("");
-  if (keyBits === null) {
-    out.push(
-      solved
-        ? `**Result: solved.** \`${opts.successNet}\` latches high at cycle ${latchedAt}.`
-        : `**Result: not solved.** \`${opts.successNet}\` has not latched high.`,
-    );
-  } else {
-    out.push(
-      solved
-        ? `**Result: solved.** \`${opts.successNet}\` latches high at cycle ${latchedAt} ` +
-            `under the key on \`${opts.keyPort}\`:`
-        : `**Result: not solved.** \`${opts.successNet}\` has not latched high under the current ` +
-            `sequence on \`${opts.keyPort}\`.`,
-    );
-    out.push("");
-    out.push("```");
-    out.push(keyBits);
-    out.push("```");
-  }
-  out.push("");
+  out.push(...renderResult(simStore, opts, accepted));
   out.push("---");
   out.push("");
 
@@ -315,8 +354,12 @@ export function generateWriteup(
   out.push("");
 
   // ---- 5. final key ---------------------------------------------------------
+  //
+  // "Final key" is a claim about the sequence below, so it is only made once
+  // an answer has been accepted. Before that it is the sequence the player
+  // happens to be holding, and the heading says so.
   if (keyBits !== null) {
-    out.push("## Final key");
+    out.push(accepted ? "## Final key" : "## Current sequence");
     out.push("");
     out.push(`Sequence on \`${opts.keyPort}\` (${simStore.cycles} cycles):`);
     out.push("");
