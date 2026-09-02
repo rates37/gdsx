@@ -249,8 +249,14 @@ export function mountStickyFlops(
         // win condition; a puzzle whose lock does not reduce to a set of flop
         // values gets neither -- no column full of blanks, no button that
         // would report nothing.
+        //
+        // And neither is offered when there is no sticky flop to put them
+        // against. A design can have a derivable win condition and no one-way
+        // latch at all (First Light is both), which would otherwise caption an
+        // empty list with "named for 0 of 0 sticky flops" and offer a button
+        // whose only possible answer is 0.
         win = await options.winCondition.get();
-        if (disposed || win === null) return;
+        if (disposed || win === null || sticky.length === 0) return;
         const named = sticky.filter((s) => win!.flops.has(s.flop)).length;
         captionEl.textContent =
           `required = what the win condition (${win.net}) needs this flop's Q to hold — ` +
