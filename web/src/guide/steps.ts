@@ -317,9 +317,9 @@ export const STEPS: GuideStep[] = [
     panel: "repl",
     title: "And when the panels are not enough",
     body: [
-      "The Python drawer runs the real {{gdsx}} library in your browser, with this design already bound to {{nl}}, {{design}} and {{graph}}. Everything the panels do is a call you can make yourself.",
-      "Try {{design.registers(ordered=True)}}, or {{graph.cone('success')}}. Returning a netlist renders a table; returning a trace renders a waveform.",
-      "Every panel also has a {{{ }}} button that shows the exact call behind what it is currently displaying, copyable straight into here. The GUI is a convenience over the library, never a wall around it.",
+      "The Python panel runs the real {{gdsx}} library in your browser, with this design already bound: {{nl}} is the netlist, {{graph}} its connectivity, {{sim}} a simulator, {{design}} the object the panels themselves call, and {{api}} the module. It is a session rather than a series of one-shot evaluations — names you bind stay bound, {{Enter}} runs and {{Shift+Enter}} takes a new line, and {{reset()}} puts those bindings back if you overwrite one.",
+      "Try {{design.registers(ordered=True)}}, or step across the lock flop the way the Cone Walker does: {{graph.cone({graph.d_pin('dfrtp_2_7')})}}. Mind the braces: they are not decoration. {{cone}} takes a set of nets, so handing it a bare net name walks the letters of the string instead and hands back an empty set with no complaint.",
+      "The output is honest rather than rich: a dataclass the library already knows how to flatten prints as JSON, and everything else prints as its {{repr()}}. There is no table view here and no waveform renderer — drawing a result is what the panels are for, and every one of them carries a {{{ }}} button showing the exact call behind what it is displaying, copyable straight into here. The GUI is a convenience over the library, never a wall around it.",
     ],
     goal: "run something in the REPL",
     done: () => q(".repl-entry") !== null,
