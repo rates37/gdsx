@@ -286,7 +286,7 @@ function perPuzzleVersioned(name: string, category: string): KeyRule {
 }
 
 export const KEY_RULES: readonly KeyRule[] = [
-  exact("workspace-layout", "gdsx.workspace.layout.v2"),
+  exact("workspace-layout", "gdsx.workspace.layout.v3"),
   exact("puzzle-last-played", "gdsx.puzzle.last.v1"),
   exact("guide-state", "gdsx.guide.state.v1"),
   exact("guide-autostart", "gdsx.guide.autostart"),

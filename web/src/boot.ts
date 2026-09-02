@@ -461,7 +461,12 @@ export async function bootWorkspace(
         onFocusWaveform: () => workspace.focus("waveform"),
       }),
       waveformPanel({ storeReady, trackPorts: driver.trackPorts, successNet }),
-      sequenceEditorPanel({ storeReady, successNet, trackPorts: driver.trackPorts }),
+      sequenceEditorPanel({
+        storeReady,
+        successNet,
+        trackPorts: driver.trackPorts,
+        resetPort: driver.resetPort,
+      }),
       notebookPanel({
         designReady,
         storeReady,
@@ -492,6 +497,10 @@ export async function bootWorkspace(
       defaultPanelIds: [...MENUS.flatMap((m) => m.items), "notebook"].filter((id) =>
         allowedPanels.has(id),
       ),
+      //: So a layout arranged on another level can be told from this level's
+      //: own -- see workspace.ts's v3 note. Without it, gating applied only to
+      //: a player's very first puzzle.
+      puzzleId: puzzle.id,
       levels: {
         puzzles: catalog.map((p) => ({
           id: p.id,

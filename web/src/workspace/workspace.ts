@@ -27,7 +27,31 @@ import {
 // tabbed group. The key is versioned so a returning player gets the new
 // default once rather than keeping a saved copy of the old one -- their own
 // deliberate splits, made after this lands, still persist as before.
-const STORAGE_KEY = "gdsx.workspace.layout.v2";
+//
+// v3: the blob records which puzzle it was saved on. The layout is still one
+// arrangement per browser rather than one per puzzle -- dragging the notebook
+// wide once should not have to be redone for every level -- but restoring it
+// verbatim onto a *different* puzzle silently defeated that puzzle's tool
+// gating (web/src/puzzles/tools.ts). Opening First Light and then Warm Start
+// gave Warm Start a Sequence Editor and an Experiments tab it does not ask
+// for and cannot use: it has no input tracks to paint. `defaultPanelIds` only
+// ever reached a player's very first puzzle, or one who had just pressed
+// "reset layout".
+//
+// So the arrangement carries across, and the *set of panels* is reconciled
+// against the puzzle being opened -- but only when the layout came from
+// somewhere else. A layout saved on this same puzzle is the player's own
+// choice about this puzzle and is restored untouched, including any panel
+// they opened from a menu that its manifest never named.
+const STORAGE_KEY = "gdsx.workspace.layout.v3";
+
+/** What v3 stores: the dockview blob, and the puzzle it was arranged on. */
+interface SavedLayout {
+  /** Absent on a blob written before this field existed, which is then
+   *  treated as "from somewhere else" and reconciled. */
+  puzzleId?: string;
+  layout: SerializedDockview;
+}
 
 export interface PanelDef {
   id: string;
@@ -60,6 +84,11 @@ export interface WorkspaceOptions extends ToolbarOptions {
    *  a puzzle's `tools_enabled` does not ask for (web/src/puzzles/tools.ts).
    *  Filtered to panels this build actually registers. */
   defaultPanelIds: string[];
+  /** The puzzle being opened. Only used to tell "this arrangement is the
+   *  player's own choice about this puzzle" from "this arrangement arrived
+   *  from another level and its panel set should be reconciled against what
+   *  this one asks for". See the v3 note above `STORAGE_KEY`. */
+  puzzleId: string;
 }
 
 export class Workspace {
@@ -68,17 +97,20 @@ export class Workspace {
   private readonly toolbar: ToolbarHandle;
   private readonly menus: MenuGroup[];
   private readonly order: string[];
+  private readonly puzzleId: string;
 
   /**
-   * Everything in `opts` beyond `menus` and `defaultPanelIds` is handed
-   * straight to the toolbar -- the level picker, the guide button, the
+   * Everything in `opts` beyond `menus`, `defaultPanelIds` and `puzzleId` is
+   * handed straight to the toolbar -- the level picker, the guide button, the
    * objective, the submit surface, the way back to the menu and the solved
-   * marker. The shell does not itself know which puzzle is loaded.
+   * marker. The shell still does not know what a puzzle *is*; it only knows
+   * which one this layout belongs to.
    */
   constructor(container: HTMLElement, panels: PanelDef[], opts: WorkspaceOptions) {
     for (const p of panels) this.defs.set(p.id, p);
     this.menus = opts.menus;
     this.order = opts.defaultPanelIds.filter((id) => this.defs.has(id));
+    this.puzzleId = opts.puzzleId;
 
     const dockMount = document.createElement("div");
     dockMount.className = "gdsx-dock-mount";
@@ -205,7 +237,8 @@ export class Workspace {
 
   private persist(): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.api.toJSON()));
+      const saved: SavedLayout = { puzzleId: this.puzzleId, layout: this.api.toJSON() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     } catch {
       // Storage full or disabled -- the workspace still works, it just
       // won't remember the layout next time. Not worth surfacing to the
@@ -226,15 +259,15 @@ export class Workspace {
    * dockview already filters views down to the panels that survived, and
    * re-opens a group's last panel when its `activePanel` is not among them.
    */
-  private prune(data: SerializedDockview): SerializedDockview {
+  private prune(data: SerializedDockview, keep: (component: string) => boolean): SerializedDockview {
     const panels = data.panels as Record<string, { contentComponent?: string }> | undefined;
     if (!panels) return data;
     const dropped = Object.keys(panels).filter((id) => {
       const component = panels[id]?.contentComponent;
-      return component !== undefined && !this.defs.has(component);
+      return component !== undefined && !keep(component);
     });
     if (dropped.length === 0) return data;
-    console.warn(`gdsx: dropping ${dropped.join(", ")} from the saved layout — no longer registered`);
+    console.warn(`gdsx: dropping ${dropped.join(", ")} from the saved layout`);
     for (const id of dropped) delete panels[id];
     return data;
   }
@@ -243,9 +276,28 @@ export class Workspace {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     try {
-      const data = this.prune(JSON.parse(raw) as SerializedDockview);
+      const saved = JSON.parse(raw) as SavedLayout;
+      if (!saved?.layout) return false;
+      // A layout arranged on this same puzzle is the player's own decision
+      // about this puzzle: every panel in it stays, including one they opened
+      // from a menu that the manifest never named. One that arrived from
+      // another level carries the arrangement but not the panel set -- that
+      // is what `defaultPanelIds` is for, and restoring verbatim was silently
+      // overriding it.
+      const ownLayout = saved.puzzleId === this.puzzleId;
+      const allowed = new Set(this.order);
+      const data = this.prune(saved.layout, (component) =>
+        this.defs.has(component) && (ownLayout || allowed.has(component)),
+      );
       this.api.fromJSON(data);
-      return this.api.panels.length > 0;
+      if (this.api.panels.length === 0) return false;
+      // …and the reconciliation runs both ways: a puzzle that asks for a panel
+      // the borrowed arrangement never had (the Sequence Editor, for a puzzle
+      // whose answer is a stimulus) must still open with it.
+      if (!ownLayout) {
+        for (const id of this.order) this.reopen(id);
+      }
+      return true;
     } catch (err) {
       console.warn("gdsx: discarding unreadable saved layout", err);
       localStorage.removeItem(STORAGE_KEY);

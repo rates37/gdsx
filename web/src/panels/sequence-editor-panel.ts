@@ -46,6 +46,17 @@ export interface SequenceEditorOptions {
   /** The driver's own input ports, so bus discovery does not offer the
    *  stimulus back as if it were a result. */
   trackPorts: string[];
+  /**
+   * The port the puzzle's driver uses as its reset, or null if it declares
+   * none.
+   *
+   * A track per primary input is the right rule -- the reset IS an input, and
+   * a puzzle may well want it pulsed -- but it is not part of anyone's answer,
+   * the driver holds it at a level of its own, and painting a cell of it holds
+   * the design in reset for that cycle. Unmarked, it is a row that looks
+   * exactly like the one carrying the key, immediately below it.
+   */
+  resetPort: string | null;
 }
 
 export function sequenceEditorPanel(options: SequenceEditorOptions): PanelDef {
@@ -100,9 +111,28 @@ export function sequenceEditorPanel(options: SequenceEditorOptions): PanelDef {
       }
 
       function buildTrack(port: string): { root: HTMLElement; cells: HTMLElement } {
-        const root = el("div", "seq-track");
+        const isReset = port === options.resetPort;
+        const root = el("div", "seq-track" + (isReset ? " seq-track-reset" : ""));
         const header = el("div", "seq-track-header");
         header.append(el("span", "seq-track-name", port));
+        // Named, not disabled: pulsing a reset is a legitimate thing to want
+        // to do, and a control the panel refuses to operate teaches nothing.
+        // What it must not be is indistinguishable from the track carrying
+        // the key.
+        //
+        // Drawn on every track and made invisible on the rest, so the tag
+        // reserves its own column rather than shunting one track's import and
+        // export buttons out of line with its neighbours'.
+        const tag = el("span", "seq-track-tag", "reset");
+        if (isReset) {
+          tag.title =
+            `${port} is this puzzle's reset line, held by the driver. It is not part of ` +
+            `the answer, and a cell you paint here holds the design in reset for that cycle.`;
+        } else {
+          tag.classList.add("seq-track-tag-blank");
+          tag.setAttribute("aria-hidden", "true");
+        }
+        header.append(tag);
         const io = el("input", "seq-track-io") as HTMLInputElement;
         io.type = "text";
         io.placeholder = "bit string…";

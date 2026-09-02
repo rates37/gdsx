@@ -131,10 +131,24 @@ export function mountDie2D(
 
       // The substrate and anything else synthetic is 3D-only -- listing a
       // toggle here for a layer the 2D view never draws is a dead control.
+      //
+      // So is a layer the design does not use. The layer list comes from the
+      // bundle header, which carries every layer the map defines rather than
+      // every layer that got any geometry, so a standard-cell design with no
+      // substrate taps produced a `tap (0)` checkbox sitting between two live
+      // ones and toggling nothing. The 3D view never showed it, because it
+      // builds its list from the meshes it actually made.
+      const rectCount = (name: string): number => {
+        let total = 0;
+        for (const lod of Object.values(bundle.header.lods)) {
+          total += lod[name]?.rects.count ?? 0;
+        }
+        return total;
+      };
       const synthetic2D = new Set(bundle.header.synthetic_layers ?? []);
       const toggles = [
         "instances",
-        ...bundle.header.layers.filter((n) => !synthetic2D.has(n)),
+        ...bundle.header.layers.filter((n) => !synthetic2D.has(n) && rectCount(n) > 0),
       ];
       for (const name of toggles) {
         const label = document.createElement("label");

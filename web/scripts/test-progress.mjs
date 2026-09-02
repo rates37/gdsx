@@ -149,7 +149,7 @@ reset();
     recordSolved(puzzleId, { accepted: true, reason: "accepted" });
   }
   // App-level settings, which name no puzzle and must survive.
-  localStorage.setItem("gdsx.workspace.layout.v2", "x");
+  localStorage.setItem("gdsx.workspace.layout.v3", "x");
   localStorage.setItem("gdsx.puzzle.last.v1", "puzzle-a");
   localStorage.setItem("gdsx.guide.state.v1", "x");
   localStorage.setItem("gdsx.guide.autostart", "1");
@@ -178,7 +178,7 @@ reset();
 
 reset();
 {
-  localStorage.setItem("gdsx.workspace.layout.v2", "x");
+  localStorage.setItem("gdsx.workspace.layout.v3", "x");
   localStorage.setItem("gdsx.notebook.puzzle-a.v1", "x");
   recordSolved("puzzle-a", { accepted: true, reason: "accepted" });
   // Something outside the namespace, to prove clearAll is scoped to gdsx.*
@@ -213,7 +213,7 @@ reset();
   localStorage.setItem("gdsx.notebook.puzzle-a.v1", "aaaa");
   localStorage.setItem("gdsx.labels.puzzle-a.v1", "bb");
   localStorage.setItem("gdsx.notebook.puzzle-b.v1", "cccc");
-  localStorage.setItem("gdsx.workspace.layout.v2", "dddd");
+  localStorage.setItem("gdsx.workspace.layout.v3", "dddd");
   localStorage.setItem("unrelated.other-app.setting", "not ours");
 
   const all = storageUsage();
@@ -267,7 +267,7 @@ reset();
   dispatchStorage({ key: "gdsx.notebook.puzzle-a.v1", newValue: null });
   check(fired === 1, "this puzzle's own key being removed fires once");
 
-  dispatchStorage({ key: "gdsx.workspace.layout.v2", newValue: null });
+  dispatchStorage({ key: "gdsx.workspace.layout.v3", newValue: null });
   check(fired === 2, "so does an app-level key, which only clearAll removes");
 
   dispatchStorage({ key: null, newValue: null });
