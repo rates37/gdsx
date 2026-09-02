@@ -49,6 +49,7 @@ import { createDesignClient, type DesignClient } from "./design/client";
 import { winConditionSource } from "./design/win-condition";
 import { parseTapeBundle, type GateTape } from "./sim/tape";
 import { SimStore } from "./sim/store";
+import { persistStimulus, restoreStimulus } from "./sim/stimulus";
 import { menuUrl, openPuzzle, rememberPuzzle, type PuzzleDescriptor } from "./puzzles/catalog";
 import { panelsFor } from "./puzzles/tools";
 import { assetUrl } from "./asset-url.ts";
@@ -187,13 +188,19 @@ export async function bootWorkspace(
     .then((r) => r.arrayBuffer())
     .then(parseTapeBundle);
 
-  const storeReady: Promise<SimStore> = tapeReady.then(
-    (tape) =>
-      new SimStore(tape, driver.cycles, {
-        resetVector: driver.resetVector,
-        initialLevels: driver.initialLevels,
-      }),
-  );
+  //: The sequence the player was holding, restored before any panel sees the
+  //: store and kept in step with it from then on. Everything else a session
+  //: produces already survives a reload; the stimulus is the one thing that
+  //: did not, and it is the answer -- see sim/stimulus.ts.
+  const storeReady: Promise<SimStore> = tapeReady.then((tape) => {
+    const store = new SimStore(tape, driver.cycles, {
+      resetVector: driver.resetVector,
+      initialLevels: driver.initialLevels,
+    });
+    restoreStimulus(puzzle.id, store);
+    persistStimulus(puzzle.id, store);
+    return store;
+  });
 
   let pyLine = "python: booting…";
   let dieApi: DieViewApi | null = null;

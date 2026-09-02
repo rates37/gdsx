@@ -86,7 +86,7 @@ function clearButton(entry: MenuEntry, usage: StorageUsage, onDone: () => void):
       body: [
         `This deletes everything you have done on ${entry.title}: notebook claims, ` +
           `labels, the model you built, saved evidence, REPL history, sticky-flop ` +
-          `classifications, and its solved record.`,
+          `classifications, the sequence you were driving, and its solved record.`,
         `${items(usage)}. Your other levels, your panel layout and your app settings ` +
           `are not touched.`,
         "This cannot be undone.",
@@ -248,8 +248,8 @@ function settingsButton(puzzleCount: number, onDone: () => void): HTMLElement {
       title: "Clear all progress?",
       body: [
         `This deletes your progress on all ${puzzleCount} puzzles — every notebook, ` +
-          `label, model, saved evidence file, REPL history, sticky-flop classification ` +
-          `and solved record.`,
+          `label, model, saved evidence file, REPL history, sticky-flop classification, ` +
+          `driven sequence and solved record.`,
         "It also clears the app's own state: your saved panel layout, the guided " +
           "walkthrough's progress, your die view preferences, and which level you " +
           "last opened.",
