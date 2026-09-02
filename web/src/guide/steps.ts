@@ -152,19 +152,17 @@ export const STEPS: GuideStep[] = [
     goal: "walk an orbit or infer weights",
     done: () => q(".rd-orbit-kind") !== null || q(".rd-weight-line") !== null,
   },
-  {
-    id: "sticky",
-    panel: "register-inspector",
-    section: "sticky",
-    title: "Find the lock",
-    body: [
-      "A sticky flop is a one-way latch: once set, its own Q holds it set. This section lists every one in the design.",
-      "There is exactly one here, and it drives {{success}}. Its set condition is the thing you have to make true — and because it is sticky, you only have to make it true once, for one cycle.",
-      "The two columns are yours to fill in: is a given latch a {{checkpoint}} you must reach, or a {{trap}} you must avoid? Stickiness alone does not say which, so the game will not guess. On this design it is plainly a checkpoint.",
-    ],
-    goal: "look at the sticky flop list",
-    done: () => q(".sf-row") !== null,
-  },
+  // There was a "Find the lock" step here, routing to the Registers panel's
+  // Sticky Flops section. It is gone because this design has no sticky flop
+  // to find: `sequential.sticky` recognises feedback that arrives the same way
+  // round it left, and First Light's lock holds itself through an inverter, so
+  // the section lists nothing. The step described a flop that was not there
+  // and its tick watched for a row that could never be drawn.
+  //
+  // The section is not taught anywhere else in the walkthrough as a result.
+  // That is deliberate -- a step whose panel is empty on the only design the
+  // walkthrough runs on teaches nothing -- and it is the player manual's job
+  // to cover it.
   {
     id: "cone",
     panel: "cone-walker",
