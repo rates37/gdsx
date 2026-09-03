@@ -372,6 +372,5 @@ console.log(
     `  live at         ${liveUrl}\n` +
     `\n` +
     `If this is the first deploy, the site is not being served yet: set\n` +
-    `Settings -> Pages -> Source -> "Deploy from a branch" -> ${BRANCH} / root.\n` +
-    `See docs/deploy.md.\n`,
+    `Settings -> Pages -> Source -> "Deploy from a branch" -> ${BRANCH} / root.\n`,
 );
