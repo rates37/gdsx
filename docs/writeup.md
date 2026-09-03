@@ -1,4 +1,4 @@
-# Reverse Engineering ASIC Puzzle
+# Reverse Engineering ASIC Puzzle Write Up
 
 ## TLDR:
 

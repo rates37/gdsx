@@ -7,5 +7,7 @@
         "normalise",
         "recognised",
         "tokenise"
-    ]
+    ],
+    "markdown-pdf.styles": ["/Users/satya/Developer/gdsx/docs/styles.css"]
+
 }
