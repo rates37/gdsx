@@ -2,7 +2,7 @@
 
 ## Summary:
 
-I started out with writing a Python library to recover the netlist from the `.gds` file and to perform analysis + simulations on that netlist. In the middle, I had the idea to make a game out of it, to make it more interactive and visual, so the project changed trajectories half-way through. The game aims to support all the functionality that was implemented for the Python library, and is purely in-browser, statically deployed to https://rates37.github.io/gdsx. The game contains both the original puzzle from the challenge, and a set of additional ones that vary in difficulty and design.
+I started out with writing a Python library to recover the netlist from the `.gds` file and to perform analysis + simulations on that netlist. In the middle, I had the idea to make a game out of it, to make it more interactive and visual, so the project changed trajectories half-way through. The game aims to support all the functionality that was implemented for the Python library, and is purely in-browser, statically deployed to [rates37.github.io/gdsx](https://rates37.github.io/gdsx). The game contains both the original puzzle from the challenge, and a set of additional ones that vary in difficulty and design.
 
 My reverse engineering process involved a lot of trial and error, manual inspection, and simulation of the netlist to get some insights as to its structure and behaviour. The design validates an 11x11 two-star game board, and upon the correct pattern being applied, it outputs the message `(* TWO STAR *)` in ASCII on `O[7:0]`.
 
