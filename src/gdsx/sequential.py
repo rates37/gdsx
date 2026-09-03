@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from itertools import combinations, product
 
 from . import idiom
-from .analyse import cone_nets, Register, _survey
-from .functions import data_nets, is_sequential, lookup, output_net
+from .analyse import Register, _survey
+from .core.graph import Graph
+from .functions import data_nets, lookup, output_net
+from .liberty import Expr, evaluate, to_verilog
 from .netlist import Netlist
 
 
@@ -53,7 +56,7 @@ def _next_state_cone(nl: Netlist, register: Register) -> set[str]:
         cell = lookup(inst.cell)
         if cell is not None and cell.is_sequential:
             direct |= data_nets(cell, inst.connections)
-    return direct | cone_nets(nl, direct, set())
+    return direct | Graph.of(nl).cone(direct)
 
 
 def classify(
@@ -237,32 +240,142 @@ def pipelines(roles: list[Role]) -> list[list[str]]:
     return found
 
 
-def report(nl: Netlist, roles: list[Role], runs: list[list[str]]) -> str:
-    flops = sum(1 for i in nl.instances if is_sequential(i.cell))
-    lines = [f"{len(roles)} registers over {flops} flops", ""]
+@dataclass
+class Sticky:
+    """A flop whose D pin latches on its own Q: `D = <condition> | Q`, or the
+    AND mirror, `D = <condition> & Q`.
 
-    by_kind: dict[str, list[Role]] = {}
-    for role in roles:
-        by_kind.setdefault(role.kind, []).append(role)
-    for kind, found in sorted(by_kind.items(), key=lambda kv: -len(kv[1])):
-        lines.append(f"  {len(found):3d} x {kind}")
-        for role in found[:6]:
-            arrow = ""
-            if role.fed_by:
-                arrow = f"  <- {', '.join(role.fed_by[:3])}"
-            lines.append(f"        {role.register}{arrow}   [{role.evidence}]")
-        if len(found) > 6:
-            lines.append(f"        ... and {len(found) - 6} more")
+    Detection is exhaustive over the D-driver cell's Liberty truth table, not
+    structural pattern matching: `flop` is sticky iff some input pin of the
+    cell driving its D net is fed by that same flop's own `Q`, and forcing
+    that pin to `polarity` forces the cell's output to `polarity` for every
+    setting of the cell's other inputs, possibly with a handful of those
+    other pins also pinned down.
 
-    if runs:
-        lines += ["", f"{len(runs)} pipelines:"]
-        for run in runs:
-            lines.append("  " + " -> ".join(run))
+    Stickiness alone does not say whether `flop` is a checkpoint (must reach
+    `polarity`) or a trap (must avoid it).
+    """
 
-    lines += [
-        "",
-        "  Structural: what feeds what, and what is in the way. Nothing here has",
-        "  been proven, and a register that does something the idiom library has",
-        "  no name for is reported by its topology alone.",
-    ]
-    return "\n".join(lines)
+    flop: str
+    polarity: int  # 1 = latches high, 0 = latches low
+    condition: str  # the Verilog expression that sets it
+
+
+def _fix(expr: Expr, pin: str, value: int) -> Expr:
+    """`expr` with every occurrence of `pin` replaced by the constant `value`"""
+    kind = expr[0]
+    if kind == "var":
+        return expr if expr[1] != pin else ("const", value)
+    if kind == "const":
+        return expr
+    if kind == "not":
+        return ("not", _fix(expr[1], pin, value))
+    return (kind, _fix(expr[1], pin, value), _fix(expr[2], pin, value))
+
+
+def _simplify(expr: Expr) -> Expr:
+    """Fold the constants `_fix` introduces, so `to_verilog` reads as a
+    condition over the remaining pins rather than as `(1 & a) | (0 & b)`."""
+    kind = expr[0]
+    if kind in ("var", "const"):
+        return expr
+    if kind == "not":
+        inner = _simplify(expr[1])
+        return ("const", 1 - inner[1]) if inner[0] == "const" else ("not", inner)
+    left, right = _simplify(expr[1]), _simplify(expr[2])
+    if kind == "and":
+        if left == ("const", 0) or right == ("const", 0):
+            return ("const", 0)
+        if left == ("const", 1):
+            return right
+        if right == ("const", 1):
+            return left
+    elif kind == "or":
+        if left == ("const", 1) or right == ("const", 1):
+            return ("const", 1)
+        if left == ("const", 0):
+            return right
+        if right == ("const", 0):
+            return left
+    elif kind == "xor":
+        if left == ("const", 0):
+            return right
+        if right == ("const", 0):
+            return left
+        if left == ("const", 1):
+            return ("not", right)
+        if right == ("const", 1):
+            return ("not", left)
+    return (kind, left, right)
+
+
+def _minimal_forcing_cube(
+    expr: Expr, pin: str, target: int, others: list[str]
+) -> dict[str, int] | None:
+    """The smallest set of literals -- `pin` fixed to `target`, plus as few of
+    `others` as necessary -- that forces `expr` to `target` no matter how the
+    rest of `others` ends up. None if no such cube exists at all, i.e. `pin`
+    never decides the output, however the rest of the cell is pinned down.
+
+    `others` is never pinned down in full: with nothing left free, "every
+    setting of what's left" is vacuously true of a single satisfying row, and
+    almost any pin can be made to look decisive that way. At least one other
+    input must stay free for the cube to mean anything.
+
+    Brute force: cube sizes smallest first, so the first cube found is
+    minimal, over at most 3**4 partial assignments of `others` (unset, 0, or
+    1 each), cheap, since a standard cell has at most five inputs.
+    """
+    for size in range(len(others)):
+        for chosen in combinations(others, size):
+            for signs in product((0, 1), repeat=size):
+                fixed = {pin: target, **dict(zip(chosen, signs))}
+                free = [p for p in others if p not in chosen]
+                if all(
+                    evaluate(expr, {**fixed, **dict(zip(free, bits))}) == target
+                    for bits in product((0, 1), repeat=len(free))
+                ):
+                    return fixed
+    return None
+
+
+def sticky(graph: Graph) -> list[Sticky]:
+    """Every flop whose D pin latches on its own Q, high or low.
+
+    For each flop, finds the cell driving its D net and tests each of that
+    cell's input pins that is fed only by the flop's own Q (through
+    combinational logic, stopping at the next flop) with
+    `_minimal_forcing_cube`. A pin that forces the output high makes
+    `D = condition | Q` (`condition` being the cell's function with the
+    feedback pin fixed at 0); one that forces the output low makes
+    `D = condition & Q`. At most one pin per cell is the feedback pin in
+    practice, so the first hit per flop wins.
+    """
+    found: list[Sticky] = []
+    for flop in sorted(graph.seq):
+        d_net = graph.d_pin(flop)
+        if d_net is None:
+            continue
+        ref = graph.driver_of(d_net)
+        if ref is None or ref.instance in graph.seq:
+            continue
+        cell = graph.cell_of[ref.instance]
+        if cell is None:
+            continue
+        expr = cell.functions.get(ref.pin)
+        if expr is None:
+            continue
+        conns = graph.by_name[ref.instance].connections
+
+        for pin in cell.inputs:
+            net = conns.get(pin)
+            if net is None or graph.support(net) != {flop}:
+                continue
+            others = [p for p in cell.inputs if p != pin]
+            if _minimal_forcing_cube(expr, pin, 1, others) is not None:
+                found.append(Sticky(flop, 1, to_verilog(_simplify(_fix(expr, pin, 0)))))
+                break
+            if _minimal_forcing_cube(expr, pin, 0, others) is not None:
+                found.append(Sticky(flop, 0, to_verilog(_simplify(_fix(expr, pin, 1)))))
+                break
+    return found

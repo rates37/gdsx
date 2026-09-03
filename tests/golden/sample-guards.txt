@@ -1,0 +1,8 @@
+21 candidate control nets tested against 16 flops
+16 flops have a recovered freeze condition, 0 do not
+
+GROUPS  (flops that are enabled together)
+   16 flops frozen when en=0
+        dfrtp_2_1, dfrtp_2_10, dfrtp_2_11, dfrtp_2_12, dfrtp_2_13, dfrtp_2_14
+        dfrtp_2_15, dfrtp_2_16, dfrtp_2_2, dfrtp_2_3, dfrtp_2_4, dfrtp_2_5
+        dfrtp_2_6, dfrtp_2_7, dfrtp_2_8, dfrtp_2_9

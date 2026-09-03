@@ -1,0 +1,36 @@
+{
+  "schema_version": 3,
+  "answer_kind": "parameter",
+  "answer": {
+    "fields": [
+      {
+        "name": "polynomial",
+        "value": "0xA3000000",
+        "check": {
+          "type": "declared",
+          "reason": "the tap mask is a structural property of the wiring -- which of the 32 flops' D nets are driven by an XOR rather than by the neighbouring stage's Q -- not a value carried on any observable bus, so there is no bus_at_cycle/bus_equals_when check to write. It is checked instead by this puzzle's own bake assertion, which inspects the extracted netlist's Q-to-D adjacency directly and confirms exactly three XOR interruptions at the tap positions this mask predicts."
+        }
+      },
+      {
+        "name": "state_at_cycle_1e12",
+        "value": "0xBAB7B0EF",
+        "check": {
+          "type": "declared",
+          "reason": "10**12 cycles cannot be simulated in the time this bakes in. The value is state = M^(N+1) . seed over GF(2), where M is the Galois LFSR's 32x32 linear transition map for mask 0xA3000000, seed is 0x13579BDF, N = 10**12, and the +1 matches the pack's cycle-0-origin convention (cycle N is the design's state after N+1 clock edges past reset, same convention as puzzle 1). Computed by repeated-squaring matrix exponentiation and cross-checked bit-for-bit against direct RTL and netlist simulation for every N from 0 to 4099."
+        }
+      }
+    ]
+  },
+  "driver": {
+    "clock": {"port": "clk"},
+    "reset": {
+      "port": "rst_n",
+      "active_low": true,
+      "protocol": [{"cycles": 1, "values": {"rst_n": 0, "enable": 1}}],
+      "note": "One cycle with rst_n low clears the async-set and async-reset flops to the seed 0x13579BDF. Every subsequent cycle runs with rst_n high and enable high -- the design free-runs with no stimulus."
+    },
+    "static_inputs": {"enable": 1},
+    "run_cycles": 4096
+  },
+  "hint": "The 32 flops form a single chain once you look past each one's own clock-enable mux (every flop's D is mux(enable, hold-at-Q, real-next-value); the real-next-value is the interesting input). Three flops take their real-next-value from an XOR instead of the neighbouring stage's Q -- those are the taps, and the XOR's other input is the same flop in all three cases."
+}

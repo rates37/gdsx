@@ -1,0 +1,12 @@
+{
+  "fill": 0.35,
+  "aspect": 1.0,
+  "mode": "banded",
+  "order": ["fsm", "lives", "accept"],
+  "channels": ["fsm", "lives"],
+  "groups_by_prefix": {
+    "st": "fsm",
+    "O": "lives",
+    "success": "accept"
+  }
+}

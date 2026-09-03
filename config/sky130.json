@@ -1,0 +1,290 @@
+{
+  "pdk": "sky130A",
+  "library": "sky130_fd_sc_hd",
+  "routing": [
+    {
+      "name": "li1",
+      "drawing": [
+        67,
+        20
+      ],
+      "pin": [
+        67,
+        5
+      ],
+      "label": [
+        67,
+        16
+      ]
+    },
+    {
+      "name": "met1",
+      "drawing": [
+        68,
+        20
+      ],
+      "pin": [
+        68,
+        5
+      ],
+      "label": [
+        68,
+        16
+      ]
+    },
+    {
+      "name": "met2",
+      "drawing": [
+        69,
+        20
+      ],
+      "pin": [
+        69,
+        5
+      ],
+      "label": [
+        69,
+        16
+      ]
+    },
+    {
+      "name": "met3",
+      "drawing": [
+        70,
+        20
+      ],
+      "pin": [
+        70,
+        5
+      ],
+      "label": [
+        70,
+        16
+      ]
+    },
+    {
+      "name": "met4",
+      "drawing": [
+        71,
+        20
+      ],
+      "pin": [
+        71,
+        5
+      ],
+      "label": [
+        71,
+        16
+      ]
+    },
+    {
+      "name": "met5",
+      "drawing": [
+        72,
+        20
+      ],
+      "pin": [
+        72,
+        5
+      ],
+      "label": [
+        72,
+        16
+      ]
+    }
+  ],
+  "device": [
+    {
+      "name": "nwell",
+      "drawing": [
+        64,
+        20
+      ],
+      "fill": true
+    },
+    {
+      "name": "diff",
+      "drawing": [
+        65,
+        20
+      ],
+      "fill": true
+    },
+    {
+      "name": "tap",
+      "drawing": [
+        65,
+        44
+      ],
+      "fill": true
+    },
+    {
+      "name": "poly",
+      "drawing": [
+        66,
+        20
+      ]
+    },
+    {
+      "name": "licon1",
+      "drawing": [
+        66,
+        44
+      ],
+      "via": true
+    }
+  ],
+  "vias": [
+    {
+      "name": "mcon",
+      "layer": [
+        67,
+        44
+      ],
+      "below": "li1",
+      "above": "met1"
+    },
+    {
+      "name": "via",
+      "layer": [
+        68,
+        44
+      ],
+      "below": "met1",
+      "above": "met2"
+    },
+    {
+      "name": "via2",
+      "layer": [
+        69,
+        44
+      ],
+      "below": "met2",
+      "above": "met3"
+    },
+    {
+      "name": "via3",
+      "layer": [
+        70,
+        44
+      ],
+      "below": "met3",
+      "above": "met4"
+    },
+    {
+      "name": "via4",
+      "layer": [
+        71,
+        44
+      ],
+      "below": "met4",
+      "above": "met5"
+    }
+  ],
+  "stack": [
+    {
+      "name": "substrate",
+      "z": -0.8,
+      "thickness": 0.6
+    },
+    {
+      "name": "nwell",
+      "z": -0.2,
+      "thickness": 0.2
+    },
+    {
+      "name": "diff",
+      "z": 0.0,
+      "thickness": 0.12
+    },
+    {
+      "name": "tap",
+      "z": 0.0,
+      "thickness": 0.12
+    },
+    {
+      "name": "licon1",
+      "z": 0.12,
+      "thickness": 0.816,
+      "via": true
+    },
+    {
+      "name": "poly",
+      "z": 0.326,
+      "thickness": 0.18
+    },
+    {
+      "name": "li1",
+      "z": 0.936,
+      "thickness": 0.1
+    },
+    {
+      "name": "mcon",
+      "z": 1.036,
+      "thickness": 0.33,
+      "via": true
+    },
+    {
+      "name": "met1",
+      "z": 1.366,
+      "thickness": 0.36
+    },
+    {
+      "name": "via",
+      "z": 1.726,
+      "thickness": 0.27,
+      "via": true
+    },
+    {
+      "name": "met2",
+      "z": 1.996,
+      "thickness": 0.37
+    },
+    {
+      "name": "via2",
+      "z": 2.366,
+      "thickness": 0.42,
+      "via": true
+    },
+    {
+      "name": "met3",
+      "z": 2.786,
+      "thickness": 0.845
+    },
+    {
+      "name": "via3",
+      "z": 3.631,
+      "thickness": 0.39,
+      "via": true
+    },
+    {
+      "name": "met4",
+      "z": 4.021,
+      "thickness": 0.845
+    },
+    {
+      "name": "via4",
+      "z": 4.866,
+      "thickness": 0.505,
+      "via": true
+    },
+    {
+      "name": "met5",
+      "z": 5.371,
+      "thickness": 1.26
+    }
+  ],
+  "power_pins": [
+    "VPWR",
+    "VGND",
+    "VPB",
+    "VNB"
+  ],
+  "nonlogic_prefixes": [
+    "sky130_fd_sc_hd__fill",
+    "sky130_fd_sc_hd__decap",
+    "sky130_fd_sc_hd__tap",
+    "sky130_fd_sc_hd__diode",
+    "sky130_fd_sc_hd__fakediode"
+  ]
+}

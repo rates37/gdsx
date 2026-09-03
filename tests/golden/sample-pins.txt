@@ -1,0 +1,16 @@
+sky130_fd_sc_hd__a21bo_2: A1, A2, B1_N, VGND, VPWR, X
+sky130_fd_sc_hd__a21boi_2: A1, A2, B1_N, VGND, VPWR, Y
+sky130_fd_sc_hd__a21o_2: A1, A2, B1, VGND, VPWR, X
+sky130_fd_sc_hd__a31o_2: A1, A2, A3, B1, VGND, VPWR, X
+sky130_fd_sc_hd__and2_2: A, B, VGND, VPWR, X
+sky130_fd_sc_hd__and3_2: A, B, C, VGND, VPWR, X
+sky130_fd_sc_hd__and4bb_2: A_N, B_N, C, D, VGND, VPWR, X
+sky130_fd_sc_hd__clkbuf_16: A, VGND, VPWR, X
+sky130_fd_sc_hd__dfrtp_2: CLK, D, Q, RESET_B, VGND, VPWR
+sky130_fd_sc_hd__mux2_1: A0, A1, S, VGND, VPWR, X
+sky130_fd_sc_hd__nand2_2: A, B, VGND, VPWR, Y
+sky130_fd_sc_hd__nor2_2: A, B, VGND, VPWR, Y
+sky130_fd_sc_hd__o21bai_2: A1, A2, B1_N, VGND, VPWR, Y
+sky130_fd_sc_hd__or2_2: A, B, VGND, VPWR, X
+sky130_fd_sc_hd__xnor2_2: A, B, VGND, VPWR, Y
+sky130_fd_sc_hd__xor2_2: A, B, VGND, VPWR, X

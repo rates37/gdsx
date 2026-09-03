@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "3-gatekeeper",
+  "title": "Gatekeeper",
+  "difficulty": "medium",
+  "blurb": "A command-driven register file with one privileged register. Find the command sequence that unlocks it.",
+  "author": "gdsx",
+  "answer_kind": "sequence",
+  "tools_enabled": ["die", "netlist", "registers", "cone", "waveform", "repl"],
+  "par_seconds": 2100,
+  "tags": ["guards", "write-enables", "control-path", "stimulus"]
+}

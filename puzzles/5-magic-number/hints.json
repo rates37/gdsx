@@ -1,0 +1,20 @@
+{
+  "tiers": [
+    {
+      "tier": 0,
+      "text": "189 instances, 40 sequential"
+    },
+    {
+      "tier": 1,
+      "text": "4 of 40 registers have no recovered freeze condition"
+    },
+    {
+      "tier": 2,
+      "text": "the flops form 1 register groups; the largest is reg_dfrtp_2_24 (40 members)"
+    },
+    {
+      "tier": 4,
+      "text": "Five wide equality comparators, one lock. Which of them the die view puts next to which tells you nothing; read the success cone instead."
+    }
+  ]
+}

@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import product
 
-from .analyse import Register, load_state, read_state, support
+from .analyse import Register, load_state, read_state
+from .core.graph import Graph
 from .functions import data_nets, lookup
 from .netlist import Netlist
 from .sim import Simulator
@@ -33,12 +34,6 @@ class StateMachine:
 
     def successors(self, state: int) -> set[int]:
         return {v for (s, _), v in self.transitions.items() if s == state}
-
-    def describe(self) -> str:
-        return (
-            f"{len(self.states)}-state machine in {self.register} "
-            f"({self.width} bits, {self.density:.0%} of the encoding space used)"
-        )
 
 
 def reset_state(nl: Netlist, register: Register) -> int:
@@ -89,11 +84,12 @@ def _relevant_inputs(nl: Netlist, register: Register, exclude: set[str]) -> list
     """
     by_name = {i.name: i for i in nl.instances}
 
+    graph = Graph.of(nl)
     seen: set[str] = set()
     for flop in register.flops:
         inst = by_name[flop]
         for net in data_nets(lookup(inst.cell), inst.connections):
-            seen |= {d for d in support(nl, net) if d in nl.ports}
+            seen |= {d for d in graph.support(net) if d in nl.ports}
     return sorted(p for p in seen - exclude if nl.ports[p] == "input")
 
 
@@ -170,27 +166,3 @@ def find_state_machines(
     return found
 
 
-def to_table(machine: StateMachine) -> str:
-    """The transition table, as text"""
-    width = machine.width
-    label = {s: f"S{i}" for i, s in enumerate(machine.states)}
-    lines = [
-        machine.describe(),
-        f"  inputs: {', '.join(machine.inputs) or '(none)'}",
-        "",
-        f"  {'state':<8} {'encoding':<{width + 3}} {'outputs':<24} transitions",
-    ]
-    for state in machine.states:
-        outputs = ", ".join(
-            f"{p}={v}" for p, v in sorted(machine.moore_outputs[state].items())
-        )
-        arrows = []
-        for index, combo in enumerate(product((0, 1), repeat=len(machine.inputs))):
-            nxt = machine.transitions[(state, index)]
-            condition = "".join(str(b) for b in combo) or "-"
-            arrows.append(f"{condition}->{label[nxt]}")
-        marker = " (reset)" if state == machine.reset_state else ""
-        lines.append(
-            f"  {label[state] + marker:<8} {state:0{width}b}{'':<3} {outputs:<24} {' '.join(arrows)}"
-        )
-    return "\n".join(lines)

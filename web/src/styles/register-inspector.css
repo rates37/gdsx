@@ -1,0 +1,119 @@
+/* ---- register inspector: flop state, one row per register ---------- */
+.ri-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+.ri-loading, .ri-hint { padding: 8px; color: var(--df-faint); font-size: 11px; }
+.ri-hint.bad { color: var(--df-coral); }
+.ri-body { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.ri-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
+.ri-count { color: var(--df-ink-3); font-size: 11px; }
+.ri-main { display: flex; flex: 1; min-height: 0; }
+.ri-adhoc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 6px;
+  border-top: 1px solid var(--df-edge);
+}
+.ri-adhoc-flops {
+  flex: 1;
+  min-width: 0;
+  background: var(--df-plate);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 3px 6px;
+}
+.ri-adhoc-status {
+  color: var(--df-dim);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.ri-adhoc-status.bad {
+  color: var(--df-coral);
+}
+/* A column now, because the ad-hoc group row sits below the list. */
+.ri-list-col { width: 260px; flex: none; border-right: 1px solid var(--df-edge); min-height: 0; display: flex; flex-direction: column; }
+.ri-list-viewport { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+.ri-row { display: flex; align-items: center; gap: 6px; padding: 0 8px; cursor: pointer; font-size: 12px; }
+.ri-row:hover { background: var(--df-plate); }
+.ri-row-selected { background: var(--df-plate-2); }
+.ri-row-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ri-row-role { color: var(--df-blue); font-size: 10px; }
+.ri-row-width { color: var(--df-faint); font-size: 10px; }
+.ri-detail { flex: 1; overflow-y: auto; min-height: 0; padding: 8px 12px; }
+.ri-detail-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.ri-title { font-weight: 600; font-size: 13px; }
+.ri-badge { background: var(--df-plate-2); border: 1px solid var(--df-edge-2); border-radius: var(--df-radius); padding: 1px 6px; font-size: 10px; color: var(--df-blue); }
+.ri-sub { color: var(--df-faint); font-size: 11px; }
+.ri-description { color: var(--df-ink-3); font-size: 12px; margin-bottom: 8px; }
+.ri-evidence { color: var(--df-faint); font-size: 11px; margin-bottom: 8px; }
+.ri-section { margin-bottom: 14px; }
+.ri-section-title { color: var(--df-ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+.ri-guard-line { font-size: 12px; margin-bottom: 2px; }
+.ri-guard-cond { color: var(--df-ink-2); }
+.ri-flops-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ri-flop-chip { font-size: 11px; }
+.ri-truth-note { font-size: 11px; color: var(--df-teal); margin-bottom: 4px; }
+.ri-truth-note.ri-sampled { color: var(--df-gold); font-weight: 600; }
+.ri-truth-row { display: flex; gap: 10px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; padding: 1px 0; }
+.ri-truth-header { color: var(--df-ink-3); border-bottom: 1px solid var(--df-edge); margin-bottom: 2px; }
+.ri-truth-cell { min-width: 18px; text-align: center; }
+.ri-truth-value { border-left: 1px solid var(--df-edge); padding-left: 8px; color: var(--df-blue); }
+
+/* ---- requirements panel --------------------------------------------- */
+.rq-summary { font-size: 12px; margin-bottom: 8px; color: var(--df-ink-2); }
+.rq-conflicts { color: var(--df-coral); font-size: 11px; margin-bottom: 8px; }
+.rq-section { margin-bottom: 16px; }
+.rq-section-title { color: var(--df-ink-3); font-size: 11px; margin-bottom: 6px; }
+.rq-leaf { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 1px 0; }
+.rq-check { width: 14px; text-align: center; }
+.rq-check-yes { color: var(--df-teal); }
+.rq-check-no { color: var(--df-coral); }
+.rq-check-unknown { color: var(--df-faint-2); }
+.rq-hint { color: var(--df-faint); font-size: 11px; }
+.rq-hint.bad { color: var(--df-coral); }
+.rq-eq { color: var(--df-faint); }
+.rq-claim-btn { margin-left: auto; font-size: 10px; padding: 1px 6px; }
+.rq-choice { border-left: 2px solid var(--df-edge-2); padding-left: 8px; margin-bottom: 8px; font-size: 12px; }
+.rq-choice-head { color: var(--df-ink-3); margin-bottom: 2px; }
+.rq-choice-option { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+.rq-choice-bullet { color: var(--df-faint); }
+.rq-choice-chip { font-size: 11px; }
+
+/* ---- register decoder panel ------------------------------------------ */
+.rd-hint { padding: 8px; color: var(--df-faint); font-size: 11px; }
+.rd-hint.bad { color: var(--df-coral); }
+.rd-group-title { font-weight: 600; font-size: 13px; margin: 6px 0; }
+.rd-section { margin-bottom: 16px; }
+.rd-section-title { color: var(--df-ink-3); font-size: 11px; margin-bottom: 6px; }
+.rd-toggle-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.rd-inline { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--df-ink-3); margin-right: 8px; }
+.rd-inline input { width: 60px; }
+.rd-weight-line { display: flex; align-items: center; gap: 2px; font-size: 12px; padding: 1px 0; }
+.rd-weight-unknown { color: var(--df-faint); font-style: italic; }
+.rd-weight-value { color: var(--df-ink-2); }
+.rd-weight-tag { color: var(--df-faint); font-size: 10px; }
+.rd-by-elimination { color: var(--df-gold) !important; font-weight: 600; cursor: help; }
+.rd-orbit-kind { font-size: 12px; color: var(--df-blue); margin-bottom: 4px; }
+.rd-orbit-states { display: flex; flex-wrap: wrap; gap: 6px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-ink-3); margin-top: 4px; }
+.rd-select-row { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-ink-3); }
+
+/* ---- sticky flops panel ----------------------------------------------- */
+.sf-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; }
+.sf-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
+.sf-count { color: var(--df-ink-3); font-size: 11px; }
+.sf-suggest { font-size: 11px; }
+.sf-status { color: var(--df-ink-3); font-size: 11px; }
+.sf-status.bad { color: var(--df-coral); }
+.sf-loading { padding: 8px; color: var(--df-faint); font-size: 11px; }
+.sf-caption { padding: 4px 8px; color: var(--df-faint); font-size: 11px; border-bottom: 1px solid var(--df-edge); }
+.sf-body { flex: 1; overflow-y: auto; padding: 4px 8px; }
+.sf-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; border-bottom: 1px solid var(--df-plate); }
+.sf-flop { flex: none; }
+.sf-polarity { color: var(--df-blue); font-size: 11px; }
+.sf-condition { color: var(--df-faint); font-size: 11px; font-family: ui-monospace, Menlo, monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Fixed-width so a column of blanks and 0s/1s still reads as a column. */
+.sf-required { flex: none; width: 3ch; text-align: center; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-gold); }
+.sf-suggestion-tag { color: var(--df-gold); font-size: 10px; cursor: help; border: 1px solid var(--df-gold-edge); border-radius: var(--df-radius); padding: 1px 6px; }
+.sf-classify-btn { font-size: 10px; padding: 2px 8px; }
+.sf-classify-btn.active { background: var(--df-plate-2); border-color: var(--df-gold-edge); color: var(--df-gold); }

@@ -1,4 +1,4 @@
-# load puzzle netlist once, cache it, wrap simulator
+# load puzzle netlist once, cache it, build its graph, wrap simulator
 
 import os
 import pickle
@@ -7,6 +7,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from gdsx import config, loader, netlist
+from gdsx.core.graph import Graph
 from gdsx.sim import Simulator
 
 
@@ -29,6 +30,9 @@ def load() -> netlist.Netlist:
 
 
 NETLIST = load()
+
+# every graph question goes through this: drivers, leaf labels, cones, support
+GRAPH = Graph(NETLIST)
 
 
 def get_fresh_sim() -> Simulator:

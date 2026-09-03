@@ -1,0 +1,177 @@
+/* ---- waveform -------------------------------------------------------- */
+.wave-search {
+  width: 220px;
+}
+.wave-suggest {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  z-index: 20;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 220px;
+}
+.wave-suggest-item {
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.wave-suggest-item:hover {
+  background: var(--df-edge);
+  color: var(--df-gold);
+}
+/* Both scrolling rows are as wide as their content, not as wide as the
+   viewport. A `sticky` child may only travel inside its containing block, so
+   while these were viewport-width the pinned label column stopped 230 px
+   short of the left edge and slid away with the traces. */
+.wave-ruler-row,
+.wave-rows,
+.wave-row {
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+.wave-ruler-row {
+  display: flex;
+  position: sticky;
+  top: 0;
+  background: var(--df-void);
+  z-index: 2;
+  border-bottom: 1px solid var(--df-edge);
+}
+/* The label gutter and the ruler's spacer are one column: the ruler only
+   lines up with the traces while these two agree. Both are `sticky` to the
+   left edge, so scrolling out to cycle 120 still shows which signal each
+   trace is and what it reads at the cursor -- the column is the legend for
+   everything to the right of it, and scrolling it away made a wide run
+   unreadable. Opaque background, or the traces show through it. */
+.wave-label-spacer {
+  width: 230px;
+  flex: none;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--df-void);
+  border-right: 1px solid var(--df-edge);
+  box-sizing: border-box;
+}
+.wave-ruler {
+  position: relative;
+  height: 16px;
+  flex: none;
+}
+.wave-tick {
+  position: absolute;
+  top: 0;
+  color: var(--df-faint-2);
+  font-size: 9px;
+  border-left: 1px solid var(--df-edge-2);
+  padding-left: 2px;
+}
+.wave-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--df-plate-2);
+}
+.wave-row-label {
+  width: 230px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  cursor: grab;
+  overflow: hidden;
+  /* Full row height, not just its content's: the trace canvas passes behind
+     this column, and a two-pixel sliver above and below let the cursor line
+     show through it. */
+  align-self: stretch;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--df-void);
+  border-right: 1px solid var(--df-edge);
+  box-sizing: border-box;
+}
+.wave-drag-handle {
+  color: var(--df-edge-hi);
+  font-size: 10px;
+}
+.wave-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.wave-row-name:hover {
+  color: var(--df-gold);
+}
+/* The row's value at the cursor. Fixed width and right-aligned so a column of
+   them reads as a column, and monospace so a bus does not jitter as it
+   changes width. */
+.wave-row-value {
+  flex: none;
+  min-width: 46px;
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--df-gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wave-row-remove {
+  padding: 0 5px;
+  color: var(--df-faint);
+}
+.wave-row-canvas {
+  display: block;
+  flex: none;
+  cursor: crosshair;
+}
+.wave-row-radix {
+  flex: none;
+  background: var(--df-plate);
+  color: var(--df-blue);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  font: inherit;
+  font-size: 10px;
+  padding: 0 2px;
+}
+.wave-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.wave-cursor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--df-dim);
+}
+.wave-cycle {
+  width: 58px;
+  background: var(--df-plate);
+  color: var(--df-gold);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  font: inherit;
+  font-family: ui-monospace, monospace;
+  padding: 2px 4px;
+}
+.wave-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  /* Pinned to the right end of the waveform's control row. */
+  margin-left: auto;
+}
+.wave-zoom button {
+  width: 22px;
+  padding: 2px 0;
+  text-align: center;
+}

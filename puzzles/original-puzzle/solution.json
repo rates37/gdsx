@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "answer_kind": "sequence",
+  "key": {
+    "port": "I",
+    "bits": "0000000101010000100000000000010101010000000000001010000001000001000000100000101000010000000100000010000010010001010000000"
+  },
+  "driver": {
+    "clock": {
+      "port": "clk"
+    },
+    "reset": {
+      "port": "rst_n",
+      "active_low": true,
+      "protocol": [
+        {
+          "cycles": 1,
+          "values": {
+            "rst_n": 0,
+            "enable": 1,
+            "I": 0
+          }
+        }
+      ],
+      "note": "One cycle with rst_n low clears the design's async resets, including the async-set flops that power up at 1. Every subsequent cycle runs with rst_n high."
+    },
+    "static_inputs": {
+      "enable": 1
+    },
+    "input_port": "I",
+    "start_cycle": 1,
+    "input_cycles": 121
+  },
+  "verify": {
+    "method": "simulate",
+    "predicate": {
+      "type": "port_reaches_value_by_cycle",
+      "port": "success",
+      "value": 1,
+      "by_cycle": 121,
+      "sticky": true
+    }
+  },
+  "reveal": {
+    "description": "Once success is high, O[7:0] streams an ASCII message, one byte per cycle, bit i of the byte on O[i].",
+    "port": "O",
+    "width": 8,
+    "condition": "success == 1",
+    "encoding": "ascii_lsb_first"
+  }
+}

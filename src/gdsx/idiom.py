@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from itertools import permutations
 
-from .functions import is_sequential, lookup
+from .core.graph import Graph
+from .functions import is_sequential
 from .liberty import evaluate
 from .netlist import Netlist
 
@@ -76,19 +77,13 @@ def npn(table: int, width: int) -> int:
 def evaluate_cone(nl: Netlist, output: str, leaves: list[str]) -> int | None:
     """The truth table of `output` as a function of `leaves`"""
 
-    by_name = {i.name: i for i in nl.instances}
-    driven_by = {}
-    for inst in nl.instances:
-        cell = lookup(inst.cell)
-        if cell is None:
-            continue
-        for pin in cell.functions:
-            if pin in inst.connections:
-                driven_by[inst.connections[pin]] = (inst.name, pin)
-
-    order = _topological(nl, output, set(leaves), driven_by, by_name)
-    if order is None:
+    graph = Graph.of(nl)
+    # The instances between the leaves and the output. A sequential one in the
+    # way means this is not a combinational function of the leaves.
+    inside = graph.cone({output}, stop=frozenset(leaves), returns="instances")
+    if inside & graph.seq:
         return None
+    order = [inst.name for inst in graph.topo(inside)]
 
     table = 0
     for row in range(1 << len(leaves)):
@@ -96,8 +91,8 @@ def evaluate_cone(nl: Netlist, output: str, leaves: list[str]) -> int | None:
         values.update({net: 0 for net in nl.power_nets if net.endswith("GND")})
         values.update({net: 1 for net in nl.power_nets if not net.endswith("GND")})
         for name in order:
-            inst = by_name[name]
-            cell = lookup(inst.cell)
+            inst = graph.by_name[name]
+            cell = graph.cell_of[name]
             pins = {
                 p: values.get(inst.connections[p], 0)
                 for p in cell.inputs
@@ -111,57 +106,25 @@ def evaluate_cone(nl: Netlist, output: str, leaves: list[str]) -> int | None:
     return table
 
 
-def _topological(nl, output, leaves, driven_by, by_name):
-    """Instances between the leaves and the output, in evaluation order"""
-    order, seen = [], set()
-
-    def visit(net: str) -> bool:
-        if net in leaves or net in nl.power_nets or net not in driven_by:
-            return True
-        name = driven_by[net][0]
-        if name in seen:
-            return True
-        inst = by_name[name]
-        if is_sequential(inst.cell):
-            return False
-        seen.add(name)
-        cell = lookup(inst.cell)
-        for pin in cell.inputs:
-            if pin in inst.connections and not visit(inst.connections[pin]):
-                return False
-        order.append(name)
-        return True
-
-    return order if visit(output) else None
-
-
 # cut enumeration
 
 
 def cuts(nl: Netlist, limit: int = MAX_CUT) -> dict[str, list[frozenset[str]]]:
     """The k-feasible cuts of every net: which small sets of nets it is a function of"""
-    driven_by = {}
-    for inst in nl.instances:
-        cell = lookup(inst.cell)
-        if cell is None:
-            continue
-        for pin in cell.functions:
-            if pin in inst.connections:
-                driven_by[inst.connections[pin]] = inst
-
-    by_name = {i.name: i for i in nl.instances}
+    graph = Graph.of(nl)
     found: dict[str, list[frozenset[str]]] = {}
 
     def compute(net: str, depth: int = 0) -> list[frozenset[str]]:
         if net in found:
             return found[net]
         trivial = [frozenset({net})]
-        inst = driven_by.get(net)
+        ref = graph.driver_of(net)
+        inst = graph.by_name[ref.instance] if ref is not None else None
         if inst is None or is_sequential(inst.cell) or depth > 32:
             found[net] = trivial
             return trivial
 
-        cell = lookup(inst.cell)
+        cell = graph.cell_of[inst.name]
         inputs = [
             inst.connections[p]
             for p in cell.inputs
@@ -191,7 +154,6 @@ def cuts(nl: Netlist, limit: int = MAX_CUT) -> dict[str, list[frozenset[str]]]:
     for net in sorted(nl.nets):
         if net not in nl.power_nets:
             compute(net)
-    _ = by_name
     return found
 
 
@@ -358,30 +320,3 @@ def carry_chains(matches: Matches) -> list[Chain]:
         chains.append(chain)
     return chains
 
-
-def report(nl: Netlist, matches: Matches, chains: list[Chain]) -> str:
-    lines = [
-        f"{len(matches.found)} nets match a known function "
-        f"({matches.considered} cuts examined, {len(library())} idioms in the library)",
-        "",
-    ]
-    for idiom, found in matches.by_idiom().items():
-        sample = ", ".join(m.net for m in found[:6])
-        lines.append(
-            f"  {len(found):4d} x {idiom:22s} {sample}"
-            + (" ..." if len(found) > 6 else "")
-        )
-
-    if chains:
-        lines += ["", f"{len(chains)} carry chains:"]
-        for chain in sorted(chains, key=lambda c: -c.width):
-            lines.append(
-                f"  {chain.width}-bit adder: carries {' -> '.join(chain.carries[:6])}"
-                + (" ..." if chain.width > 6 else "")
-            )
-    lines += [
-        "",
-        "  Matched by canonical function, so a resynthesised adder still matches.",
-        "  Nothing here is a claim about what the operands mean.",
-    ]
-    return "\n".join(lines)

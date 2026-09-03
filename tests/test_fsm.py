@@ -4,6 +4,7 @@ import pytest
 
 import rtl_fixtures
 from gdsx import analyse, fsm
+from gdsx.report import fsm as report_fsm
 
 needs_yosys = pytest.mark.skipif(
     not rtl_fixtures.yosys_available(), reason="yosys not installed"
@@ -74,7 +75,7 @@ def test_the_sample_design_has_no_control_logic(sample_netlist):
 @needs_yosys
 def test_table_renders(tmp_path):
     _, (machine,) = machines_of(rtl_fixtures.TRAFFIC, "traffic", tmp_path)
-    table = fsm.to_table(machine)
+    table = report_fsm.to_table(machine)
     assert "3-state machine" in table
     assert "(reset)" in table
     assert "req" in table

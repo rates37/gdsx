@@ -1,6 +1,6 @@
 """Flatten the routing, merge it per layer, stitch via vias
 
-1. On one layer, anything that touches is one thing  -> ``Region.merged()``
+1. On one layer, anything that touches is one thing -> ``geo.merge_clusters``
    gives clusters on that layer.
 2. A via connects the cluster under it to the cluster above it -> union-find
 3. A cell pin is a point; whichever cluster contains that point is its net
@@ -9,11 +9,16 @@
 from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
-import klayout.db as db
+from itertools import chain
+from typing import Callable
 
+from . import geo
+from .geo import types as g
 from .loader import Design
 
 BUCKET = 5000  # grid size of the point-lookup index (5 um)
+
+Progress = Callable[[str, int, int], None]
 
 
 class UnionFind:
@@ -51,22 +56,21 @@ class UnionFind:
 
 
 class PointIndex:
-    """Bucket grid over polygons"""
+    """Bucket grid over clusters"""
 
-    def __init__(self, polygons: list[db.Polygon], ids: list[int]):
-        self.polygons = polygons
+    def __init__(self, clusters: list[geo.Cluster], ids: list[int]):
+        self.clusters = clusters
         self.ids = ids
         self.buckets: dict[tuple[int, int], list[int]] = defaultdict(list)
-        for i, poly in enumerate(polygons):
-            bb = poly.bbox()
+        for i, cluster in enumerate(clusters):
+            bb = cluster.bbox
             for bx in range(bb.left // BUCKET, bb.right // BUCKET + 1):
                 for by in range(bb.bottom // BUCKET, bb.top // BUCKET + 1):
                     self.buckets[(bx, by)].append(i)
 
-    def lookup(self, pt: db.Point) -> int | None:
+    def lookup(self, pt: g.Point) -> int | None:
         for i in self.buckets.get((pt.x // BUCKET, pt.y // BUCKET), ()):
-            poly = self.polygons[i]
-            if poly.bbox().contains(pt) and poly.inside(pt):
+            if self.clusters[i].contains(pt):
                 return self.ids[i]
         return None
 
@@ -78,13 +82,13 @@ class Connectivity:
     uf: UnionFind
     index: dict[str, PointIndex] = field(default_factory=dict)  # layer name -> index
     n_clusters: int = 0
-    dangling_vias: list[tuple[str, db.Point]] = field(default_factory=list)
+    dangling_vias: list[tuple[str, g.Point]] = field(default_factory=list)
 
-    def cluster_at(self, layer: str, pt: db.Point) -> int | None:
+    def cluster_at(self, layer: str, pt: g.Point) -> int | None:
         idx = self.index.get(layer)
         return idx.lookup(pt) if idx else None
 
-    def net_at(self, layer: str, pt: db.Point) -> int | None:
+    def net_at(self, layer: str, pt: g.Point) -> int | None:
         cid = self.cluster_at(layer, pt)
         return None if cid is None else self.uf.find(cid)
 
@@ -93,15 +97,59 @@ class Connectivity:
         return {self.uf.find(c) for c in range(self.n_clusters)}
 
 
-def _region(design: Design, ld: tuple[int, int]) -> db.Region:
+def _shapes(design: Design, ld: tuple[int, int]):
+    """Every shape on a (layer, datatype), flattened into top-cell coordinates"""
     idx = design.index_of(ld)
     if idx is None:
-        return db.Region()
-    return db.Region(design.top.begin_shapes_rec(idx))
+        return iter(())
+    return design.layout.shapes_rec(design.top, idx)
 
 
-def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
+def _order(cluster: geo.Cluster) -> tuple[int, int, int, int]:
+    """Sort key for a cluster: its bounding box, bottom-left first.
+
+    The bounding box is the only thing every backend agrees on. A cluster's
+    rectangle decomposition differs between them, so a key counting or
+    comparing pieces would reintroduce exactly the divergence this removes.
+    """
+    bb = cluster.bbox
+    return (bb.bottom, bb.left, bb.top, bb.right)
+
+
+def _canonical(clusters: list[geo.Cluster], layer: str) -> list[geo.Cluster]:
+    """Routing-layer clusters in a backend-independent order.
+
+    Cluster order is net numbering: the first cluster on the first routing
+    layer is `n0`. Each geometry backend finds the same clusters but emits
+    them in its own order (klayout's is its merge scanline's, which is not
+    reproducible in pure Python) so the order is imposed here instead, at
+    the one place where the numbering is decided.
+    """
+    ordered = sorted(clusters, key=_order)
+    for i in range(1, len(ordered)):
+        if _order(ordered[i]) == _order(ordered[i - 1]):
+            # Falling back on the backend's own order here would make net
+            # names depend on the backend, which is the whole thing this
+            # exists to prevent. Fail loudly instead.
+            raise ValueError(
+                f"two clusters on layer {layer} share the bounding box "
+                f"{ordered[i].bbox}, so cluster order is ambiguous and net "
+                "names would depend on the geometry backend"
+            )
+    return ordered
+
+
+def trace(
+    design: Design,
+    extra: dict[str, list] | None = None,
+    *,
+    progress: Progress | None = None,
+) -> Connectivity:
     """Trace connectivity. `extra` adds shapes per routing layer
+
+    `progress`, if given, is called as `(stage, done, total)`: once per
+    routing layer during clustering (stage "trace"), then once per via layer
+    during stitching (stage "vias").
     """
     uf = UnionFind()
     conn = Connectivity(uf=uf)
@@ -109,28 +157,40 @@ def trace(design: Design, extra: dict[str, list] | None = None) -> Connectivity:
 
     # 1. Per-layer merge: Drawing and pin purposes go in together so that a pin
     # drawn only on the pin layer still fuses with the wire that touches it
-    for rl in design.tech.routing:
-        region = _region(design, rl.drawing) + _region(design, rl.pin)
-        for box in extra.get(rl.name, ()):
-            region.insert(box)
-        region = region.merged()
-        polys, ids = [], []
-        for poly in region.each():
-            polys.append(poly)
-            ids.append(uf.add())
-        conn.index[rl.name] = PointIndex(polys, ids)
+    routing = design.tech.routing
+    for i, rl in enumerate(routing):
+        clusters = geo.merge_clusters(
+            chain(
+                _shapes(design, rl.drawing),
+                _shapes(design, rl.pin),
+                extra.get(rl.name, ()),
+            )
+        )
+        clusters = _canonical(clusters, rl.name)
+        ids = [uf.add() for _ in clusters]
+        conn.index[rl.name] = PointIndex(clusters, ids)
+        if progress is not None:
+            progress("trace", i + 1, len(routing))
 
     conn.n_clusters = len(uf.parent)
 
-    # 2. Via stitching:
-    for via in design.tech.vias:
-        for poly in _region(design, via.layer).merged().each():
-            pt = poly.bbox().center()
+    # 2. Via stitching: also in canonical order, because the union sequence
+    # decides which cluster id ends up the root of each net, and the root is
+    # the net's number. Ties need no resolving here -- two vias with the same
+    # extent stitch the same pair of clusters, in either order.
+    vias = design.tech.vias
+    for i, via in enumerate(vias):
+        for cluster in sorted(
+            geo.merge_clusters(_shapes(design, via.layer)), key=_order
+        ):
+            pt = cluster.bbox.center()
             lo = conn.cluster_at(via.below, pt)
             hi = conn.cluster_at(via.above, pt)
             if lo is None or hi is None:
                 conn.dangling_vias.append((via.name, pt))
                 continue
             uf.union(lo, hi)
+        if progress is not None:
+            progress("vias", i + 1, len(vias))
 
     return conn

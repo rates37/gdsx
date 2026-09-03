@@ -1,0 +1,8 @@
+node_modules/
+dist/
+public/pyodide/
+public/wheel/
+public/samples/
+public/puzzles/
+*.tsbuildinfo
+m0-shots/

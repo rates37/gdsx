@@ -1,6 +1,8 @@
 import pytest
 import rtl_fixtures
 from gdsx import analyse
+from gdsx.core.graph import Graph
+from gdsx.analysis.registers import describe
 from gdsx.functions import is_sequential
 from gdsx.sim import Simulator
 
@@ -34,7 +36,7 @@ def test_parallel_load_groups_but_admits_it_cannot_order(tmp_path):
     assert reg.width == 8
     assert reg.kind == "parallel register"
     assert not reg.ordered
-    assert "bit order unknown" in reg.description
+    assert "bit order unknown" in describe(reg)
 
 
 @needs_yosys
@@ -219,7 +221,7 @@ def test_blocks_are_named(sample_netlist):
 
 
 def test_support_stops_at_flops_and_ports(sample_netlist):
-    deps = analyse.support(sample_netlist, "S")
+    deps = Graph.of(sample_netlist).support("S")
     flops = {d for d in deps if d.startswith("dfrtp")}
     assert len(flops) == 16
     assert deps - flops == set()

@@ -1,78 +1,21 @@
 """Turn traced connectivity into a named netlist and emit it"""
 
 from __future__ import annotations
+import hashlib
 import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field
 from pathlib import Path
-import klayout.db as db
+from typing import Callable
 
 from .connectivity import Connectivity, trace
+from .core.netlist import Instance, Netlist  # noqa: F401  (re-exported)
 from .functions import generic_name, lookup
+from .geo import types as g
 from .loader import Design
-from .pins import PinOracle, direction_of
+from .pins import PinOracle, abstract_shapes, bond_pins, direction_of
 
-
-@dataclass
-class Instance:
-    name: str
-    cell: str
-    connections: dict[str, str] = field(default_factory=dict)  # pin -> net name
-
-
-@dataclass
-class Netlist:
-    top: str
-    instances: list[Instance] = field(default_factory=list)
-    nets: dict[str, list[str]] = field(default_factory=dict)  # net -> ["inst/pin", ...]
-    ports: dict[str, str] = field(default_factory=dict)  # net name -> direction
-    power_nets: set[str] = field(default_factory=set)
-    floating: list[str] = field(default_factory=list)  # "inst/pin" with no net
-    conflicts: list[str] = field(
-        default_factory=list
-    )  # "inst/pin" connecting to multiple nets
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "Netlist":
-        """Rebuild a netlist written by `to_dict`
-
-        Slices, sub-blocks and cached extractions all come back this way, which
-        lets one command's output be another command's input.
-        """
-        nl = cls(
-            top=data["top"],
-            ports=dict(data.get("ports", {})),
-            power_nets=set(data.get("power_nets", ())),
-            floating=list(data.get("floating", ())),
-            conflicts=list(data.get("conflicts", ())),
-        )
-        nl.instances = [
-            Instance(i["name"], i["cell"], dict(i["connections"]))
-            for i in data["instances"]
-        ]
-        nl.nets = {net: list(refs) for net, refs in data.get("nets", {}).items()}
-        if not nl.nets:  # rebuild the index if it was not stored
-            for inst in nl.instances:
-                for pin, net in inst.connections.items():
-                    nl.nets.setdefault(net, []).append(f"{inst.name}/{pin}")
-            for net in nl.nets:
-                nl.nets[net].sort()
-        return nl
-
-    def to_dict(self) -> dict:
-        return {
-            "top": self.top,
-            "ports": self.ports,
-            "power_nets": sorted(self.power_nets),
-            "instances": [
-                {"name": i.name, "cell": i.cell, "connections": i.connections}
-                for i in self.instances
-            ],
-            "nets": self.nets,
-            "floating": self.floating,
-            "conflicts": self.conflicts,
-        }
+Progress = Callable[[str, int, int], None]
 
 
 def _is_driven(nl: Netlist, net: str) -> bool:
@@ -85,19 +28,70 @@ def _is_driven(nl: Netlist, net: str) -> bool:
     return False
 
 
+def trace_design(
+    design: Design,
+    macros: dict | None = None,
+    oracle: PinOracle | None = None,
+    *,
+    progress: Progress | None = None,
+) -> Connectivity:
+    """Trace connectivity the same way `build` does, for callers that need the
+    raw `Connectivity` rather than a named `Netlist` -- `render.py` is one,
+    so its shapes land on the same net numbering the netlist does.
+
+    `progress`, if given, is passed on to `connectivity.trace` (stages
+    "trace", "vias") and then reported once more for pin bonding (stage
+    "bond_pins").
+    """
+    if oracle is None:
+        oracle = PinOracle(design, macros)
+    conn = trace(design, abstract_shapes(design, oracle), progress=progress)
+    bond_pins(design, conn, oracle)
+    if progress is not None:
+        progress("bond_pins", 1, 1)
+    return conn
+
+
 def build(
-    design: Design, conn: Connectivity | None = None, macros: dict | None = None
+    design: Design,
+    conn: Connectivity | None = None,
+    macros: dict | None = None,
+    *,
+    progress: Progress | None = None,
 ) -> Netlist:
     """Resolve every instance pin to a net and name the result"""
+    nl, _ = build_with_net_ids(design, conn, macros, progress=progress)
+    return nl
+
+
+# how often the "resolve" stage reports back, in instances
+_RESOLVE_CHUNK = 50
+
+
+def build_with_net_ids(
+    design: Design,
+    conn: Connectivity | None = None,
+    macros: dict | None = None,
+    *,
+    progress: Progress | None = None,
+) -> tuple[Netlist, dict[int, str]]:
+    """`build`, also returning the net id -> name mapping it used internally
+
+    `render.py` needs this: it works from the same `Connectivity` (so its
+    shape-to-net lookups land on the same integer ids this function assigns),
+    and has to turn those ids back into the names the netlist browser shows.
+
+    `progress`, if given, is called as `(stage, done, total)` through tracing
+    ("trace", "vias", "bond_pins", see `trace_design`), then during pin
+    resolution ("resolve", one report per `_RESOLVE_CHUNK` instances) and
+    once for naming ("name").
+    """
     tech = design.tech
     oracle = PinOracle(design, macros)
     if conn is None:
-        from .pins import abstract_shapes, bond_pins
+        conn = trace_design(design, macros, oracle, progress=progress)
 
-        conn = trace(design, abstract_shapes(design, oracle))
-        bond_pins(design, conn, oracle)
-
-    nl = Netlist(top=design.top.name)
+    nl = Netlist(top=design.top)
 
     #  collect pin -> net id, keeping instances in a stable placement order
     # A pin often carries several labels, so collect refs in a set, one entry
@@ -108,7 +102,9 @@ def build(
     )
 
     counters: dict[str, int] = defaultdict(int)
-    for cell_name, trans in placements:
+    for i, (cell_name, trans) in enumerate(placements):
+        if progress is not None and i % _RESOLVE_CHUNK == 0:
+            progress("resolve", i, len(placements))
         if not tech.is_logic_cell(cell_name):
             continue
         counters[cell_name] += 1
@@ -135,10 +131,14 @@ def build(
             inst.connections[pin_name] = net_id  # provisional: id, renamed below
             members[net_id].add(ref)
         nl.instances.append(inst)
+    if progress is not None:
+        progress("resolve", len(placements), len(placements))
 
     # naming: top-level labels preserved, everything else gets n<id>
     labels = _top_labels(design, conn)
     names = _name_nets(labels, members)
+    if progress is not None:
+        progress("name", 1, 1)
 
     for inst in nl.instances:
         inst.connections = {p: names[i] for p, i in inst.connections.items()}
@@ -152,7 +152,7 @@ def build(
             continue
         nl.ports[net] = "output" if _is_driven(nl, net) else "input"
 
-    return nl
+    return nl, names
 
 
 def _top_labels(design: Design, conn: Connectivity) -> dict[int, set[str]]:
@@ -162,12 +162,12 @@ def _top_labels(design: Design, conn: Connectivity) -> dict[int, set[str]]:
         idx = design.index_of(rl.pin)
         if idx is None:
             continue
-        for shape in design.top.shapes(idx).each():
-            if not shape.is_text():
+        for shape in design.layout.shapes(design.top, idx):
+            if not isinstance(shape, g.Text):
                 continue
-            net_id = conn.net_at(rl.name, db.Point(shape.text.x, shape.text.y))
+            net_id = conn.net_at(rl.name, shape.point)
             if net_id is not None:
-                labels[net_id].add(shape.text.string)
+                labels[net_id].add(shape.string)
     return labels
 
 
@@ -201,6 +201,21 @@ def ident(name: str) -> str:
 
 def to_json(nl: Netlist) -> str:
     return json.dumps(nl.to_dict(), indent=2)
+
+
+def naming_digest(nl: Netlist) -> str:
+    """A hash over every name extraction invents, in a fixed order
+
+    The contract `tests/test_naming_stable.py` freezes and `gdsx puzzle
+    verify` checks a fresh extraction against: instance placement order, nets
+    sorted by name, ports sorted by name. Two netlists with this digest equal
+    named every instance, net and port identically.
+    """
+    lines = [f"top {nl.top}"]
+    lines += [f"inst {i.name} {i.cell}" for i in nl.instances]  # placement order
+    lines += [f"net {n}" for n in sorted(nl.nets)]
+    lines += [f"port {n} {d}" for n, d in sorted(nl.ports.items())]
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest()
 
 
 def to_generic_dict(nl: Netlist) -> dict:

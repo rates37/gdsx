@@ -1,9 +1,11 @@
 # Layer map for the sky130 standard-cell flow
 #
-# Only the layers we trace in gdsx are listed: the routing stack, the vias,
-# and the pin/label purposes where cell pins are named
-# Everything else in the GDS is deliberately ignored , we don't need to inspect
-# individual cells here
+# `routing` and `vias` are the layers gdsx *traces*: the routing stack and the
+# pin/label purposes where cell pins are named. `device` is the transistor
+# level underneath, which is never traced but is drawn, because a die rendered
+# without it is metal hovering over nothing.
+# Everything else in the GDS (implants, markers, area IDs) is deliberately
+# ignored -- it carries no connectivity and adds nothing to look at.
 #
 # Numbers are (layer, datatype) pairs. Note tests/test_config.py checks them against
 # what is in the sample (warmup) GDS
@@ -21,12 +23,66 @@ routing:
   - {name: met4, drawing: [71, 20], pin: [71, 5], label: [71, 16]}
   - {name: met5, drawing: [72, 20], pin: [72, 5], label: [72, 16]}
 
+# Device-level layers: the transistors under the routing. Nothing is *traced*
+# on these -- they carry no nets and extraction ignores them entirely -- but
+# they are the bottom two thirds of what a GDS viewer shows you, and a die
+# rendered without them is metal hovering over nothing.
+#
+# They are drawn inside the standard cells rather than at the top level, which
+# is why they need listing separately from `routing`: a routing layer is a
+# (drawing, pin, label) triple that connectivity walks, and these have no pin
+# or label purpose and no connectivity to walk.
+#
+# `fill: true` marks a layer that covers whole regions rather than drawing
+# wires -- a well or a diffusion tub. The viewer renders those flatter and
+# further back, so they read as ground rather than as geometry.
+#
+# `via: true` marks a contact layer. Like the metal vias, these are dropped
+# from the zoomed-out level of detail and from the 3D view: there are tens of
+# thousands of them, each well under a pixel at that zoom, and they would
+# double the render bundle to draw nothing you can see.
+device:
+  - {name: nwell,  drawing: [64, 20], fill: true}
+  - {name: diff,   drawing: [65, 20], fill: true}
+  - {name: tap,    drawing: [65, 44], fill: true}
+  - {name: poly,   drawing: [66, 20]}
+  - {name: licon1, drawing: [66, 44], via: true}
+
 vias:
   - {name: mcon, layer: [67, 44], below: li1,  above: met1}
   - {name: via,  layer: [68, 44], below: met1, above: met2}
   - {name: via2, layer: [69, 44], below: met2, above: met3}
   - {name: via3, layer: [70, 44], below: met3, above: met4}
   - {name: via4, layer: [71, 44], below: met4, above: met5}
+
+# The physical layer stack, bottom to top, in microns. `z` is the bottom of
+# the layer and `thickness` its height, so z(n+1) == z(n) + thickness(n) for a
+# contiguous stack. Values approximate the public sky130 interconnect stack
+# (li1 through met5); this is for an honest-looking 3D view, not a substitute
+# for the PDK's own tech file. `via: true` marks a via/contact layer rather
+# than a routing layer.
+stack:
+  # Device level. The substrate is not a drawn layer -- there is no GDS
+  # geometry for "the wafer" -- so the renderer synthesises one slab covering
+  # the die, which is what anchors the stack visually and what every other GDS
+  # viewer shows. The rest are real drawn layers (see `device` above).
+  - {name: substrate, z: -0.800, thickness: 0.600}
+  - {name: nwell, z: -0.200, thickness: 0.200}
+  - {name: diff,  z: 0.000, thickness: 0.120}
+  - {name: tap,   z: 0.000, thickness: 0.120}
+  - {name: licon1, z: 0.120, thickness: 0.816, via: true}
+  - {name: poly,  z: 0.326, thickness: 0.180}
+  - {name: li1,  z: 0.936, thickness: 0.100}
+  - {name: mcon, z: 1.036, thickness: 0.330, via: true}
+  - {name: met1, z: 1.366, thickness: 0.360}
+  - {name: via,  z: 1.726, thickness: 0.270, via: true}
+  - {name: met2, z: 1.996, thickness: 0.370}
+  - {name: via2, z: 2.366, thickness: 0.420, via: true}
+  - {name: met3, z: 2.786, thickness: 0.845}
+  - {name: via3, z: 3.631, thickness: 0.390, via: true}
+  - {name: met4, z: 4.021, thickness: 0.845}
+  - {name: via4, z: 4.866, thickness: 0.505, via: true}
+  - {name: met5, z: 5.371, thickness: 1.260}
 
 power_pins: [VPWR, VGND, VPB, VNB]
 

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "1-warm-start",
+  "title": "Warm Start",
+  "difficulty": "easy",
+  "blurb": "An accumulator with a non-zero reset. Read O when success goes high.",
+  "author": "gdsx",
+  "answer_kind": "constant",
+  "tools_enabled": ["die", "netlist", "registers", "cone", "waveform", "repl"],
+  "par_seconds": 1200,
+  "tags": ["warm-up", "registers", "reset-values"]
+}

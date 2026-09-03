@@ -25,27 +25,42 @@ name = "gdsx"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "klayout" },
     { name = "pyyaml" },
-    { name = "scipy" },
+]
+
+[package.optional-dependencies]
+cli = [
+    { name = "rich" },
     { name = "typer" },
+]
+native = [
+    { name = "klayout" },
+]
+solve = [
+    { name = "scipy" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "gdsx", extra = ["cli", "native"] },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "klayout", specifier = ">=0.30.10" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "scipy", specifier = ">=1.18.0" },
-    { name = "typer", specifier = ">=0.27.1" },
+    { name = "klayout", marker = "extra == 'native'", specifier = ">=0.30.10" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "rich", marker = "extra == 'cli'" },
+    { name = "scipy", marker = "extra == 'solve'", specifier = ">=1.18.0" },
+    { name = "typer", marker = "extra == 'cli'", specifier = ">=0.27.1" },
 ]
+provides-extras = ["cli", "native", "solve"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.1.1" }]
+dev = [
+    { name = "gdsx", extras = ["cli", "native"] },
+    { name = "pytest", specifier = ">=9.1.1" },
+]
 
 [[package]]
 name = "iniconfig"

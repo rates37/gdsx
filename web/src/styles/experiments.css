@@ -1,0 +1,205 @@
+/* ---- experiment runner ----------------------------------------------- */
+.xp-panel,
+.mb-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+.xp-toolbar,
+.mb-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--df-edge);
+}
+.xp-params {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 8px 0;
+}
+.xp-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--df-ink-3);
+}
+.xp-num {
+  width: 64px;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  color: var(--df-ink-2);
+  padding: 3px 4px;
+}
+.xp-watch-list {
+  flex: 1;
+  min-width: 200px;
+}
+.xp-blurb {
+  padding: 4px 8px 6px;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.xp-loading,
+.mb-loading {
+  padding: 16px;
+  color: var(--df-faint);
+}
+.xp-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0 8px 8px;
+}
+.xp-status,
+.mb-status {
+  color: var(--df-ink-3);
+  font-size: 11px;
+}
+.xp-status.bad,
+.mb-status.bad {
+  color: var(--df-coral);
+}
+/* The two self-checks from the sensitivity map. Amber, above the matrix,
+   and never collapsed into a console log: a matrix with either problem
+   looks exactly as convincing as one without. */
+.xp-warning {
+  margin: 6px 0;
+  padding: 4px 8px;
+  border-left: 2px solid var(--df-gold-edge);
+  background: var(--df-gold-wash);
+  color: var(--df-gold);
+  font-size: 11px;
+}
+.xp-baseline-note {
+  margin: 6px 0;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.xp-canvas-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.xp-readout {
+  padding: 4px 0;
+  color: var(--df-ink-2);
+  font-size: 11px;
+}
+.xp-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.xp-zoom button {
+  width: 22px;
+  padding: 2px 0;
+  text-align: center;
+}
+.xp-canvas-wrap {
+  overflow: auto;
+  max-height: 45%;
+  border: 1px solid var(--df-edge);
+  background: var(--df-void);
+}
+.xp-canvas {
+  display: block;
+  cursor: crosshair;
+}
+.xp-summary {
+  margin-top: 8px;
+}
+.xp-summary-note {
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.xp-table-row {
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+  font-size: 11px;
+}
+.xp-orient {
+  color: var(--df-dim);
+}
+.xp-to-constraints {
+  margin-left: auto;
+  flex: none;
+  padding: 0 6px;
+  font-size: 10px;
+  color: var(--df-dim);
+}
+.xp-to-constraints:disabled {
+  color: var(--df-teal);
+  opacity: 1;
+}
+.xp-table-row .net-chip {
+  flex: none;
+  width: 120px;
+}
+.xp-hits {
+  color: var(--df-ink-3);
+  word-break: break-word;
+}
+.xp-hits-more {
+  margin-left: 4px;
+  padding: 0 4px;
+  font-size: 10px;
+  color: var(--df-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.xp-hits-more:hover {
+  text-decoration: underline;
+}
+.xp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.xp-evidence-note {
+  color: var(--df-faint);
+  font-size: 11px;
+}
+
+/* ---- constraints panel ------------------------------------------------ */
+.cs-panel { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; overflow-y: auto; }
+.cs-toolbar { display: flex; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
+.cs-note { color: var(--df-faint); font-size: 11px; font-style: italic; }
+.cs-add { display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--df-edge); }
+.cs-name { width: 100px; }
+.cs-elements { flex: 1; }
+.cs-k { width: 60px; }
+.cs-gen { padding: 6px 8px; border-bottom: 1px solid var(--df-edge); display: flex; flex-direction: column; gap: 5px; }
+.cs-gen-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 11px; }
+.cs-gen-label { color: var(--df-ink-2); font-family: ui-monospace, Menlo, monospace; min-width: 58px; }
+.cs-gen-text { color: var(--df-faint); }
+.cs-gen input[type="number"] { width: 52px; }
+.cs-gen-note { color: var(--df-faint); font-size: 11px; font-style: italic; }
+.cs-rows { padding: 4px 8px; }
+.cs-row-expand { font-size: 11px; }
+.cs-row-detail { padding: 2px 0 4px 24px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-faint); max-height: 180px; overflow-y: auto; }
+.cs-row-detail-line { padding: 1px 0; }
+.cs-solution-port { margin-left: 8px; }
+.cs-solution-load { margin-left: 4px; font-size: 11px; }
+.cs-solution-said { margin-left: 6px; color: var(--df-faint); font-style: italic; }
+.cs-row { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; padding: 2px 0; }
+.cs-row-name { color: var(--df-ink-2); min-width: 90px; }
+.cs-row-source { color: var(--df-faint); }
+.cs-row-elements { color: var(--df-ink-3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-row-exactly { color: var(--df-faint); }
+.cs-row-k { width: 50px; }
+.cs-summary { padding: 4px 8px; }
+.cs-summary-line { color: var(--df-ink-3); font-size: 11px; }
+.cs-warning { color: var(--df-gold); font-size: 11px; margin-top: 4px; }
+.cs-solve-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
+.cs-solve-status { color: var(--df-ink-3); font-size: 11px; }
+.cs-solutions { padding: 0 8px 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--df-ink-3); }

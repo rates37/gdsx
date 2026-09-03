@@ -1,0 +1,93 @@
+108 candidate control nets tested against 92 flops
+75 flops have a recovered freeze condition, 17 do not
+
+GROUPS  (flops that are enabled together)
+   17 flops frozen when (never frozen)
+        dfrtp_2_21, dfrtp_2_40, dfrtp_2_47, dfrtp_2_51, dfrtp_2_55, dfrtp_2_58
+        dfrtp_2_59, dfrtp_2_60, dfrtp_2_9, dfstp_2_1, dfstp_2_2, dfstp_2_3
+        dfstp_2_4, dfxtp_2_1, dfxtp_2_2, dfxtp_2_3, dfxtp_2_4
+   13 flops frozen when enable=0, n1484=0, n4834=1
+        dfrtp_2_27, dfrtp_2_33, dfrtp_2_34, dfrtp_2_37, dfrtp_2_38, dfrtp_2_42
+        dfrtp_2_43, dfrtp_2_44, dfrtp_2_48, dfrtp_2_49, dfrtp_2_52, dfrtp_2_53
+        dfrtp_2_54
+    3 flops frozen when enable=0, n1484=0, n2209=0, n2482=1, n3446=0, n411=1, n4834=1, n8470=0
+        dfrtp_2_17, dfrtp_2_18, dfrtp_2_25
+    2 flops frozen when I=0, enable=0, n1091=0, n1197=0, n1299=1, n1481=0, n1484=0, n4834=1, n931=0
+        dfrtp_2_30, dfrtp_2_31
+    2 flops frozen when I=0, enable=0, n1091=0, n1197=0, n1299=1, n1481=1, n1484=0, n4834=1, n931=0
+        dfrtp_2_28, dfrtp_2_29
+    2 flops frozen when I=0, enable=0, n1091=0, n1197=1, n1299=0, n1481=1, n1484=0, n4834=1, n931=0
+        dfrtp_2_45, dfrtp_2_46
+    2 flops frozen when I=0, enable=0, n1091=0, n1197=1, n1299=1, n1481=0, n1484=0, n4834=1, n931=0
+        dfrtp_2_13, dfrtp_2_15
+    2 flops frozen when I=0, enable=0, n1091=0, n1197=1, n1299=1, n1481=1, n1484=0, n4834=1, n931=0
+        dfrtp_2_14, dfrtp_2_16
+    2 flops frozen when I=0, enable=0, n1091=1, n1197=0, n1299=1, n1481=0, n1484=0, n4834=1, n931=0
+        dfrtp_2_22, dfrtp_2_23
+    2 flops frozen when I=0, enable=0, n1091=1, n1197=0, n1299=1, n1481=1, n1484=0, n4834=1, n931=0
+        dfrtp_2_19, dfrtp_2_24
+    2 flops frozen when I=0, enable=0, n1091=1, n1197=1, n1299=0, n1481=0, n1484=0, n4834=1, n931=0
+        dfrtp_2_36, dfrtp_2_39
+    2 flops frozen when I=0, enable=0, n1091=1, n1197=1, n1299=0, n1481=1, n1484=0, n4834=1, n931=0
+        dfrtp_2_32, dfrtp_2_35
+    2 flops frozen when I=0, enable=0, n1091=1, n1197=1, n1299=1, n1481=0, n1484=0, n4834=1, n931=0
+        dfrtp_2_11, dfrtp_2_12
+    2 flops frozen when I=0, enable=0, n1091=1, n1197=1, n1299=1, n1481=1, n1484=0, n4834=1
+        dfrtp_2_7, dfrtp_2_8
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=0, n3446=0, n411=0, n4834=1, n8470=1
+        dfrtp_2_74, dfrtp_2_75
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=0, n3446=0, n411=1, n4834=1, n8470=1
+        dfrtp_2_72, dfrtp_2_73
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=0, n3446=1, n411=0, n4834=1, n8470=1
+        dfrtp_2_70, dfrtp_2_71
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=0, n3446=1, n411=1, n4834=1, n8470=1
+        dfrtp_2_68, dfrtp_2_69
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=0, n411=0, n4834=1, n8470=1
+        dfrtp_2_66, dfrtp_2_67
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=0, n411=1, n4834=1, n8470=0
+        dfrtp_2_81, dfrtp_2_84
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=0, n411=1, n4834=1, n8470=1
+        dfrtp_2_64, dfrtp_2_65
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=1, n411=0, n4834=1, n8470=0
+        dfrtp_2_76, dfrtp_2_78
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=1, n411=0, n4834=1, n8470=1
+        dfrtp_2_62, dfrtp_2_63
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=1, n411=1, n4834=1, n8470=0
+        dfrtp_2_79, dfrtp_2_80
+    2 flops frozen when I=0, enable=0, n1484=0, n2482=1, n3446=1, n411=1, n4834=1, n8470=1
+        dfrtp_2_56, dfrtp_2_57
+    2 flops frozen when n4834=0, n5873=1
+        dfrtp_2_77, dfrtp_2_83
+    1 flops frozen when I=0, enable=0, n1108=0, n1138=0, n1221=0, n1234=0, n1403=0, n1484=0, 
+n4834=1, n710=0, n798=0, n811=0, n897=0
+        dfrtp_2_10
+    1 flops frozen when I=0, enable=0, n1138=0, n1221=0, n1234=0, n1403=0, n1484=0, n4834=1, n710=0,
+n798=0, n811=0
+        dfrtp_2_4
+    1 flops frozen when I=0, enable=0, n1138=0, n1221=0, n1234=0, n1403=0, n1484=0, n4834=1, n710=0,
+n798=0, n811=0, n897=0
+        dfrtp_2_5
+    1 flops frozen when I=0, enable=0, n1138=0, n1221=0, n1234=0, n1403=0, n1484=0, n4834=1, n798=0,
+n811=0
+        dfrtp_2_1
+    1 flops frozen when I=0, enable=0, n1138=0, n1403=0, n1484=0, n4834=1, n798=0, n811=0
+        dfrtp_2_6
+    1 flops frozen when I=0, enable=0, n1138=0, n1403=0, n1484=0, n4834=1, n811=0
+        dfrtp_2_3
+    1 flops frozen when I=0, enable=0, n1403=0, n1484=0, n4834=1
+        dfrtp_2_2
+    1 flops frozen when I=0, enable=0, n1484=0, n4834=1
+        dfrtp_2_50
+    1 flops frozen when enable=0, n1484=0, n2095=1, n2209=0, n2482=1, n3446=0, n411=1, n434=1, 
+n486=0, n513=0, n583=1, n8470=0
+        dfrtp_2_61
+    1 flops frozen when enable=0, n1484=0, n2209=0, n2462=0, n2482=1, n3446=0, n411=1, n434=0, 
+n4834=1, n513=0, n8470=0
+        dfrtp_2_26
+    1 flops frozen when enable=0, n1484=0, n2209=0, n2482=1, n3446=0, n411=1, n4834=1, n513=0, 
+n8470=0
+        dfrtp_2_20
+    1 flops frozen when enable=0, n1484=0, n3446=0, n411=0, n4834=1
+        dfrtp_2_41
+    1 flops frozen when n4834=0
+        dfrtp_2_82

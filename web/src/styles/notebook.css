@@ -1,0 +1,234 @@
+/* ---- notebook ------------------------------------------------------- */
+/* The verdict tones are the only place colour carries meaning in this
+   panel, and they are deliberately far apart: green and amber must never
+   be mistaken for each other at a glance, because that mistake IS reading
+   a LIKELY as a PROVEN. */
+.nb-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+.nb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--df-edge);
+}
+.nb-coverage {
+  color: var(--df-ink-3);
+}
+.nb-spacer {
+  flex: 1;
+}
+.nb-loading,
+.nb-empty {
+  padding: 16px;
+  color: var(--df-faint);
+}
+.nb-list {
+  flex: 1;
+  overflow: auto;
+  padding: 4px;
+}
+
+.nb-row {
+  border: 1px solid var(--df-edge);
+  border-radius: var(--df-radius);
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  background: var(--df-plate);
+}
+.nb-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.nb-claim-text {
+  flex: 1;
+  word-break: break-word;
+}
+.nb-struck {
+  text-decoration: line-through;
+  color: var(--df-dim);
+}
+.nb-verdict {
+  flex: none;
+  border-radius: var(--df-radius);
+  padding: 1px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.nb-tone-green {
+  background: var(--df-teal-wash);
+  border: 1px solid var(--df-teal-edge);
+  color: var(--df-teal);
+}
+.nb-tone-amber {
+  background: var(--df-gold-wash);
+  border: 1px solid var(--df-gold-edge);
+  color: var(--df-gold);
+}
+.nb-tone-red {
+  background: var(--df-coral-wash);
+  border: 1px solid var(--df-coral-edge);
+  color: var(--df-coral);
+}
+.nb-tone-grey {
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  color: var(--df-ink-3);
+}
+.nb-row-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 3px;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.nb-points {
+  color: var(--df-dim);
+}
+.nb-note {
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 2px solid var(--df-edge-2);
+  color: var(--df-ink-3);
+  font-size: 11px;
+}
+.nb-detail {
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--df-void);
+  border-radius: var(--df-radius);
+  font-size: 11px;
+  color: var(--df-ink-3);
+}
+.nb-witness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.nb-witness-label {
+  color: var(--df-faint);
+}
+.nb-load {
+  margin-top: 6px;
+}
+.nb-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.nb-history {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--df-faint);
+}
+.nb-history-row {
+  padding: 2px 0 2px 10px;
+}
+
+.nb-form {
+  border-bottom: 1px solid var(--df-edge);
+  padding: 8px;
+  background: var(--df-void);
+}
+.nb-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.nb-label {
+  flex: none;
+  width: 120px;
+  text-align: right;
+  color: var(--df-ink-3);
+}
+.nb-input {
+  flex: 1;
+  min-width: 80px;
+}
+.nb-wide {
+  min-width: 200px;
+}
+.nb-hint {
+  margin: 4px 0 8px 128px;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.nb-form-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.nb-cost {
+  flex: 1;
+  font-size: 11px;
+}
+.nb-cost-ok {
+  color: var(--df-teal);
+}
+/* The warning that has to arrive before the verdict, not after it. */
+.nb-cost-sampled {
+  color: var(--df-gold);
+}
+.nb-cost-bad {
+  color: var(--df-coral);
+}
+.nb-cost-idle {
+  color: var(--df-faint);
+}
+.nb-section {
+  padding: 8px 6px 4px;
+  color: var(--df-faint);
+  border-top: 1px solid var(--df-edge);
+}
+.nb-evidence {
+  padding: 0 4px 8px;
+}
+/* Evidence is a measurement, not an assertion: no verdict tone, and a
+   left edge that reads as "recorded" rather than "settled". */
+.nb-evidence-row {
+  border-left: 2px solid var(--df-edge-3);
+}
+.nb-warning {
+  color: var(--df-gold);
+  border-left-color: var(--df-gold-edge);
+}
+/* The write-up: editable, so a textarea, not a
+   preview -- the player owns this copy the moment it is generated. */
+.nb-writeup {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--df-edge);
+}
+.nb-writeup-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--df-edge);
+}
+.nb-writeup-hint {
+  flex: 1;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.nb-writeup-text {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: none;
+  background: var(--df-plate);
+  color: var(--df-ink);
+  font: 12px/1.5 ui-monospace, "SF Mono", monospace;
+  padding: 10px;
+  box-sizing: border-box;
+}

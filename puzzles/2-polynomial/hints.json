@@ -1,0 +1,20 @@
+{
+  "tiers": [
+    {
+      "tier": 0,
+      "text": "91 instances, 32 sequential"
+    },
+    {
+      "tier": 1,
+      "text": "0 of 32 registers have no recovered freeze condition"
+    },
+    {
+      "tier": 2,
+      "text": "the flops form 1 register groups; the largest is reg_dfstp_2_11 (32 members)"
+    },
+    {
+      "tier": 4,
+      "text": "The 32 flops form a single chain once you look past each one's own clock-enable mux (every flop's D is mux(enable, hold-at-Q, real-next-value); the real-next-value is the interesting input). Three flops take their real-next-value from an XOR instead of the neighbouring stage's Q -- those are the taps, and the XOR's other input is the same flop in all three cases."
+    }
+  ]
+}

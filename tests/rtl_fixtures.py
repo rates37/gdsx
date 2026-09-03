@@ -38,6 +38,15 @@ module accumulator(input clk, input rst_n, input [3:0] d, output [3:0] q);
 endmodule
 """
 
+NONZERO_RESET = """
+module nonzero_reset(input clk, input rst_n, output [3:0] q);
+  reg [3:0] r;
+  always @(posedge clk or negedge rst_n)
+    if (!rst_n) r <= 4'b1010; else r <= r + 4'd1;
+  assign q = r;
+endmodule
+"""
+
 PARALLEL_LOAD = """
 module parallel_load(input clk, input rst_n, input load, input [7:0] d, output [7:0] q);
   reg [7:0] r;

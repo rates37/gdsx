@@ -1,0 +1,99 @@
+/* ---- model builder ----------------------------------------------------- */
+.mb-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 8px;
+  gap: 8px;
+}
+.mb-source {
+  min-height: 180px;
+  flex: 1 1 auto;
+  resize: vertical;
+  background: var(--df-void);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 8px;
+  font: inherit;
+  tab-size: 2;
+}
+.mb-badge-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.mb-points {
+  color: var(--df-dim);
+  font-size: 11px;
+}
+.mb-badge-detail {
+  margin-top: 3px;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+/* The scope rule, said in words and never as a running score -- see
+   model-panel.ts's renderBadge. Quieter than the badge detail: it is standing
+   advice about what a model is for, not news about this run. */
+.mb-badge-scope {
+  margin-top: 3px;
+  color: var(--df-faint);
+  font-size: 11px;
+  max-width: 62ch;
+}
+.mb-summary {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.mb-agreement {
+  color: var(--df-ink-2);
+}
+.mb-watch,
+.mb-pulses {
+  color: var(--df-faint);
+  font-size: 11px;
+}
+/* The panel's whole point: not "wrong", but wrong HERE, on this vector,
+   about this signal, one click from the waveform. */
+.mb-divergence {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--df-coral-edge);
+  border-radius: var(--df-radius);
+  background: var(--df-coral-wash);
+  color: var(--df-coral-hi);
+  font-size: 11px;
+}
+.mb-divergence-head {
+  color: var(--df-coral);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.mb-agreed {
+  margin-top: 6px;
+  color: var(--df-gold);
+  font-size: 11px;
+}
+/* "Nothing was tested" has to read as a warning, not as a pass. */
+.mb-vacuous {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-left: 2px solid var(--df-gold-edge);
+  background: var(--df-gold-wash);
+  color: var(--df-gold);
+  font-size: 11px;
+}
+.mb-mismatches {
+  margin-top: 6px;
+  color: var(--df-ink-3);
+  font-size: 11px;
+}
+.mb-error {
+  padding: 8px;
+  border-left: 2px solid var(--df-coral-edge);
+  color: var(--df-coral);
+  white-space: pre-wrap;
+  font-size: 11px;
+}

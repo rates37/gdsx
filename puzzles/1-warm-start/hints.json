@@ -1,0 +1,20 @@
+{
+  "tiers": [
+    {
+      "tier": 0,
+      "text": "80 instances, 23 sequential"
+    },
+    {
+      "tier": 1,
+      "text": "11 of 23 registers have no recovered freeze condition"
+    },
+    {
+      "tier": 2,
+      "text": "the flops form 1 register groups; the largest is reg_dfrtp_2_8 (23 members)"
+    },
+    {
+      "tier": 4,
+      "text": "The accumulator does not advance on every cycle. Orbit the two-bit group before extrapolating."
+    }
+  ]
+}

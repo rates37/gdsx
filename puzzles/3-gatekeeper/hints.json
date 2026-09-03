@@ -1,0 +1,24 @@
+{
+  "tiers": [
+    {
+      "tier": 0,
+      "text": "296 instances, 68 sequential"
+    },
+    {
+      "tier": 1,
+      "text": "4 of 68 registers have no recovered freeze condition"
+    },
+    {
+      "tier": 2,
+      "text": "the flops form 57 register groups; the largest is reg_dfrtp_2_67 (12 members)"
+    },
+    {
+      "tier": 3,
+      "text": "success is driven by one flop (dfrtp_2_66); its D cone has 9 leaves"
+    },
+    {
+      "tier": 4,
+      "text": "Seven of the eight banks share one write enable and the eighth does not. Every extra term in that eighth enable is itself a register, so keep justifying backwards until each term is grounded in an input word or in a count of cycles -- and do not assume the address field names the register a command acts on."
+    }
+  ]
+}

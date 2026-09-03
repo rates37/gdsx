@@ -1,0 +1,39 @@
+adder_demo  dbu=0.001  layers=38
+pin source: in-GDS labels
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━┓
+┃ kind                       ┃ cells ┃ instances ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━┩
+│ logic                      │ 16    │ 79        │
+│ non-logic (tap/decap/fill) │ 2     │ 151       │
+│ other (via/unknown)        │ 8     │ 869       │
+└────────────────────────────┴───────┴───────────┘
+
+logic cells
+    16 x sky130_fd_sc_hd__mux2_1
+    16 x sky130_fd_sc_hd__dfrtp_2
+     8 x sky130_fd_sc_hd__nor2_2
+     7 x sky130_fd_sc_hd__and2_2
+     5 x sky130_fd_sc_hd__a31o_2
+     5 x sky130_fd_sc_hd__xor2_2
+     5 x sky130_fd_sc_hd__or2_2
+     4 x sky130_fd_sc_hd__nand2_2
+     3 x sky130_fd_sc_hd__clkbuf_16
+     3 x sky130_fd_sc_hd__xnor2_2
+     2 x sky130_fd_sc_hd__and4bb_2
+     1 x sky130_fd_sc_hd__and3_2
+     1 x sky130_fd_sc_hd__a21boi_2
+     1 x sky130_fd_sc_hd__o21bai_2
+     1 x sky130_fd_sc_hd__a21bo_2
+     1 x sky130_fd_sc_hd__a21o_2
+
+top-level labels
+  A  (met3)
+  B  (met3)
+  S  (met3)
+  VGND  (met4)
+  VGND  (met5)
+  VPWR  (met4)
+  VPWR  (met5)
+  clk  (met3)
+  en  (met3)
+  rst_n  (met3)

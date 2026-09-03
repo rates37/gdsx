@@ -12,15 +12,14 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import klayout.db as db
-
+from . import geo
 from .config import TechConfig
 
 
 @dataclass
 class Design:
-    layout: db.Layout
-    top: db.Cell
+    layout: geo.Layout
+    top: str
     tech: TechConfig
     path: Path
     layer_index: dict[tuple[int, int], int] = field(default_factory=dict)
@@ -31,7 +30,7 @@ class Design:
         return self.layout.dbu
 
     def index_of(self, ld: tuple[int, int]) -> int | None:
-        # Returns the KLayout layer index for a (layer, datatype) pair
+        # Returns the backend's layer handle for a (layer, datatype) pair
         return self.layer_index.get(ld)
 
     def instances(self):
@@ -41,63 +40,30 @@ class Design:
         one placement for each leaf instance together with its accumulated
         transformation.
         """
-        yield from _walk(self.layout, self.top, db.ICplxTrans())
-
-
-def _array_trans(inst: db.Instance):
-    """Every placement of an instance, expanding regular arrays"""
-    base = inst.cplx_trans
-    if not inst.is_regular_array():
-        yield base
-        return
-    a, b = inst.a, inst.b
-    for i in range(inst.na):
-        for j in range(inst.nb):
-            yield db.ICplxTrans(db.Vector(a.x * i + b.x * j, a.y * i + b.y * j)) * base
-
-
-def _walk(layout: db.Layout, cell: db.Cell, trans: db.ICplxTrans):
-    """Recursively traverse the cell hierarchy
-
-    Yields:
-        (cell_name, transform) for every leaf-cell instance
-    """
-    for inst in cell.each_inst():
-        child = layout.cell(inst.cell_index)
-        for itrans in _array_trans(inst):
-            here = trans * itrans
-
-            if child.is_leaf():
-                yield child.name, here
-            else:
-                yield from _walk(layout, child, here)
+        yield from self.layout.leaf_instances(self.top)
 
 
 def load(path: Path | str, tech: TechConfig, top_name: str | None = None) -> Design:
     """Load a GDS layout and construct a Design object"""
-    layout = db.Layout()
-    layout.read(str(path))
+    layout = geo.read_file(path)
 
     # Find candidate top cells:
-    tops = list(layout.top_cells())
+    tops = layout.top_cells()
 
     if top_name:
-        top = layout.cell(top_name)
-        if top is None:
+        if not layout.has_cell(top_name):
             raise ValueError(f"no cell named {top_name!r}")
+        top = top_name
 
     elif len(tops) == 1:
         top = tops[0]
 
     else:
         # Choose top cell with largest bounding-box area (best guess)
-        top = max(tops, key=lambda c: c.bbox().area())
+        top = max(tops, key=lambda c: layout.cell_bbox(c).area())
 
-    # Build a lookup from (layer, datatype) to KLayout layer index
-    layer_index = {}
-    for idx in layout.layer_indexes():
-        info = layout.get_info(idx)
-        layer_index[(info.layer, info.datatype)] = idx
+    # Build a lookup from (layer, datatype) to the backend's layer handle
+    layer_index = {ld: layout.layer_index(ld) for ld in layout.layers()}
 
     return Design(
         layout=layout,
@@ -159,9 +125,11 @@ def inspect(design: Design, macros: dict | None = None) -> Inspection:
     self_contained = False
     pin_source = "none"
     if logic:
-        probe = design.layout.cell(next(iter(logic)))
+        probe = next(iter(logic))
         li1_pin = design.index_of(tech.layer("li1").pin)
-        self_contained = li1_pin is not None and probe.shapes(li1_pin).size() > 0
+        self_contained = li1_pin is not None and any(
+            True for _ in design.layout.shapes(probe, li1_pin)
+        )
         if self_contained:
             pin_source = "in-GDS labels"
         elif macros and set(logic) <= set(macros):
@@ -179,12 +147,12 @@ def inspect(design: Design, macros: dict | None = None) -> Inspection:
         if idx is None:
             continue
 
-        for shape in design.top.shapes(idx).each():
-            if shape.is_text():
-                top_labels.append((shape.text.string, rl.name))
+        for shape in design.layout.shapes(design.top, idx):
+            if isinstance(shape, geo.Text):
+                top_labels.append((shape.string, rl.name))
 
     return Inspection(
-        top=design.top.name,
+        top=design.top,
         dbu=design.dbu,
         layers=sorted(design.layer_index),
         cell_counts=counts,

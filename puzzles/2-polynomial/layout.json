@@ -1,0 +1,11 @@
+{
+  "fill": 0.3,
+  "aspect": 1.0,
+  "mode": "banded",
+  "order": [
+    "lfsr"
+  ],
+  "groups_by_prefix": {
+    "s": "lfsr"
+  }
+}

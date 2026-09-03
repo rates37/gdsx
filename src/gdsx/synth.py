@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .external import yosys
 from .netlist import Instance, Netlist
 
 # yosys gate -> (sky130 cell, {yosys port: sky130 pin})
@@ -31,13 +30,69 @@ GATE_MAP = {
     "$_OAI4_": ("o22ai", {"A": "A1", "B": "A2", "C": "B1", "D": "B2", "Y": "Y"}),
     "$_DFF_P_": ("dfxtp", {"C": "CLK", "D": "D", "Q": "Q"}),
     "$_DFF_PN0_": ("dfrtp", {"C": "CLK", "R": "RESET_B", "D": "D", "Q": "Q"}),
-    "$_DLATCH_P_": ("dlxtp", {"E": "GATE", "D": "D", "Q": "Q"}),
+    "$_DFF_PN1_": ("dfstp", {"C": "CLK", "R": "SET_B", "D": "D", "Q": "Q"}),
 }
 
-GATES = "AND,NAND,OR,NOR,XOR,XNOR,ANDNOT,ORNOT,MUX,AOI3,OAI3,AOI4,OAI4"
+# no ORNOT (-> or2b), no NMUX (-> mux2i): neither has geometry in
+# samples/puzzle.gds
+GATES = "AND,NAND,OR,NOR,XOR,XNOR,ANDNOT,MUX,AOI3,OAI3,AOI4,OAI4"
 
 # FFs we can map. Everything else has to be legalised into these.
-LEGALIZE = "dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PN0_ 0 -cell $_DLATCH_P_ 0"
+#
+# $_DLATCH_P_ stays in this list even though `dlxtp` has no geometry and is
+# deliberately absent from GATE_MAP. Legalising latches into a shape we then
+# refuse lets `to_netlist` raise a message naming the RTL problem (an
+# incompletely-assigned combinational block); dropping it here instead makes
+# yosys fail first, with an error about cell types.
+LEGALIZE = "dfflegalize -cell $_DFF_P_ 0 -cell $_DFF_PN0_ 0 -cell $_DFF_PN1_ 1 -cell $_DLATCH_P_ 0"
+
+# base cell name -> drive-strength suffix that actually has geometry in
+# samples/puzzle.gds. Everything not listed here is "_2"; only these four
+# deviate.
+DRIVE_SUFFIX = {
+    "mux2": "1",
+    "conb": "1",
+    "decap": "3",
+    "tapvpwrvgnd": "1",
+}
+
+
+def cell_name(base: str) -> str:
+    return f"sky130_fd_sc_hd__{base}_{DRIVE_SUFFIX.get(base, '2')}"
+
+
+class UnmappableCell(RuntimeError):
+    """yosys produced a cell we cannot place, and why"""
+
+
+def _unmappable_message(cell: dict) -> str:
+    """Say what the author has to change, not just which cell was missing.
+
+    A latch is the common case by a wide margin, and the cause is always in
+    the RTL rather than in this module, so name the signal.
+    """
+    kind = cell["type"]
+    if "DLATCH" in kind or "DFFSR" in kind or "SR_" in kind:
+        signal = ", ".join(
+            sorted(
+                str(bits[0])
+                for port, bits in cell.get("connections", {}).items()
+                if port in ("Q", "Y") and bits
+            )
+        )
+        where = f" (output bit {signal})" if signal else ""
+        return (
+            f"yosys inferred a latch or an SR element{where}, which has no "
+            f"geometry in this cell library. Almost always this is an "
+            f"incompletely-assigned combinational always block in the RTL: "
+            f"assign every output on every path, or make the block "
+            f"`always @(posedge clk)`."
+        )
+    return (
+        f"no mapping for yosys cell {kind}. Either add it to GATE_MAP with a "
+        f"sky130 cell that has geometry, or remove whatever gate produces it "
+        f"from GATES."
+    )
 
 
 @dataclass(frozen=True)
@@ -86,7 +141,7 @@ RECIPES = (
 
 
 def yosys_available() -> bool:
-    return shutil.which("yosys") is not None
+    return yosys.available()
 
 
 def synthesize(
@@ -98,12 +153,8 @@ def synthesize(
     src = workdir / f"{top}.v"
     src.write_text(source)
     out = workdir / f"{stem}.json"
-    script = workdir / f"{stem}.ys"
-    script.write_text(recipe.script(src, top, out))
 
-    proc = subprocess.run(["yosys", "-q", str(script)], capture_output=True, text=True)
-    if proc.returncode != 0:
-        raise RuntimeError(f"yosys failed:\n{proc.stdout}\n{proc.stderr}")
+    yosys.run(recipe.script(src, top, out))
     return json.loads(out.read_text())
 
 
@@ -114,7 +165,7 @@ def _net_names(module: dict) -> dict[int, str]:
     def claim(base: str, bits: list) -> None:
         for i, bit in enumerate(bits):
             if isinstance(bit, int) and bit not in names:
-                names[bit] = base if len(bits) == 1 else f"{base}_{i}"
+                names[bit] = base if len(bits) == 1 else f"{base}[{i}]"
 
     for name, port in module["ports"].items():
         claim(name, port["bits"])
@@ -141,12 +192,12 @@ def to_netlist(design: dict, top: str) -> Netlist:
         if cell["type"] == "$scopeinfo":
             continue  # a marker left where a module boundary used to be
         if cell["type"] not in GATE_MAP:
-            raise KeyError(f"no mapping for yosys cell {cell['type']}")
+            raise UnmappableCell(_unmappable_message(cell))
         base, pin_map = GATE_MAP[cell["type"]]
         counters[base] = counters.get(base, 0) + 1
         inst = Instance(
             name=f"{base}_{counters[base]}",
-            cell=f"sky130_fd_sc_hd__{base}_1",
+            cell=cell_name(base),
             connections={
                 pin_map[port]: net_of(bits[0])
                 for port, bits in cell["connections"].items()

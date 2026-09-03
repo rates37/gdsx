@@ -17,10 +17,13 @@ An individual cell is atomic, it is in or out by where its centre lies.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from . import xref
+from .core.graph import Graph
 from .netlist import Netlist
+from .physical.placement import bands as _bands
 
 
 @dataclass(frozen=True)
@@ -76,18 +79,6 @@ class Region:
             return "a block with a lot of context"
         return "a fragment -- the boundary cuts through the logic"
 
-    def report(self) -> str:
-        return "\n".join(
-            [
-                f"region {self.box}",
-                f"  {len(self.inside)} of {self.total_cells} cells "
-                f"({len(self.inside) / self.total_cells:.0%})",
-                f"  {len(self.inputs)} inputs, {len(self.outputs)} outputs, "
-                f"{len(self.internal)} internal nets",
-                f"  cut ratio {self.cut_ratio:.2f} -- {self.verdict}",
-            ]
-        )
-
 
 def within(
     points: dict[str, tuple[float, float]],
@@ -112,7 +103,7 @@ def extract(
 ) -> Region:
     """Everything in `box`, as a netlist with the cut nets promoted to ports"""
     inside = within(points, box, extents)
-    carved = xref.sub_netlist(nl, set(inside), name or f"{nl.top}_region")
+    carved = Graph.of(nl).subgraph(set(inside), name or f"{nl.top}_region")
 
     inputs = sorted(p for p, d in carved.ports.items() if d == "input")
     outputs = sorted(p for p, d in carved.ports.items() if d == "output")
@@ -150,3 +141,57 @@ def bounding_box(
         max(p[0] + e[0] for p, e in here) + pad,
         max(p[1] + e[1] for p, e in here) + pad,
     )
+
+
+class SelectionError(Exception):
+    """None of --box/--band/--group resolved to a valid area"""
+
+
+def extents_of(layout, placed: list) -> dict[str, tuple[float, float]]:
+    """Each placed cell's (width, height) in microns, from its GDS bounding box"""
+    sizes: dict[str, tuple[float, float]] = {}
+    out: dict[str, tuple[float, float]] = {}
+    for p in placed:
+        if p.cell not in sizes:
+            bb = layout.layout.cell_bbox(p.cell)
+            sizes[p.cell] = (
+                (bb.width() * layout.dbu, bb.height() * layout.dbu)
+                if bb
+                else (0.0, 0.0)
+            )
+        out[p.name] = sizes[p.cell]
+    return out
+
+
+def resolve(
+    points: dict[str, tuple[float, float]],
+    extents: dict[str, tuple[float, float]],
+    *,
+    box: str | None,
+    band: int | None,
+    group: str | None,
+    groups_file: Path | None,
+    pad: float,
+    axis: str,
+) -> tuple[Box, str | None] | None:
+    """The selected area and its label, or `None` to mean "list the bands instead" """
+    if box:
+        try:
+            x0, y0, x1, y1 = (float(v) for v in box.split(","))
+        except ValueError:
+            raise SelectionError("--box wants four numbers: x0,y0,x1,y1")
+        return Box(x0, y0, x1, y1), None
+    if band is not None:
+        found = [b for b in _bands(points, axis) if len(b.members) >= 5]
+        if not 0 <= band < len(found):
+            raise SelectionError(f"no band {band}; there are {len(found)}")
+        return bounding_box(points, found[band].members, pad, extents), f"band{band}"
+    if group and groups_file:
+        by_label = json.loads(groups_file.read_text())
+        if group not in by_label:
+            raise SelectionError(f"no group {group!r}; have {sorted(by_label)}")
+        return (
+            bounding_box(points, by_label[group], pad, extents),
+            group.replace(" ", "_"),
+        )
+    return None

@@ -1,0 +1,116 @@
+/* ---- sequence editor -------------------------------------------------- */
+.seq-cycles {
+  width: 60px;
+}
+.seq-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--df-edge);
+}
+.seq-autorun {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--df-ink-3);
+  white-space: nowrap;
+}
+.seq-run-btn {
+  white-space: nowrap;
+}
+.seq-run-status {
+  color: var(--df-faint);
+  white-space: nowrap;
+  font-size: 11px;
+}
+.seq-run-status.dirty {
+  color: var(--df-gold);
+}
+.seq-result.stale {
+  color: var(--df-gold) !important;
+}
+.seq-result {
+  margin-left: auto;
+  color: var(--df-faint);
+}
+.seq-result.latched {
+  color: var(--df-teal);
+}
+.seq-track {
+  border-bottom: 1px solid var(--df-plate-2);
+  padding: 4px 8px;
+}
+.seq-track-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.seq-track-name {
+  width: 70px;
+  flex: none;
+  color: var(--df-ink-2);
+  font-weight: 600;
+}
+/* The reset track. Set apart rather than disabled: pulsing a reset is a real
+   thing to want to do, but the row must not read as another key track. */
+.seq-track-reset .seq-track-name {
+  color: var(--df-faint-2);
+  font-weight: 400;
+}
+.seq-track-tag {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--df-edge-2);
+  border-radius: 2px;
+  color: var(--df-faint-2);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: help;
+}
+/* Present but unseen on every other track, so the tag is a column rather than
+   something that shifts one row's controls away from its neighbours'. */
+.seq-track-tag-blank {
+  visibility: hidden;
+}
+.seq-track-io {
+  flex: 1;
+  max-width: 340px;
+}
+.seq-track-btn {
+  font-size: 11px;
+  padding: 1px 6px;
+}
+.seq-ruler {
+  position: relative;
+  height: 14px;
+  margin-left: 0;
+}
+.seq-tick {
+  position: absolute;
+  top: 0;
+  color: var(--df-faint-2);
+  font-size: 9px;
+}
+.seq-cells {
+  position: relative;
+  height: 20px;
+  touch-action: none;
+}
+.seq-cell {
+  position: absolute;
+  top: 0;
+  background: var(--df-plate-2);
+  border-right: 1px solid var(--df-void);
+  box-sizing: border-box;
+}
+.seq-cell.epoch {
+  border-right: 1px solid var(--df-edge-2);
+}
+.seq-cell.on {
+  background: var(--df-teal-edge);
+}
+.seq-cell.cursor {
+  outline: 1px solid var(--df-gold);
+  outline-offset: -1px;
+}

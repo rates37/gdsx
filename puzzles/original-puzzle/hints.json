@@ -1,0 +1,20 @@
+{
+  "tiers": [
+    {
+      "tier": 0,
+      "text": "728 instances, 92 sequential"
+    },
+    {
+      "tier": 1,
+      "text": "17 of 92 registers have no recovered freeze condition"
+    },
+    {
+      "tier": 2,
+      "text": "the flops form 2 register groups; the largest is reg_dfrtp_2_40 (88 members)"
+    },
+    {
+      "tier": 3,
+      "text": "success is driven by one flop (dfrtp_2_83); its D cone has 57 leaves"
+    }
+  ]
+}

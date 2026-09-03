@@ -1,0 +1,40 @@
+/* Every stylesheet the app has, in one place. `shell.css` is the frame the
+   screens sit in -- page background, toolbar, menu bar, submit popover,
+   dockview chrome, the sub-tab and drawer mounts -- and the rest is one file
+   per panel. There is no other location: index.html carries no styles of its
+   own, and no panel injects a <style> tag.
+
+   `tokens.css` comes first and is the only file allowed to contain a raw hex
+   value: the palette, the two typefaces and the border radius all resolve
+   there. */
+@import "./tokens.css";
+@import "./shell.css";
+@import "./menu.css";
+@import "./die-view.css";
+@import "./netlist.css";
+@import "./cone-walker.css";
+@import "./waveform.css";
+@import "./sequence-editor.css";
+@import "./notebook.css";
+@import "./experiments.css";
+@import "./model-builder.css";
+@import "./register-inspector.css";
+@import "./repl.css";
+
+/* `hidden` must actually hide.
+
+   Panels toggle visibility with the `hidden` property, which relies on the
+   user agent's `[hidden] { display: none }`. That rule is the weakest one
+   there is, so any class selector setting `display` beats it and the element
+   stays on screen with its attribute set and nobody the wiser. Two had already
+   gone that way: the Notebook's write-up drawer (`display: flex`) sat open
+   with an empty text area from the moment the panel was opened, and the guided
+   walkthrough's card (`display: flex`, `position: fixed`) left an empty
+   bordered sliver pinned to the bottom-left corner of every level whether or
+   not the walkthrough was running.
+
+   Last in the file and `!important`, because the whole point is to outrank
+   whatever a panel's own stylesheet says. */
+[hidden] {
+  display: none !important;
+}

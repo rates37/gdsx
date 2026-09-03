@@ -1,0 +1,871 @@
+:root {
+  color-scheme: dark;
+  font-family: var(--df-mono);
+  font-size: 12px;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--df-void);
+  color: var(--df-ink-2);
+  overflow: hidden;
+  /* Spline Sans Mono's default figures are already tabular, but a column of
+     cycle numbers is the app's most common alignment problem and saying so
+     costs nothing. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+#workspace {
+  position: absolute;
+  inset: 0;
+}
+
+/* Scrollbars. Almost every panel is a long list, so the browser default --
+   a light grey bar on a light track -- ends up being one of the brightest
+   things on screen, several times over. `scrollbar-color` covers Firefox and
+   recent Chrome; the WebKit pseudo-elements cover the rest of Safari. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--df-edge-3) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--df-edge-2);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--df-edge-hi);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* The display serif, wherever a surface names itself. Titles only: it never
+   carries a net name, a cycle count or a control label, because it is not
+   monospaced and every one of those wants to align with the one below it. */
+.df-title {
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--df-ink);
+}
+
+/* ---- empty and loading states ------------------------------------ */
+/*
+   The one place the display serif is allowed inside a panel. These are the
+   only lines in the workspace that are prose rather than data -- they say
+   what to do next and then they are gone -- so nothing they are set beside
+   has to align with them, and the change of voice is the point: a panel with
+   a serif sentence in it reads as waiting, not as empty.
+
+   Listed by hand rather than given a shared class because each of these is a
+   panel's own empty state and the panels do not import from one another; a
+   new one is added here.
+*/
+.cw-loading,
+.die-loading,
+.die3d-loading,
+.gdsx-hints-empty,
+.labels-empty,
+.mb-loading,
+.nb-empty,
+.nb-loading,
+.netlist-detail-empty,
+.netlist-loading,
+.repl-loading,
+.ri-loading,
+.seq-loading,
+.sf-loading,
+.wave-loading,
+.xp-loading {
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-size: 15px;
+  font-weight: 300;
+  letter-spacing: 0;
+  line-height: 1.6;
+  color: var(--df-dim);
+}
+
+/* ---- dockview: the panel frame ----------------------------------- */
+/*
+   Overrides for the `themeAbyss` dockview ships with, applied here rather
+   than by editing `workspace/dockview.css` -- that file is a vendored copy
+   of the dependency's stylesheet and re-extracting it (npm run
+   extract-dockview-css) would throw away anything written into it.
+
+   The tab strip is the single biggest surface in the app and abyss draws it
+   as fourteen equal filled boxes. Darkfield draws tabs as text on the page
+   ground, with the active one marked by a rule beneath it: the strip then
+   reads as one row of labels rather than a row of competing buttons.
+*/
+/*
+   The class is doubled deliberately. `workspace/dockview.css` is imported by
+   `workspace.ts` rather than by `index.css`, so it lands in the workspace
+   chunk and its `.dockview-theme-abyss` block is applied *after* this file.
+   At equal specificity the later rule wins and every override here is a
+   no-op. `.a.a` outranks `.a` and settles it whatever the load order turns
+   out to be.
+
+   The `--dv-color-abyss-*` primitives are set as well as the semantic
+   variables: abyss's second block redefines the semantic ones in terms of the
+   primitives, so overriding only the semantic names leaves half the theme
+   pointing back at navy.
+*/
+.dockview-theme-abyss.dockview-theme-abyss {
+  --dv-color-abyss-dark: var(--df-void);
+  --dv-color-abyss: var(--df-void);
+  --dv-color-abyss-light: var(--df-plate);
+  --dv-color-abyss-lighter: var(--df-edge);
+  --dv-color-abyss-accent: var(--df-gold);
+  --dv-color-abyss-primary-text: var(--df-ink);
+  --dv-color-abyss-secondary-text: var(--df-dim);
+  --dv-group-view-background-color: var(--df-void);
+  --dv-tabs-and-actions-container-background-color: var(--df-void);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--df-void);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--df-void);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--df-void);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--df-void);
+  --dv-tab-divider-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: var(--df-ink);
+  --dv-activegroup-hiddenpanel-tab-color: var(--df-dim);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--df-ink-3);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--df-faint);
+  --dv-separator-border: var(--df-edge);
+  --dv-paneview-header-border-color: var(--df-edge);
+  --dv-paneview-active-outline-color: var(--df-gold);
+  --dv-color-abyss-accent: var(--df-gold);
+  --dv-tabs-and-actions-container-height: 30px;
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-drag-over-background-color: rgba(255, 209, 102, 0.14);
+  --dv-edge-dock-indicator-color: var(--df-gold);
+  --dv-icon-hover-background-color: var(--df-plate-2);
+  /* abyss ships `#888` here, which drew a light rule the width of the tab
+     strip -- brighter than the active tab's own marker. */
+  --dv-tabs-container-scrollbar-color: var(--df-edge-2);
+  --dv-floating-border: 1px solid var(--df-edge-3);
+  --dv-floating-box-shadow: 0 10px 34px rgba(0, 0, 0, 0.62);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tabs-and-actions-container {
+  border-bottom: 1px solid var(--df-edge);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab {
+  padding: 0;
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab {
+  /* `box-sizing` is load-bearing, not tidiness. dockview sizes this element
+     `width: 100%` of the tab, and the tab's own width comes from this
+     element's intrinsic width -- so under the default content-box, adding
+     padding here made the inner element 24px wider than the tab that
+     contains it. The overflow ran the close button out over the next tab
+     (mostly hiding it), and the sum of the overhangs made
+     `.dv-tabs-container` scrollable even when every tab fitted. */
+  box-sizing: border-box;
+  padding: 0 13px;
+  /* The rule under the active tab is drawn as an inset shadow rather than a
+     border so it does not add a pixel of height and jog the strip. */
+  box-shadow: inset 0 -2px 0 transparent;
+}
+/* The close button. Quiet by default -- it is one click from throwing a
+   panel's state away and should not read as part of the label -- and pulled
+   into the tab's right padding so it costs the strip a few pixels rather
+   than a whole control's width. */
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab .dv-default-tab-content {
+  margin-right: 7px;
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab .dv-default-tab-action {
+  padding: 2px;
+  margin-right: -6px;
+  color: var(--df-faint);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab .dv-default-tab .dv-default-tab-action:hover {
+  border-radius: var(--df-radius);
+  color: var(--df-ink);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab.dv-active-tab .dv-default-tab {
+  box-shadow: inset 0 -2px 0 var(--df-gold);
+}
+.dockview-theme-abyss.dockview-theme-abyss .dv-tab.dv-inactive-tab .dv-default-tab:hover {
+  box-shadow: inset 0 -2px 0 var(--df-edge-hi);
+}
+
+/* ---- app toolbar: reset layout, reopen closed tabs --------------- */
+.gdsx-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--df-void);
+  border-bottom: 1px solid var(--df-edge);
+  box-sizing: border-box;
+}
+/* The wordmark. Set in the display serif at a readable size rather than as
+   tracked-out mono caps: it is the one place in the app that is a name and
+   not a value, and it should not look like another label in the strip. */
+.gdsx-toolbar-title {
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  color: var(--df-ink);
+  flex: none;
+}
+.gdsx-toolbar-spacer {
+  flex: 1;
+}
+/* The way back to the level menu. Styled as a link rather than a button --
+   it navigates, and the browser should say so on hover. */
+.gdsx-home {
+  flex: none;
+  color: var(--df-ink-3);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--df-radius);
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+.gdsx-home:hover {
+  color: var(--df-ink);
+  background: var(--df-plate-2);
+  border-color: var(--df-edge-2);
+}
+/* "You have solved this one", beside the objective. Absent, not greyed, when
+   the puzzle is unsolved -- which is most puzzles most of the time. */
+.gdsx-solved {
+  flex: none;
+  color: var(--df-teal);
+  border: 1px solid var(--df-teal-edge);
+  background: var(--df-teal-wash);
+  border-radius: var(--df-radius);
+  padding: 0 5px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: default;
+}
+/* ---- readiness pill ---------------------------------------------------- */
+.gdsx-ready {
+  flex: none;
+  font-size: 11px;
+  border-radius: var(--df-radius);
+  padding: 0 6px;
+  white-space: nowrap;
+  cursor: default;
+  transition: opacity 0.6s ease;
+}
+.gdsx-ready-booting {
+  color: var(--df-gold);
+  border: 1px solid var(--df-gold-edge);
+}
+.gdsx-ready-ready {
+  color: var(--df-teal);
+  border: 1px solid var(--df-teal-edge);
+}
+.gdsx-ready-failed {
+  color: var(--df-coral);
+  border: 1px solid var(--df-coral-edge);
+  background: var(--df-coral-wash);
+}
+/* Out of the way once it has been read: a permanent green light is noise,
+   and the state it reports does not come back. Opacity rather than `display`
+   so the bar does not reflow four seconds after boot. */
+.gdsx-ready-done {
+  opacity: 0;
+  pointer-events: none;
+}
+.gdsx-level-select {
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 2px 4px;
+  font: inherit;
+  max-width: 240px;
+  cursor: pointer;
+}
+.gdsx-level-select:hover:not(:disabled) {
+  border-color: var(--df-edge-hi);
+}
+.gdsx-level-select:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+/* The objective. `min-width: 0` plus the blurb's own ellipsis is what
+   lets the sentence give up room first while the goal phrase -- the half
+   that actually says what ends the puzzle -- always survives. */
+.gdsx-objective {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  cursor: default;
+}
+.gdsx-objective-goal {
+  flex: none;
+  color: var(--df-gold);
+  border: 1px solid var(--df-gold-edge);
+  border-radius: var(--df-radius);
+  padding: 0 5px;
+  white-space: nowrap;
+}
+.gdsx-objective-blurb {
+  color: var(--df-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gdsx-toolbar button {
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 3px 8px;
+  font: inherit;
+  cursor: pointer;
+  /* The objective beside the level picker is elastic; these are not.
+     Without this the buttons wrap to two lines inside a 28px bar. */
+  flex: none;
+  white-space: nowrap;
+}
+.gdsx-toolbar button:hover:not(:disabled) {
+  border-color: var(--df-edge-hi);
+}
+.gdsx-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* ---- menu bar: View / Analyse / Experiment, macOS/Windows style --- */
+.gdsx-menubar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.gdsx-menu-wrap {
+  position: relative;
+}
+.gdsx-menu-btn {
+  background: transparent;
+  color: var(--df-ink-2);
+  border: 1px solid transparent;
+  border-radius: var(--df-radius);
+  padding: 3px 8px;
+  font: inherit;
+  cursor: pointer;
+  flex: none;
+  white-space: nowrap;
+}
+.gdsx-menu-btn:hover,
+.gdsx-menu-btn.open {
+  background: var(--df-plate-2);
+  border-color: var(--df-edge-2);
+}
+.gdsx-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  overflow: hidden;
+  z-index: 31;
+}
+.gdsx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gdsx-menu-item:hover {
+  background: var(--df-edge);
+  color: var(--df-gold);
+}
+/* Reserved so an item's label does not jog left/right depending on
+   whether its panel happens to be open. */
+.gdsx-menu-check {
+  flex: none;
+  width: 14px;
+  visibility: hidden;
+}
+.gdsx-menu-check.checked {
+  visibility: visible;
+}
+.gdsx-submit-slot {
+  position: relative;
+  flex: none;
+}
+.gdsx-notebook-btn.on {
+  border-color: var(--df-gold-edge);
+  color: var(--df-gold);
+}
+/* ---- submit surface: value against the checks block ----------------- */
+.gdsx-submit-btn.on {
+  border-color: var(--df-teal-edge);
+  color: var(--df-teal);
+}
+.gdsx-submit-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 32;
+  margin-top: 4px;
+  width: max-content;
+  max-width: min(420px, 70vw);
+  background: var(--df-void);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* The class rule above's `display: flex` outranks the browser's
+   default `[hidden] { display: none }` (an author rule beats a
+   user-agent one at equal specificity), so setting `.hidden = true`
+   flipped the DOM property but left the popover visibly on screen.
+   `[hidden]` as part of the selector raises this rule's specificity
+   past the base one and wins regardless of source order. */
+.gdsx-submit-popover[hidden] {
+  display: none;
+}
+.gdsx-submit-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.gdsx-submit-use-current {
+  font-size: 11px;
+}
+.gdsx-submit-close {
+  flex: none;
+  padding: 0 6px;
+  line-height: 1.4;
+}
+.gdsx-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gdsx-submit-label {
+  flex: none;
+  min-width: 90px;
+  color: var(--df-ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gdsx-submit-input {
+  flex: 1;
+  min-width: 140px;
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 2px 6px;
+  font: inherit;
+}
+.gdsx-submit-radix {
+  flex: none;
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 2px 4px;
+  font: inherit;
+}
+.gdsx-submit-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+.gdsx-submit-verdict {
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.gdsx-submit-pending {
+  color: var(--df-ink-3);
+}
+.gdsx-submit-ok {
+  color: var(--df-teal);
+}
+.gdsx-submit-bad {
+  color: var(--df-coral);
+}
+/* ---- hints: tiered, revealed one at a time, always available (20.1) ---- */
+.gdsx-hints-slot {
+  position: relative;
+  flex: none;
+}
+.gdsx-hints-btn.on {
+  border-color: var(--df-gold-edge);
+  color: var(--df-gold);
+}
+.gdsx-hints-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 32;
+  margin-top: 4px;
+  width: max-content;
+  /* Wider than the submit popover's cap: the survey across all seven baked
+     puzzles found tier text up to 442 characters, and a narrower box would
+     wrap that into an unreadable column of one word per line. */
+  max-width: min(480px, 85vw);
+  background: var(--df-void);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gdsx-hints-popover[hidden] {
+  display: none;
+}
+.gdsx-hints-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--df-ink-3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.gdsx-hints-close {
+  flex: none;
+  padding: 0 6px;
+  line-height: 1.4;
+}
+.gdsx-hints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* No fixed height: tier counts run 4-5 and any one tier can be a single
+     short line or a multi-sentence paragraph, so the popover grows with its
+     content rather than clipping or reserving space for the longest case. */
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.gdsx-hints-tier {
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  color: var(--df-ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.gdsx-hints-empty {
+  margin: 0;
+  color: var(--df-faint);
+  font-size: 11px;
+}
+.gdsx-hints-reveal {
+  align-self: flex-end;
+  font-size: 11px;
+}
+.gdsx-dock-mount {
+  position: absolute;
+  /* Matches `.gdsx-toolbar`'s height. */
+  top: 32px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* ---- dockview panel chrome ------------------------------------- */
+.gdsx-panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--df-void);
+}
+
+/* ---- sub-tab host (panels/mounts.ts) ----------------------------- */
+/* One panel, several former panels beneath it. Visually quieter than
+   dockview's own tab strip on purpose: this is a division *within* a
+   tab, and making it look like a peer of the tab strip above would read
+   as two competing rows of tabs. */
+.pt-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+/* Same underline treatment as the dockview tab strip above it, one step
+   quieter: a shorter rule in a dimmer colour. Two rows of tabs are
+   unavoidable here, so the difference between them has to be legible at a
+   glance -- the outer row marks the panel, the inner row marks the section
+   inside it. */
+.pt-tabs {
+  display: flex;
+  gap: 14px;
+  flex: none;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--df-edge);
+}
+.pt-tab {
+  background: transparent;
+  border: 0;
+  border-radius: var(--df-radius);
+  padding: 6px 0;
+  color: var(--df-faint);
+  cursor: pointer;
+  box-shadow: inset 0 -1px 0 transparent;
+}
+.pt-tab:hover {
+  color: var(--df-ink-2);
+}
+.pt-tab.on {
+  color: var(--df-ink);
+  box-shadow: inset 0 -1px 0 var(--df-ink-3);
+}
+.pt-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* One per section, so a kept-alive section can be hidden without the
+   next one having to clear up after it. */
+.pt-section {
+  position: absolute;
+  inset: 0;
+}
+.pt-section[hidden] {
+  display: none;
+}
+
+/* ---- collapsible drawer (panels/mounts.ts) ----------------------- */
+.pd-drawer {
+  flex: none;
+  border-top: 1px solid var(--df-edge-2);
+  background: var(--df-void);
+}
+.pd-drawer-bar {
+  display: flex;
+  align-items: center;
+}
+.pd-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--df-radius);
+  padding: 5px 8px;
+  text-align: left;
+  color: var(--df-dim);
+  cursor: pointer;
+}
+.pd-drawer-head:hover {
+  color: var(--df-ink-2);
+  background: var(--df-plate-2);
+}
+/* Only shown while the drawer is open: the escape hatch for a header that has
+   just moved out from under the cursor. */
+.pd-drawer-close {
+  flex: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--df-radius);
+  padding: 2px 8px;
+  margin-right: 4px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--df-dim);
+  cursor: pointer;
+}
+.pd-drawer-close:hover {
+  color: var(--df-ink-2);
+  background: var(--df-plate-2);
+}
+.pd-drawer.on .pd-drawer-title {
+  color: var(--df-ink-2);
+}
+.pd-drawer-caret {
+  width: 10px;
+  flex: none;
+}
+.pd-drawer-badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--df-gold);
+  border: 1px solid var(--df-gold-edge);
+  border-radius: var(--df-radius);
+  padding: 0 5px;
+}
+.pd-drawer-badge:empty {
+  display: none;
+}
+.pd-drawer-body {
+  max-height: 45vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--df-edge);
+}
+/* It is focusable only so that Escape works after a click inside it; it is
+   not a control, so it should not draw a focus ring. */
+.pd-drawer-body:focus {
+  outline: none;
+}
+
+/* ---- waveform + sequence editor: shared bits ----------------------- */
+.wave-panel,
+.seq-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+.wave-toolbar,
+.seq-toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--df-edge);
+  flex: none;
+}
+.wave-loading,
+.seq-loading {
+  padding: 16px;
+  color: var(--df-faint);
+}
+.wave-body,
+.seq-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ---- guided walkthrough (guide/guide.ts) -------------------------- */
+/* Floats over the workspace bottom-left: the die view keeps its layer
+   box top-left and its minimap bottom-right, so this is the one corner
+   nothing else claims. Collapsible, because a player who wants the
+   whole panel back should not have to close the guide to get it. */
+.guide-card {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 50;
+  width: 400px;
+  max-width: calc(100vw - 24px);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--df-plate);
+  border: 1px solid var(--df-edge-3);
+  border-radius: var(--df-radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+}
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--df-edge-2);
+}
+.guide-collapsed .guide-head {
+  border-bottom: 0;
+}
+.guide-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--df-gold);
+}
+.guide-count {
+  color: var(--df-dim);
+  font-size: 11px;
+}
+.guide-collapse {
+  margin-left: auto;
+}
+.guide-head button {
+  padding: 0 6px;
+  color: var(--df-dim);
+}
+.guide-title {
+  margin: 10px 10px 0;
+  font-size: 13px;
+  color: var(--df-ink);
+}
+.guide-body {
+  overflow-y: auto;
+  padding: 0 10px;
+  margin: 6px 0;
+}
+.guide-body p {
+  margin: 8px 0;
+  line-height: 1.65;
+  color: var(--df-ink-3);
+}
+.guide-body code {
+  color: var(--df-blue);
+  background: var(--df-plate-2);
+  border-radius: var(--df-radius);
+  padding: 0 3px;
+}
+.guide-goal {
+  margin: 0 10px 8px;
+  padding: 4px 8px;
+  border: 1px dashed var(--df-edge-2);
+  border-radius: var(--df-radius);
+  color: var(--df-dim);
+}
+.guide-goal-done {
+  color: var(--df-teal);
+  border-style: solid;
+  border-color: var(--df-teal-edge);
+  background: var(--df-teal-wash);
+}
+.guide-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--df-edge-2);
+}
+.guide-next {
+  font-weight: 600;
+  color: var(--df-ink);
+}
+.guide-jump {
+  margin-left: auto;
+  max-width: 170px;
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 2px 4px;
+}
+.gdsx-guide-btn.on {
+  border-color: var(--df-gold-edge);
+  color: var(--df-gold);
+}

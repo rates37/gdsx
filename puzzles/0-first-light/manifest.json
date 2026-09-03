@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "0-first-light",
+  "title": "First Light",
+  "difficulty": "easy",
+  "blurb": "Guided. Six flops, one comparator, one lock — and a walkthrough of every tool.",
+  "author": "gdsx",
+  "answer_kind": "sequence",
+  "tools_enabled": [
+    "die",
+    "netlist",
+    "cone",
+    "requirements",
+    "registers",
+    "register-decoder",
+    "sticky",
+    "waveform",
+    "sequence",
+    "experiments",
+    "sensitivity",
+    "constraints",
+    "notebook",
+    "model",
+    "labels",
+    "repl"
+  ],
+  "par_seconds": 900,
+  "tags": ["tutorial", "guided", "shift-register", "comparator"],
+  "guide": true
+}

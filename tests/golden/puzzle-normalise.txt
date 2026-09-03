@@ -1,0 +1,64 @@
+728 -> 688 instances, 741 -> 696 nets
+45 cells removed, 45 nets merged
+    33 buffers collapsed
+     1 inverter pairs collapsed
+    11 cells folded to a constant
+     0 cells degenerated into a wire
+     0 cells driving nothing
+    13 nets known constant
+
+buffers
+  buf_2_1              sky130_fd_sc_hd__buf_2 n2350 := n2377
+  clkbuf_16_1          sky130_fd_sc_hd__clkbuf_16 n1702 := clk
+  clkbuf_4_1           sky130_fd_sc_hd__clkbuf_4 n1637 := n819
+  clkbuf_4_2           sky130_fd_sc_hd__clkbuf_4 n1740 := n726
+  clkbuf_4_3           sky130_fd_sc_hd__clkbuf_4 n1857 := n1126
+  clkbuf_4_4           sky130_fd_sc_hd__clkbuf_4 n1955 := n1964
+  clkbuf_4_5           sky130_fd_sc_hd__clkbuf_4 n2495 := n2081
+  clkbuf_4_6           sky130_fd_sc_hd__clkbuf_4 n2664 := n2586
+  clkbuf_4_7           sky130_fd_sc_hd__clkbuf_4 n3279 := n3523
+  clkbuf_4_8           sky130_fd_sc_hd__clkbuf_4 n3476 := n3386
+  clkbuf_4_9           sky130_fd_sc_hd__clkbuf_4 n4127 := n2930
+  clkbuf_4_10          sky130_fd_sc_hd__clkbuf_4 n4171 := n4211
+  clkbuf_4_11          sky130_fd_sc_hd__clkbuf_4 n4756 := n3525
+  clkbuf_4_12          sky130_fd_sc_hd__clkbuf_4 n5025 := n4958
+  clkbuf_4_13          sky130_fd_sc_hd__clkbuf_4 n5442 := n5451
+  clkbuf_4_14          sky130_fd_sc_hd__clkbuf_4 n5986 := n6001
+  clkbuf_4_15          sky130_fd_sc_hd__clkbuf_4 n5910 := n5705
+  clkbuf_8_1           sky130_fd_sc_hd__clkbuf_8 n726 := clk
+  clkbuf_8_2           sky130_fd_sc_hd__clkbuf_8 n819 := clk
+  clkbuf_8_3           sky130_fd_sc_hd__clkbuf_8 n1126 := clk
+  clkbuf_8_4           sky130_fd_sc_hd__clkbuf_8 n1964 := clk
+  clkbuf_8_5           sky130_fd_sc_hd__clkbuf_8 n2081 := clk
+  clkbuf_8_6           sky130_fd_sc_hd__clkbuf_8 n2586 := clk
+  clkbuf_8_7           sky130_fd_sc_hd__clkbuf_8 n3386 := clk
+  clkbuf_8_8           sky130_fd_sc_hd__clkbuf_8 n3523 := clk
+  clkbuf_8_9           sky130_fd_sc_hd__clkbuf_8 n2930 := clk
+  clkbuf_8_10          sky130_fd_sc_hd__clkbuf_8 n4211 := clk
+  clkbuf_8_11          sky130_fd_sc_hd__clkbuf_8 n3525 := clk
+  clkbuf_8_12          sky130_fd_sc_hd__clkbuf_8 n4958 := clk
+  clkbuf_8_13          sky130_fd_sc_hd__clkbuf_8 n4972 := clk
+  clkbuf_8_14          sky130_fd_sc_hd__clkbuf_8 n5451 := clk
+  clkbuf_8_15          sky130_fd_sc_hd__clkbuf_8 n5705 := clk
+  clkbuf_8_16          sky130_fd_sc_hd__clkbuf_8 n6001 := clk
+
+inverter pairs
+  inv_2_24             sky130_fd_sc_hd__inv_2 n6397 := n3401
+
+constant folds
+  conb_1_2             sky130_fd_sc_hd__conb_1 n2233 = 1
+  conb_1_2             sky130_fd_sc_hd__conb_1 n2296 = 0
+  conb_1_3             sky130_fd_sc_hd__conb_1 n2522 = 1
+  conb_1_3             sky130_fd_sc_hd__conb_1 n2506 = 0
+  conb_1_4             sky130_fd_sc_hd__conb_1 n2882 = 1
+  conb_1_4             sky130_fd_sc_hd__conb_1 n2887 = 0
+  conb_1_5             sky130_fd_sc_hd__conb_1 n3266 = 1
+  conb_1_5             sky130_fd_sc_hd__conb_1 n3299 = 0
+  conb_1_6             sky130_fd_sc_hd__conb_1 n3788 = 1
+  conb_1_6             sky130_fd_sc_hd__conb_1 n3770 = 0
+  a22o_2_17            sky130_fd_sc_hd__a22o_2 n5254 = 0
+  wrote out/puzzle.json
+  wrote out/puzzle.v
+  wrote out/puzzle.generic.v
+  wrote out/puzzle.generic.json
+  wrote out/puzzle.dot

@@ -1,0 +1,122 @@
+/* ---- Darkfield: the app's whole palette and type scale -------------- */
+/*
+   Every colour, font and border radius in the app resolves to something in
+   this file. No other stylesheet may contain a raw hex value -- if a surface
+   needs a colour that is not here, the colour is missing from the system and
+   belongs here first.
+
+   The short version: a graphite ground so the die view is the brightest thing on
+   screen, five accents with one role each, and no border radius anywhere.
+*/
+
+/* ---- typefaces ------------------------------------------------------ */
+/*
+   Self-hosted, latin subset, variable. The app already ships Pyodide and the
+   render bundles locally and must work from a file:// build with no network,
+   so a webfont CDN is not an option.
+
+   The files live in src/styles/fonts/ rather than public/fonts/, and the
+   url()s below are relative rather than site-root-absolute, so that Vite
+   resolves them at build time: it fingerprints them into the asset graph and
+   rewrites these references against the deploy base path. A '/fonts/...'
+   URL is opaque to Vite and 404s under a sub-path deploy (GitHub Pages).
+*/
+@font-face {
+  font-family: "Fraunces";
+  src: url("./fonts/fraunces-latin.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215;
+}
+@font-face {
+  font-family: "Spline Sans Mono";
+  src: url("./fonts/spline-sans-mono-latin.woff2") format("woff2");
+  font-weight: 300 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215;
+}
+
+:root {
+  /* Mono carries every number, name and control: this is a tool for people
+     who read `dfrtp_2_83.Q` all day and alignment is worth more than warmth.
+     The display serif is for titles only -- never for data. */
+  --df-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --df-display: "Fraunces", Iowan Old Style, Georgia, serif;
+
+  /* ---- surfaces: graphite, near-neutral, a hair cool ---------------- */
+  --df-void: #0c0d10; /* page and panel ground */
+  --df-plate: #131519; /* raised: toolbar, cards, popovers */
+  --df-plate-2: #191c21; /* control ground, row hover */
+  --df-edge: #21242a; /* hairline between rows and sections */
+  --df-edge-2: #2b2f37; /* hairline that carries structure */
+  --df-edge-3: #3a3f49; /* border of something floating over the page */
+  --df-edge-hi: #4d5460; /* border under the pointer */
+
+  /* ---- text -------------------------------------------------------- */
+  --df-ink: #e8e7e4; /* titles, the value you came to read */
+  --df-ink-2: #c6c5c1; /* body, control labels */
+  --df-ink-3: #a5a5a1; /* secondary body, prose in a card */
+  --df-dim: #85878e; /* field labels, metadata */
+  --df-faint: #64666d; /* captions, empty states, disabled */
+  --df-faint-2: #4e5057; /* the quietest thing that is still text */
+
+  /* ---- accents: one role each, and the role is the name ------------- */
+  /* Nothing else may use these. A colour with two meanings has none. */
+
+  /* confirmed, consistent, solved, a boolean function that checked out */
+  --df-teal: #59e0c8;
+  --df-teal-edge: #2a5f58;
+  --df-teal-wash: #0f2020;
+
+  /* disproved, failed, destructive, a counterexample */
+  --df-coral: #ff7a59;
+  --df-coral-hi: #ffa78e;
+  --df-coral-dim: #c4735c;
+  --df-coral-edge: #6b3a2c;
+  --df-coral-wash: #1c1310;
+  --df-coral-wash-2: #2a1a15;
+
+  /* the objective, the active thing, the current selection, a player label */
+  --df-gold: #ffd166;
+  --df-gold-edge: #6b5a2c;
+  --df-gold-wash: #1c1810;
+
+  /* a reference to something else: a net name, a code span, a cross-link */
+  --df-blue: #8ab4ff;
+  --df-blue-hi: #c2d6ff;
+  --df-blue-edge: #2f4468;
+  --df-blue-wash: #141926;
+
+  /* a boundary: a primary input, an output port, the edge of the design */
+  --df-cyan: #6ad9e6;
+  --df-cyan-edge: #24525c;
+
+  /* ---- die view layer colours -------------------------------------- */
+  /* The legend swatches read from these; the 2D shader and the three.js
+     materials carry their own copies in render/, and the two must be kept
+     in step by hand. Ordering is the physical stack, bottom to top: the
+     device level first, then the interconnect. */
+  --df-layer-cells: #8c94a8;
+  --df-layer-substrate: #3a3f4a;
+  --df-layer-nwell: #6b5b8c;
+  --df-layer-diff: #8c6b4a;
+  --df-layer-tap: #a88a5c;
+  --df-layer-poly: #d94f70;
+  --df-layer-licon1: #bfbfbf;
+  --df-layer-li1: #6bbf6b;
+  --df-layer-met1: #598cf2;
+  --df-layer-met2: #f2735a;
+  --df-layer-met3: #f2cc4d;
+  --df-layer-met4: #bf66e6;
+  --df-layer-met5: #66e6e6;
+
+  /* ---- geometry ----------------------------------------------------- */
+  /* Zero, everywhere, including on native controls. Hierarchy in this app
+     comes from type scale and space; a 3px radius on 200 controls is noise
+     that reads as a default rather than a decision. */
+  --df-radius: 0;
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "5-magic-number",
+  "title": "Magic Number",
+  "difficulty": "hard",
+  "blurb": "A 32-bit serial comparator and four decoys, laid out so the die view actively misleads. Read the constant out of the gates.",
+  "author": "gdsx",
+  "answer_kind": "constant",
+  "tools_enabled": ["die", "netlist", "registers", "cone", "waveform", "repl"],
+  "par_seconds": 2400,
+  "tags": ["cone-flattening", "polarity", "decoys", "shift-register", "anti-layout"]
+}

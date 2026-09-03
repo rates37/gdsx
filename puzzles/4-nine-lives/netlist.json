@@ -1,0 +1,1527 @@
+{
+  "top": "nine_lives",
+  "ports": {
+    "clk": "input",
+    "rst_n": "input",
+    "O[7]": "output",
+    "O[3]": "output",
+    "O[1]": "output",
+    "O[0]": "output",
+    "I[0]": "input",
+    "I[1]": "input",
+    "enable": "input",
+    "O[4]": "output",
+    "O[2]": "output",
+    "success": "output",
+    "O[5]": "output",
+    "O[6]": "output"
+  },
+  "power_nets": [
+    "VGND",
+    "VPWR"
+  ],
+  "instances": [
+    {
+      "name": "a22oi_2_1",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n19",
+        "A2": "n20",
+        "B1": "n18",
+        "B2": "n17",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n13"
+      }
+    },
+    {
+      "name": "a22oi_2_2",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n17",
+        "A2": "n24",
+        "B1": "n22",
+        "B2": "n21",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n14"
+      }
+    },
+    {
+      "name": "a22oi_2_3",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n17",
+        "A2": "n42",
+        "B1": "n28",
+        "B2": "n27",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n15"
+      }
+    },
+    {
+      "name": "a22oi_2_4",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n63",
+        "A2": "n64",
+        "B1": "n62",
+        "B2": "n61",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n40"
+      }
+    },
+    {
+      "name": "a22oi_2_5",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n86",
+        "A2": "n87",
+        "B1": "n89",
+        "B2": "n84",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n80"
+      }
+    },
+    {
+      "name": "a22oi_2_6",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n306",
+        "A2": "n87",
+        "B1": "n89",
+        "B2": "n86",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n81"
+      }
+    },
+    {
+      "name": "a22oi_2_7",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n84",
+        "A2": "n87",
+        "B1": "n89",
+        "B2": "n92",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n82"
+      }
+    },
+    {
+      "name": "a22oi_2_8",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n21",
+        "A2": "n257",
+        "B1": "n456",
+        "B2": "n26",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n440"
+      }
+    },
+    {
+      "name": "a22oi_2_9",
+      "cell": "sky130_fd_sc_hd__a22oi_2",
+      "connections": {
+        "A1": "n61",
+        "A2": "n59",
+        "B1": "n87",
+        "B2": "n27",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n442"
+      }
+    },
+    {
+      "name": "and2_2_1",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n17",
+        "B": "n26",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n64"
+      }
+    },
+    {
+      "name": "and2_2_2",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n61",
+        "B": "n59",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n42"
+      }
+    },
+    {
+      "name": "and2_2_3",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "I[1]",
+        "B": "I[0]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n59"
+      }
+    },
+    {
+      "name": "and2_2_4",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n27",
+        "B": "n87",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n24"
+      }
+    },
+    {
+      "name": "and2_2_5",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n19",
+        "B": "n64",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n158"
+      }
+    },
+    {
+      "name": "and2_2_6",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n63",
+        "B": "n20",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n223"
+      }
+    },
+    {
+      "name": "and2_2_7",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n21",
+        "B": "n257",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n18"
+      }
+    },
+    {
+      "name": "and2_2_8",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n17",
+        "B": "n442",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n558"
+      }
+    },
+    {
+      "name": "and2_2_9",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n17",
+        "B": "n687",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n675"
+      }
+    },
+    {
+      "name": "and2_2_10",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n448",
+        "B": "n675",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n676"
+      }
+    },
+    {
+      "name": "and2_2_11",
+      "cell": "sky130_fd_sc_hd__and2_2",
+      "connections": {
+        "A": "n142",
+        "B": "O[3]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n687"
+      }
+    },
+    {
+      "name": "and2b_2_1",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "I[0]",
+        "B": "I[1]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n26"
+      }
+    },
+    {
+      "name": "and2b_2_2",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "I[1]",
+        "B": "I[0]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n87"
+      }
+    },
+    {
+      "name": "and2b_2_3",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "O[7]",
+        "B": "enable",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n17"
+      }
+    },
+    {
+      "name": "and2b_2_4",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "n26",
+        "B": "n17",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n199"
+      }
+    },
+    {
+      "name": "and2b_2_5",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "O[2]",
+        "B": "n450",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n448"
+      }
+    },
+    {
+      "name": "and2b_2_6",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "O[1]",
+        "B": "O[0]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n450"
+      }
+    },
+    {
+      "name": "and2b_2_7",
+      "cell": "sky130_fd_sc_hd__and2b_2",
+      "connections": {
+        "A_N": "n142",
+        "B": "n440",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n562"
+      }
+    },
+    {
+      "name": "dfrtp_2_1",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n115",
+        "Q": "n27",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_2",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n151",
+        "Q": "n142",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_3",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n176",
+        "Q": "n19",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_4",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n244",
+        "Q": "n21",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_5",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n337",
+        "Q": "n86",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_6",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n303",
+        "Q": "n306",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_7",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n376",
+        "Q": "n84",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_8",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n410",
+        "Q": "n61",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_9",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n481",
+        "Q": "O[1]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_10",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n508",
+        "Q": "O[2]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_11",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n591",
+        "Q": "O[7]",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfrtp_2_12",
+      "cell": "sky130_fd_sc_hd__dfrtp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n703",
+        "Q": "success",
+        "RESET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfstp_2_1",
+      "cell": "sky130_fd_sc_hd__dfstp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n223",
+        "Q": "n63",
+        "SET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfstp_2_2",
+      "cell": "sky130_fd_sc_hd__dfstp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n532",
+        "Q": "O[3]",
+        "SET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "dfstp_2_3",
+      "cell": "sky130_fd_sc_hd__dfstp_2",
+      "connections": {
+        "CLK": "clk",
+        "D": "n630",
+        "Q": "O[0]",
+        "SET_B": "rst_n",
+        "VGND": "VGND",
+        "VPWR": "VPWR"
+      }
+    },
+    {
+      "name": "inv_2_1",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n15",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n115"
+      }
+    },
+    {
+      "name": "inv_2_2",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n13",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n176"
+      }
+    },
+    {
+      "name": "inv_2_3",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n14",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n244"
+      }
+    },
+    {
+      "name": "inv_2_4",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n86",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n327"
+      }
+    },
+    {
+      "name": "inv_2_5",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n306",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n300"
+      }
+    },
+    {
+      "name": "inv_2_6",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n84",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n389"
+      }
+    },
+    {
+      "name": "inv_2_7",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "n40",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n410"
+      }
+    },
+    {
+      "name": "inv_2_8",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "O[7]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n353"
+      }
+    },
+    {
+      "name": "inv_2_9",
+      "cell": "sky130_fd_sc_hd__inv_2",
+      "connections": {
+        "A": "O[3]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n550"
+      }
+    },
+    {
+      "name": "nand2_2_1",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "I[0]",
+        "B": "n27",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n113"
+      }
+    },
+    {
+      "name": "nand2_2_2",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "I[0]",
+        "B": "n17",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n28"
+      }
+    },
+    {
+      "name": "nand2_2_3",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n17",
+        "B": "n26",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n20"
+      }
+    },
+    {
+      "name": "nand2_2_4",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n17",
+        "B": "n257",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n22"
+      }
+    },
+    {
+      "name": "nand2_2_5",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n17",
+        "B": "n59",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n62"
+      }
+    },
+    {
+      "name": "nand2_2_6",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n300",
+        "B": "n113",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n92"
+      }
+    },
+    {
+      "name": "nand2_2_7",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "enable",
+        "B": "n353",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n284"
+      }
+    },
+    {
+      "name": "nand2_2_8",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n562",
+        "B": "n558",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n604"
+      }
+    },
+    {
+      "name": "nand2_2_9",
+      "cell": "sky130_fd_sc_hd__nand2_2",
+      "connections": {
+        "A": "n550",
+        "B": "n448",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n605"
+      }
+    },
+    {
+      "name": "nor2_2_1",
+      "cell": "sky130_fd_sc_hd__nor2_2",
+      "connections": {
+        "A": "I[1]",
+        "B": "I[0]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n257"
+      }
+    },
+    {
+      "name": "nor2_2_2",
+      "cell": "sky130_fd_sc_hd__nor2_2",
+      "connections": {
+        "A": "O[2]",
+        "B": "n480",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n549"
+      }
+    },
+    {
+      "name": "o21ai_2_1",
+      "cell": "sky130_fd_sc_hd__o21ai_2",
+      "connections": {
+        "A1": "n604",
+        "A2": "n605",
+        "B1": "n353",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n591"
+      }
+    },
+    {
+      "name": "o22ai_2_1",
+      "cell": "sky130_fd_sc_hd__o22ai_2",
+      "connections": {
+        "A1": "n300",
+        "A2": "n199",
+        "B1": "n80",
+        "B2": "n284",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n303"
+      }
+    },
+    {
+      "name": "o22ai_2_2",
+      "cell": "sky130_fd_sc_hd__o22ai_2",
+      "connections": {
+        "A1": "n327",
+        "A2": "n199",
+        "B1": "n82",
+        "B2": "n284",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n337"
+      }
+    },
+    {
+      "name": "o22ai_2_3",
+      "cell": "sky130_fd_sc_hd__o22ai_2",
+      "connections": {
+        "A1": "n389",
+        "A2": "n199",
+        "B1": "n81",
+        "B2": "n284",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n376"
+      }
+    },
+    {
+      "name": "or2_2_1",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "n142",
+        "B": "n158",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n151"
+      }
+    },
+    {
+      "name": "or2_2_2",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "n257",
+        "B": "n59",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n89"
+      }
+    },
+    {
+      "name": "or2_2_3",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "n306",
+        "B": "n86",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "O[4]"
+      }
+    },
+    {
+      "name": "or2_2_4",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "n84",
+        "B": "O[4]",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "O[6]"
+      }
+    },
+    {
+      "name": "or2_2_5",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "n84",
+        "B": "n306",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "O[5]"
+      }
+    },
+    {
+      "name": "or2_2_6",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "O[1]",
+        "B": "n488",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n480"
+      }
+    },
+    {
+      "name": "or2_2_7",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "n19",
+        "B": "n63",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n456"
+      }
+    },
+    {
+      "name": "or2_2_8",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "O[0]",
+        "B": "n604",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n488"
+      }
+    },
+    {
+      "name": "or2_2_9",
+      "cell": "sky130_fd_sc_hd__or2_2",
+      "connections": {
+        "A": "success",
+        "B": "n676",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "X": "n703"
+      }
+    },
+    {
+      "name": "xnor2_2_1",
+      "cell": "sky130_fd_sc_hd__xnor2_2",
+      "connections": {
+        "A": "n550",
+        "B": "n549",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n532"
+      }
+    },
+    {
+      "name": "xnor2_2_2",
+      "cell": "sky130_fd_sc_hd__xnor2_2",
+      "connections": {
+        "A": "O[2]",
+        "B": "n480",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n508"
+      }
+    },
+    {
+      "name": "xnor2_2_3",
+      "cell": "sky130_fd_sc_hd__xnor2_2",
+      "connections": {
+        "A": "O[1]",
+        "B": "n488",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n481"
+      }
+    },
+    {
+      "name": "xnor2_2_4",
+      "cell": "sky130_fd_sc_hd__xnor2_2",
+      "connections": {
+        "A": "O[0]",
+        "B": "n604",
+        "VGND": "VGND",
+        "VPWR": "VPWR",
+        "Y": "n630"
+      }
+    }
+  ],
+  "nets": {
+    "n19": [
+      "a22oi_2_1/A1",
+      "and2_2_5/A",
+      "dfrtp_2_3/Q",
+      "or2_2_7/A"
+    ],
+    "n20": [
+      "a22oi_2_1/A2",
+      "and2_2_6/B",
+      "nand2_2_3/Y"
+    ],
+    "n18": [
+      "a22oi_2_1/B1",
+      "and2_2_7/X"
+    ],
+    "n17": [
+      "a22oi_2_1/B2",
+      "a22oi_2_2/A1",
+      "a22oi_2_3/A1",
+      "and2_2_1/A",
+      "and2_2_8/A",
+      "and2_2_9/A",
+      "and2b_2_3/X",
+      "and2b_2_4/B",
+      "nand2_2_2/B",
+      "nand2_2_3/A",
+      "nand2_2_4/A",
+      "nand2_2_5/A"
+    ],
+    "VGND": [
+      "a22oi_2_1/VGND",
+      "a22oi_2_2/VGND",
+      "a22oi_2_3/VGND",
+      "a22oi_2_4/VGND",
+      "a22oi_2_5/VGND",
+      "a22oi_2_6/VGND",
+      "a22oi_2_7/VGND",
+      "a22oi_2_8/VGND",
+      "a22oi_2_9/VGND",
+      "and2_2_1/VGND",
+      "and2_2_10/VGND",
+      "and2_2_11/VGND",
+      "and2_2_2/VGND",
+      "and2_2_3/VGND",
+      "and2_2_4/VGND",
+      "and2_2_5/VGND",
+      "and2_2_6/VGND",
+      "and2_2_7/VGND",
+      "and2_2_8/VGND",
+      "and2_2_9/VGND",
+      "and2b_2_1/VGND",
+      "and2b_2_2/VGND",
+      "and2b_2_3/VGND",
+      "and2b_2_4/VGND",
+      "and2b_2_5/VGND",
+      "and2b_2_6/VGND",
+      "and2b_2_7/VGND",
+      "dfrtp_2_1/VGND",
+      "dfrtp_2_10/VGND",
+      "dfrtp_2_11/VGND",
+      "dfrtp_2_12/VGND",
+      "dfrtp_2_2/VGND",
+      "dfrtp_2_3/VGND",
+      "dfrtp_2_4/VGND",
+      "dfrtp_2_5/VGND",
+      "dfrtp_2_6/VGND",
+      "dfrtp_2_7/VGND",
+      "dfrtp_2_8/VGND",
+      "dfrtp_2_9/VGND",
+      "dfstp_2_1/VGND",
+      "dfstp_2_2/VGND",
+      "dfstp_2_3/VGND",
+      "inv_2_1/VGND",
+      "inv_2_2/VGND",
+      "inv_2_3/VGND",
+      "inv_2_4/VGND",
+      "inv_2_5/VGND",
+      "inv_2_6/VGND",
+      "inv_2_7/VGND",
+      "inv_2_8/VGND",
+      "inv_2_9/VGND",
+      "nand2_2_1/VGND",
+      "nand2_2_2/VGND",
+      "nand2_2_3/VGND",
+      "nand2_2_4/VGND",
+      "nand2_2_5/VGND",
+      "nand2_2_6/VGND",
+      "nand2_2_7/VGND",
+      "nand2_2_8/VGND",
+      "nand2_2_9/VGND",
+      "nor2_2_1/VGND",
+      "nor2_2_2/VGND",
+      "o21ai_2_1/VGND",
+      "o22ai_2_1/VGND",
+      "o22ai_2_2/VGND",
+      "o22ai_2_3/VGND",
+      "or2_2_1/VGND",
+      "or2_2_2/VGND",
+      "or2_2_3/VGND",
+      "or2_2_4/VGND",
+      "or2_2_5/VGND",
+      "or2_2_6/VGND",
+      "or2_2_7/VGND",
+      "or2_2_8/VGND",
+      "or2_2_9/VGND",
+      "xnor2_2_1/VGND",
+      "xnor2_2_2/VGND",
+      "xnor2_2_3/VGND",
+      "xnor2_2_4/VGND"
+    ],
+    "VPWR": [
+      "a22oi_2_1/VPWR",
+      "a22oi_2_2/VPWR",
+      "a22oi_2_3/VPWR",
+      "a22oi_2_4/VPWR",
+      "a22oi_2_5/VPWR",
+      "a22oi_2_6/VPWR",
+      "a22oi_2_7/VPWR",
+      "a22oi_2_8/VPWR",
+      "a22oi_2_9/VPWR",
+      "and2_2_1/VPWR",
+      "and2_2_10/VPWR",
+      "and2_2_11/VPWR",
+      "and2_2_2/VPWR",
+      "and2_2_3/VPWR",
+      "and2_2_4/VPWR",
+      "and2_2_5/VPWR",
+      "and2_2_6/VPWR",
+      "and2_2_7/VPWR",
+      "and2_2_8/VPWR",
+      "and2_2_9/VPWR",
+      "and2b_2_1/VPWR",
+      "and2b_2_2/VPWR",
+      "and2b_2_3/VPWR",
+      "and2b_2_4/VPWR",
+      "and2b_2_5/VPWR",
+      "and2b_2_6/VPWR",
+      "and2b_2_7/VPWR",
+      "dfrtp_2_1/VPWR",
+      "dfrtp_2_10/VPWR",
+      "dfrtp_2_11/VPWR",
+      "dfrtp_2_12/VPWR",
+      "dfrtp_2_2/VPWR",
+      "dfrtp_2_3/VPWR",
+      "dfrtp_2_4/VPWR",
+      "dfrtp_2_5/VPWR",
+      "dfrtp_2_6/VPWR",
+      "dfrtp_2_7/VPWR",
+      "dfrtp_2_8/VPWR",
+      "dfrtp_2_9/VPWR",
+      "dfstp_2_1/VPWR",
+      "dfstp_2_2/VPWR",
+      "dfstp_2_3/VPWR",
+      "inv_2_1/VPWR",
+      "inv_2_2/VPWR",
+      "inv_2_3/VPWR",
+      "inv_2_4/VPWR",
+      "inv_2_5/VPWR",
+      "inv_2_6/VPWR",
+      "inv_2_7/VPWR",
+      "inv_2_8/VPWR",
+      "inv_2_9/VPWR",
+      "nand2_2_1/VPWR",
+      "nand2_2_2/VPWR",
+      "nand2_2_3/VPWR",
+      "nand2_2_4/VPWR",
+      "nand2_2_5/VPWR",
+      "nand2_2_6/VPWR",
+      "nand2_2_7/VPWR",
+      "nand2_2_8/VPWR",
+      "nand2_2_9/VPWR",
+      "nor2_2_1/VPWR",
+      "nor2_2_2/VPWR",
+      "o21ai_2_1/VPWR",
+      "o22ai_2_1/VPWR",
+      "o22ai_2_2/VPWR",
+      "o22ai_2_3/VPWR",
+      "or2_2_1/VPWR",
+      "or2_2_2/VPWR",
+      "or2_2_3/VPWR",
+      "or2_2_4/VPWR",
+      "or2_2_5/VPWR",
+      "or2_2_6/VPWR",
+      "or2_2_7/VPWR",
+      "or2_2_8/VPWR",
+      "or2_2_9/VPWR",
+      "xnor2_2_1/VPWR",
+      "xnor2_2_2/VPWR",
+      "xnor2_2_3/VPWR",
+      "xnor2_2_4/VPWR"
+    ],
+    "n13": [
+      "a22oi_2_1/Y",
+      "inv_2_2/A"
+    ],
+    "n24": [
+      "a22oi_2_2/A2",
+      "and2_2_4/X"
+    ],
+    "n22": [
+      "a22oi_2_2/B1",
+      "nand2_2_4/Y"
+    ],
+    "n21": [
+      "a22oi_2_2/B2",
+      "a22oi_2_8/A1",
+      "and2_2_7/A",
+      "dfrtp_2_4/Q"
+    ],
+    "n14": [
+      "a22oi_2_2/Y",
+      "inv_2_3/A"
+    ],
+    "n42": [
+      "a22oi_2_3/A2",
+      "and2_2_2/X"
+    ],
+    "n28": [
+      "a22oi_2_3/B1",
+      "nand2_2_2/Y"
+    ],
+    "n27": [
+      "a22oi_2_3/B2",
+      "a22oi_2_9/B2",
+      "and2_2_4/A",
+      "dfrtp_2_1/Q",
+      "nand2_2_1/B"
+    ],
+    "n15": [
+      "a22oi_2_3/Y",
+      "inv_2_1/A"
+    ],
+    "n63": [
+      "a22oi_2_4/A1",
+      "and2_2_6/A",
+      "dfstp_2_1/Q",
+      "or2_2_7/B"
+    ],
+    "n64": [
+      "a22oi_2_4/A2",
+      "and2_2_1/X",
+      "and2_2_5/B"
+    ],
+    "n62": [
+      "a22oi_2_4/B1",
+      "nand2_2_5/Y"
+    ],
+    "n61": [
+      "a22oi_2_4/B2",
+      "a22oi_2_9/A1",
+      "and2_2_2/A",
+      "dfrtp_2_8/Q"
+    ],
+    "n40": [
+      "a22oi_2_4/Y",
+      "inv_2_7/A"
+    ],
+    "n86": [
+      "a22oi_2_5/A1",
+      "a22oi_2_6/B2",
+      "dfrtp_2_5/Q",
+      "inv_2_4/A",
+      "or2_2_3/B"
+    ],
+    "n87": [
+      "a22oi_2_5/A2",
+      "a22oi_2_6/A2",
+      "a22oi_2_7/A2",
+      "a22oi_2_9/B1",
+      "and2_2_4/B",
+      "and2b_2_2/X"
+    ],
+    "n89": [
+      "a22oi_2_5/B1",
+      "a22oi_2_6/B1",
+      "a22oi_2_7/B1",
+      "or2_2_2/X"
+    ],
+    "n84": [
+      "a22oi_2_5/B2",
+      "a22oi_2_7/A1",
+      "dfrtp_2_7/Q",
+      "inv_2_6/A",
+      "or2_2_4/A",
+      "or2_2_5/A"
+    ],
+    "n80": [
+      "a22oi_2_5/Y",
+      "o22ai_2_1/B1"
+    ],
+    "n306": [
+      "a22oi_2_6/A1",
+      "dfrtp_2_6/Q",
+      "inv_2_5/A",
+      "or2_2_3/A",
+      "or2_2_5/B"
+    ],
+    "n81": [
+      "a22oi_2_6/Y",
+      "o22ai_2_3/B1"
+    ],
+    "n92": [
+      "a22oi_2_7/B2",
+      "nand2_2_6/Y"
+    ],
+    "n82": [
+      "a22oi_2_7/Y",
+      "o22ai_2_2/B1"
+    ],
+    "n257": [
+      "a22oi_2_8/A2",
+      "and2_2_7/B",
+      "nand2_2_4/B",
+      "nor2_2_1/Y",
+      "or2_2_2/A"
+    ],
+    "n456": [
+      "a22oi_2_8/B1",
+      "or2_2_7/X"
+    ],
+    "n26": [
+      "a22oi_2_8/B2",
+      "and2_2_1/B",
+      "and2b_2_1/X",
+      "and2b_2_4/A_N",
+      "nand2_2_3/B"
+    ],
+    "n440": [
+      "a22oi_2_8/Y",
+      "and2b_2_7/B"
+    ],
+    "n59": [
+      "a22oi_2_9/A2",
+      "and2_2_2/B",
+      "and2_2_3/X",
+      "nand2_2_5/B",
+      "or2_2_2/B"
+    ],
+    "n442": [
+      "a22oi_2_9/Y",
+      "and2_2_8/B"
+    ],
+    "I[1]": [
+      "and2_2_3/A",
+      "and2b_2_1/B",
+      "and2b_2_2/A_N",
+      "nor2_2_1/A"
+    ],
+    "I[0]": [
+      "and2_2_3/B",
+      "and2b_2_1/A_N",
+      "and2b_2_2/B",
+      "nand2_2_1/A",
+      "nand2_2_2/A",
+      "nor2_2_1/B"
+    ],
+    "n158": [
+      "and2_2_5/X",
+      "or2_2_1/B"
+    ],
+    "n223": [
+      "and2_2_6/X",
+      "dfstp_2_1/D"
+    ],
+    "n558": [
+      "and2_2_8/X",
+      "nand2_2_8/B"
+    ],
+    "n687": [
+      "and2_2_11/X",
+      "and2_2_9/B"
+    ],
+    "n675": [
+      "and2_2_10/B",
+      "and2_2_9/X"
+    ],
+    "n448": [
+      "and2_2_10/A",
+      "and2b_2_5/X",
+      "nand2_2_9/B"
+    ],
+    "n676": [
+      "and2_2_10/X",
+      "or2_2_9/B"
+    ],
+    "n142": [
+      "and2_2_11/A",
+      "and2b_2_7/A_N",
+      "dfrtp_2_2/Q",
+      "or2_2_1/A"
+    ],
+    "O[3]": [
+      "and2_2_11/B",
+      "dfstp_2_2/Q",
+      "inv_2_9/A"
+    ],
+    "O[7]": [
+      "and2b_2_3/A_N",
+      "dfrtp_2_11/Q",
+      "inv_2_8/A"
+    ],
+    "enable": [
+      "and2b_2_3/B",
+      "nand2_2_7/A"
+    ],
+    "n199": [
+      "and2b_2_4/X",
+      "o22ai_2_1/A2",
+      "o22ai_2_2/A2",
+      "o22ai_2_3/A2"
+    ],
+    "O[2]": [
+      "and2b_2_5/A_N",
+      "dfrtp_2_10/Q",
+      "nor2_2_2/A",
+      "xnor2_2_2/A"
+    ],
+    "n450": [
+      "and2b_2_5/B",
+      "and2b_2_6/X"
+    ],
+    "O[1]": [
+      "and2b_2_6/A_N",
+      "dfrtp_2_9/Q",
+      "or2_2_6/A",
+      "xnor2_2_3/A"
+    ],
+    "O[0]": [
+      "and2b_2_6/B",
+      "dfstp_2_3/Q",
+      "or2_2_8/A",
+      "xnor2_2_4/A"
+    ],
+    "n562": [
+      "and2b_2_7/X",
+      "nand2_2_8/A"
+    ],
+    "clk": [
+      "dfrtp_2_1/CLK",
+      "dfrtp_2_10/CLK",
+      "dfrtp_2_11/CLK",
+      "dfrtp_2_12/CLK",
+      "dfrtp_2_2/CLK",
+      "dfrtp_2_3/CLK",
+      "dfrtp_2_4/CLK",
+      "dfrtp_2_5/CLK",
+      "dfrtp_2_6/CLK",
+      "dfrtp_2_7/CLK",
+      "dfrtp_2_8/CLK",
+      "dfrtp_2_9/CLK",
+      "dfstp_2_1/CLK",
+      "dfstp_2_2/CLK",
+      "dfstp_2_3/CLK"
+    ],
+    "n115": [
+      "dfrtp_2_1/D",
+      "inv_2_1/Y"
+    ],
+    "rst_n": [
+      "dfrtp_2_1/RESET_B",
+      "dfrtp_2_10/RESET_B",
+      "dfrtp_2_11/RESET_B",
+      "dfrtp_2_12/RESET_B",
+      "dfrtp_2_2/RESET_B",
+      "dfrtp_2_3/RESET_B",
+      "dfrtp_2_4/RESET_B",
+      "dfrtp_2_5/RESET_B",
+      "dfrtp_2_6/RESET_B",
+      "dfrtp_2_7/RESET_B",
+      "dfrtp_2_8/RESET_B",
+      "dfrtp_2_9/RESET_B",
+      "dfstp_2_1/SET_B",
+      "dfstp_2_2/SET_B",
+      "dfstp_2_3/SET_B"
+    ],
+    "n151": [
+      "dfrtp_2_2/D",
+      "or2_2_1/X"
+    ],
+    "n176": [
+      "dfrtp_2_3/D",
+      "inv_2_2/Y"
+    ],
+    "n244": [
+      "dfrtp_2_4/D",
+      "inv_2_3/Y"
+    ],
+    "n337": [
+      "dfrtp_2_5/D",
+      "o22ai_2_2/Y"
+    ],
+    "n303": [
+      "dfrtp_2_6/D",
+      "o22ai_2_1/Y"
+    ],
+    "n376": [
+      "dfrtp_2_7/D",
+      "o22ai_2_3/Y"
+    ],
+    "n410": [
+      "dfrtp_2_8/D",
+      "inv_2_7/Y"
+    ],
+    "n481": [
+      "dfrtp_2_9/D",
+      "xnor2_2_3/Y"
+    ],
+    "n508": [
+      "dfrtp_2_10/D",
+      "xnor2_2_2/Y"
+    ],
+    "n591": [
+      "dfrtp_2_11/D",
+      "o21ai_2_1/Y"
+    ],
+    "n703": [
+      "dfrtp_2_12/D",
+      "or2_2_9/X"
+    ],
+    "success": [
+      "dfrtp_2_12/Q",
+      "or2_2_9/A"
+    ],
+    "n532": [
+      "dfstp_2_2/D",
+      "xnor2_2_1/Y"
+    ],
+    "n630": [
+      "dfstp_2_3/D",
+      "xnor2_2_4/Y"
+    ],
+    "n327": [
+      "inv_2_4/Y",
+      "o22ai_2_2/A1"
+    ],
+    "n300": [
+      "inv_2_5/Y",
+      "nand2_2_6/A",
+      "o22ai_2_1/A1"
+    ],
+    "n389": [
+      "inv_2_6/Y",
+      "o22ai_2_3/A1"
+    ],
+    "n353": [
+      "inv_2_8/Y",
+      "nand2_2_7/B",
+      "o21ai_2_1/B1"
+    ],
+    "n550": [
+      "inv_2_9/Y",
+      "nand2_2_9/A",
+      "xnor2_2_1/A"
+    ],
+    "n113": [
+      "nand2_2_1/Y",
+      "nand2_2_6/B"
+    ],
+    "n284": [
+      "nand2_2_7/Y",
+      "o22ai_2_1/B2",
+      "o22ai_2_2/B2",
+      "o22ai_2_3/B2"
+    ],
+    "n604": [
+      "nand2_2_8/Y",
+      "o21ai_2_1/A1",
+      "or2_2_8/B",
+      "xnor2_2_4/B"
+    ],
+    "n605": [
+      "nand2_2_9/Y",
+      "o21ai_2_1/A2"
+    ],
+    "n480": [
+      "nor2_2_2/B",
+      "or2_2_6/X",
+      "xnor2_2_2/B"
+    ],
+    "n549": [
+      "nor2_2_2/Y",
+      "xnor2_2_1/B"
+    ],
+    "O[4]": [
+      "or2_2_3/X",
+      "or2_2_4/B"
+    ],
+    "O[6]": [
+      "or2_2_4/X"
+    ],
+    "O[5]": [
+      "or2_2_5/X"
+    ],
+    "n488": [
+      "or2_2_6/B",
+      "or2_2_8/X",
+      "xnor2_2_3/B"
+    ]
+  },
+  "floating": [],
+  "conflicts": []
+}

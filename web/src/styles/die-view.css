@@ -1,0 +1,245 @@
+/* ---- die view panel: 2D/3D toggle + debug switch ----------------- */
+.die-modebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  background: var(--df-plate);
+  border-bottom: 1px solid var(--df-edge-2);
+}
+.die-modebar-spacer {
+  flex: 1;
+}
+.die-mode-seg {
+  display: flex;
+}
+.die-mode-seg button {
+  border-radius: var(--df-radius);
+  padding: 2px 12px;
+  color: var(--df-dim);
+}
+.die-mode-seg button:first-child {
+  border-radius: var(--df-radius);
+}
+.die-mode-seg button:last-child {
+  border-radius: var(--df-radius);
+  border-left: 0;
+}
+.die-mode-seg button.on {
+  background: var(--df-plate-2);
+  color: var(--df-ink);
+  box-shadow: inset 0 -2px 0 var(--df-gold);
+}
+.die-debug-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--df-faint);
+  cursor: pointer;
+}
+.die-mode-host {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+/* Diagnostics are hidden unless the player asks for them. */
+.die-stats,
+.die3d-stats {
+  display: none;
+}
+.die-debug-on .die-stats,
+.die-debug-on .die3d-stats {
+  display: block;
+}
+
+/* ---- die view, 2D ------------------------------------------------ */
+.die-canvas-wrap {
+  position: absolute;
+  inset: 0;
+}
+.die-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.die-canvas:active {
+  cursor: grabbing;
+}
+.die-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--df-faint);
+}
+.die-minimap {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 200px;
+  height: 140px;
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  cursor: crosshair;
+}
+
+.panel-overlay {
+  position: absolute;
+  background: rgba(16, 19, 26, 0.88);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 8px 10px;
+}
+.die-layers {
+  top: 10px;
+  left: 10px;
+  min-width: 130px;
+}
+.die-stats {
+  top: 10px;
+  right: 10px;
+  white-space: pre;
+  line-height: 1.5;
+  margin: 0;
+}
+.die-layers label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+  cursor: pointer;
+}
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--df-radius);
+  display: inline-block;
+}
+.panel-overlay h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--df-dim);
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+.panel-overlay hr {
+  border: 0;
+  border-top: 1px solid var(--df-edge-2);
+  margin: 8px 0 6px;
+}
+.panel-overlay select {
+  background: var(--df-plate);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  font: inherit;
+  width: 100%;
+}
+.panel-overlay .hint {
+  color: var(--df-faint);
+}
+
+/* ---- die view, 3D --------------------------------------------------- */
+.die3d-wrap {
+  position: absolute;
+  inset: 0;
+}
+.die3d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.die3d-canvas:active {
+  cursor: grabbing;
+}
+.die3d-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  text-align: center;
+  color: var(--df-faint);
+}
+.die3d-layers {
+  top: 10px;
+  left: 10px;
+  min-width: 150px;
+}
+.die3d-layers label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+  cursor: pointer;
+}
+.die3d-layers input[type="range"] {
+  width: 100%;
+}
+.die3d-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+.die3d-trace,
+.die3d-fit {
+  width: 100%;
+  margin-top: 6px;
+}
+.die3d-stats {
+  top: 10px;
+  right: 10px;
+  white-space: pre;
+  line-height: 1.5;
+  margin: 0;
+}
+.die3d-trace-status {
+  left: 10px;
+  bottom: 10px;
+  color: var(--df-gold);
+}
+
+/* ---- the net read-out under the cursor (net-tooltip.ts) ----------- */
+/* `pointer-events: none` is load-bearing: the tooltip sits a few pixels off
+   the cursor, and without it a fast move can put the element under the
+   pointer, which stops the picking that decides what the tooltip says. */
+.die-tooltip {
+  pointer-events: none;
+  z-index: 6;
+  padding: 5px 8px;
+  max-width: 280px;
+  line-height: 1.4;
+}
+.die-tooltip-name {
+  color: var(--df-gold);
+}
+.die-tooltip-raw {
+  color: var(--df-dim);
+  font-size: 11px;
+}
+.die-tooltip-hint {
+  color: var(--df-faint-2);
+  font-size: 10px;
+  margin-top: 3px;
+}
