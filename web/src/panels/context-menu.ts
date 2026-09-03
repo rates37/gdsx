@@ -74,10 +74,27 @@ export function openContextMenu(x: number, y: number, entries: MenuEntry[]): voi
   function close(): void {
     document.removeEventListener("pointerdown", onOutside, true);
     document.removeEventListener("keydown", onKey, true);
+    document.removeEventListener("contextmenu", onNativeMenu, true);
     window.removeEventListener("wheel", close, true);
     window.removeEventListener("scroll", close, true);
     menu.remove();
     closeOpen = null;
+  }
+  // Suppress the browser's own menu for as long as ours is up.
+  //
+  // Windows fires `contextmenu` on pointer *up*; macOS and Linux fire it on
+  // pointer *down*. The 3D die view raises this menu from its own pointerup
+  // handler (it cannot use `contextmenu` -- on a mousedown-firing platform
+  // that arrives before a right-drag can be told from a right-click, and
+  // right-drag pans the camera). So on Windows the order is: pointerup ->
+  // our menu is created under the cursor -> `contextmenu` fires, and by then
+  // the topmost element at those coordinates is *this menu*, not the canvas.
+  // The canvas's own preventDefault never sees the event, and the native menu
+  // opens on top of ours. Cancelling at the document, in capture, does not
+  // care which element the event lands on or which platform's ordering got us
+  // here.
+  function onNativeMenu(e: Event): void {
+    e.preventDefault();
   }
   function onOutside(e: PointerEvent): void {
     if (!menu.contains(e.target as Node)) close();
@@ -90,6 +107,7 @@ export function openContextMenu(x: number, y: number, entries: MenuEntry[]): voi
 
   document.addEventListener("pointerdown", onOutside, true);
   document.addEventListener("keydown", onKey, true);
+  document.addEventListener("contextmenu", onNativeMenu, true);
   window.addEventListener("wheel", close, true);
   window.addEventListener("scroll", close, true);
   closeOpen = close;
