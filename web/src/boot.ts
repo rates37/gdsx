@@ -488,7 +488,7 @@ export async function bootWorkspace(
         clockPort: driver.clockPort,
         resetPort: driver.resetPort,
       }),
-      replPanel({ api, designReady, puzzleId: puzzle.id }),
+      replPanel({ api, designReady }),
     ],
     {
       menus: MENUS,

@@ -38,7 +38,7 @@ After clustering connected nets per-layer, use the vias to merge clusters across
 2. Find the cluster it overlaps on the layer below
 3. Merge them
 
-I used a Union-Find with path compression and union-by-size to perform this in amortised `\mathcal{O}(\alpha(n))`.
+I used a Union-Find with path compression and union-by-size to perform this in amortised $\mathcal{O}(\alpha(n))$.
 
 ```py
 for via in design.tech.vias:

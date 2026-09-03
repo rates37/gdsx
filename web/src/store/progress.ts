@@ -8,7 +8,7 @@
 //
 // It is also the namespace's one owner for a second reason. Every panel that
 // needed to persist something picked its own `gdsx.<thing>.<id>` key --
-// notebook claims, labels, the model builder, evidence, REPL history, the
+// notebook claims, labels, the model builder, evidence, the
 // sticky-flops classification, the driven stimulus, plus app-level settings like the workspace
 // layout and the guide's state -- and nothing enumerated them. clearPuzzle
 // and clearAll (the level menu's per-puzzle and full reset, 19.2/19.3) need to
@@ -298,6 +298,9 @@ export const KEY_RULES: readonly KeyRule[] = [
   perPuzzleVersioned("labels", "labels"),
   perPuzzleVersioned("model", "model"),
   perPuzzleVersioned("evidence", "evidence"),
+  // Legacy: the Python transcript is no longer saved (see repl-panel.ts), but
+  // players who ran it before that change still have the key. The rule stays
+  // so a per-puzzle clear reaches it -- nothing writes it any more.
   perPuzzleVersioned("repl-history", "repl-history"),
   perPuzzleVersioned("sticky-classification", "sticky-classification"),
   perPuzzleVersioned("stimulus", "stimulus"),

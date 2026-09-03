@@ -4,10 +4,18 @@
 // not written down here: the names come from `_gdsx_repl_bindings` in
 // worker.ts and are printed above the prompt at run time, because three
 // hand-maintained copies of that list had drifted to three different subsets
-// of it. History persists
-// per puzzle; snippets from any panel's `{ }` button paste in here (copy from
+// of it. Snippets from any panel's `{ }` button paste in here (copy from
 // the popover, paste into the input -- the popover is read-only display, so
 // that hand-off is copy/paste rather than a second code path).
+//
+// The transcript is **not** part of the saved game. It lives in memory for as
+// long as the panel is mounted and is gone on reload, for the same reason the
+// namespace is: a REPL line is scratch work, not a claim the player is making
+// about the puzzle. Persisting it meant a reloaded workspace replayed a wall
+// of stale output above a namespace that no longer had any of those names
+// bound -- a transcript that lied about the session it belonged to -- and it
+// was the largest thing in a puzzle's storage by some margin. `clear` empties
+// the transcript; it does not reset the namespace (reload does that).
 //
 // It is a *session*, not a series of one-shot evaluations: names bound here
 // stay bound until the page is reloaded, because the interesting questions
@@ -46,38 +54,24 @@ interface HistoryEntry {
 
 const HISTORY_LIMIT = 200;
 
+/** The session transcript. In memory only -- see the note at the top of the
+ *  file. The cap stays because a runaway loop printing a megabyte is still a
+ *  runaway loop in a panel that has to render it. */
 class ReplHistory {
-  private readonly key: string;
-  entries: HistoryEntry[];
-
-  constructor(puzzleId: string) {
-    this.key = `gdsx.repl-history.${puzzleId}.v1`;
-    this.entries = this.restore();
-  }
+  entries: HistoryEntry[] = [];
 
   push(entry: HistoryEntry): void {
     this.entries = [...this.entries, entry].slice(-HISTORY_LIMIT);
-    try {
-      localStorage.setItem(this.key, JSON.stringify(this.entries));
-    } catch (err) {
-      console.warn("gdsx: could not save REPL history", err);
-    }
   }
 
-  private restore(): HistoryEntry[] {
-    try {
-      const raw = localStorage.getItem(this.key);
-      return raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
-    } catch {
-      return [];
-    }
+  clear(): void {
+    this.entries = [];
   }
 }
 
 export interface ReplPanelOptions {
   api: Remote<GdsxWorker>;
   designReady: Promise<DesignClient>;
-  puzzleId: string;
 }
 
 export function replPanel(options: ReplPanelOptions): PanelDef {
@@ -95,6 +89,7 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
             <span class="repl-prompt">&gt;&gt;&gt;</span>
             <textarea class="repl-input" rows="1" spellcheck="false" placeholder="nl.instances[0], graph.d_pin(nl.instances[0].name), design.registers(ordered=True)…"></textarea>
             <button type="button" class="repl-run">run</button>
+            <button type="button" class="repl-clear" title="clear the transcript (bound names stay bound)">clear</button>
           </div>
         </div>`;
 
@@ -104,8 +99,9 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
       const outputEl = container.querySelector(".repl-output") as HTMLDivElement;
       const inputEl = container.querySelector(".repl-input") as HTMLTextAreaElement;
       const runBtn = container.querySelector(".repl-run") as HTMLButtonElement;
+      const clearBtn = container.querySelector(".repl-clear") as HTMLButtonElement;
 
-      const history = new ReplHistory(options.puzzleId);
+      const history = new ReplHistory();
       let handle: string | null = null;
       let disposed = false;
       let running = false;
@@ -162,8 +158,11 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
         }
       });
       runBtn.addEventListener("click", () => void run());
-
-      for (const entry of history.entries) appendEntry(entry);
+      clearBtn.addEventListener("click", () => {
+        history.clear();
+        outputEl.replaceChildren();
+        inputEl.focus();
+      });
 
       options.designReady
         .then((d) => {

@@ -16,4 +16,8 @@
 .repl-error { margin: 2px 0 0; color: var(--df-coral); white-space: pre-wrap; word-break: break-word; }
 .repl-input-row { display: flex; align-items: flex-end; gap: 6px; padding: 6px 8px; border-top: 1px solid var(--df-edge); }
 .repl-prompt { color: var(--df-faint); padding-bottom: 4px; }
+/* `clear` sits beside `run` but must not read as its equal: one evaluates,
+   the other throws the transcript away. */
+.repl-clear { font: inherit; background: none; color: var(--df-faint); border: 1px solid var(--df-edge-2); border-radius: var(--df-radius); padding: 3px 6px; cursor: pointer; }
+.repl-clear:hover { color: var(--df-ink-2); border-color: var(--df-faint-2); }
 .repl-input { flex: 1; resize: none; font: inherit; background: var(--df-plate); color: var(--df-ink-2); border: 1px solid var(--df-edge-2); border-radius: var(--df-radius); padding: 4px 6px; max-height: 200px; }
