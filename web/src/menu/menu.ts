@@ -317,7 +317,7 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
     const solved = entries.filter((entry) => entry.solved).length;
 
     const head = el("div", "menu-head");
-    head.append(el("h1", "menu-title", "Dieshark"));
+    head.append(el("h1", "menu-title", "GateCrasher"));
     head.append(el("p", "menu-tagline", `${entries.length} levels · ${solved} solved`));
     const actions = el("div", "menu-head-actions");
     const manualLink = el("a", "menu-manual-link", "manual");
@@ -369,6 +369,6 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
   };
 
   draw();
-  document.title = "DIESHARK — levels";
+  document.title = "GATECRASHER — levels";
   return { redraw: draw };
 }

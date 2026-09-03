@@ -167,7 +167,7 @@ export function attachToolbar(
   const bar = document.createElement("div");
   bar.className = "gdsx-toolbar";
   bar.innerHTML = `
-    <span class="gdsx-toolbar-title">Dieshark</span>
+    <span class="gdsx-toolbar-title">GateCrasher</span>
     <span class="gdsx-home-wrap"></span>
     <nav class="gdsx-menubar"></nav>
     <span class="gdsx-level-wrap"></span>
