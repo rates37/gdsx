@@ -4,7 +4,7 @@
 
 I started out with writing a Python library to recover the netlist from the `.gds` file and to perform analysis + simulations on that netlist. In the middle, I had the idea to make a game out of it, to make it more interactive and visual, so the project changed trajectories half-way through. The game aims to support all the functionality that was implemented for the Python library, and is purely in-browser, statically deployed to [rates37.github.io/gdsx](https://rates37.github.io/gdsx). The game contains both the original puzzle from the challenge, and a set of additional ones that vary in difficulty and design.
 
-My reverse engineering process involved a lot of trial and error, manual inspection, and simulation of the netlist to get some insights as to its structure and behaviour. The design validates an 11x11 two-star game board, and upon the correct pattern being applied, it outputs the message `(* TWO STAR *)` in ASCII on `O[7:0]`.
+My reverse engineering process involved a lot of trial and error, manual inspection, and simulation of the netlist to get some insights as to its structure and behaviour. The design validates an 11x11 two-star game board, and upon the correct pattern being applied, it outputs the message `(* TWO STARS *)` in ASCII on `O[7:0]`.
 
 This write up mostly focuses on how the game/web UI was used to reverse engineer the puzzle. My original approach was purely using the Python library/cli, and can be read (along with my internal monologue) in [docs/journal.md](journal.md). Both approaches are essentially the same, however the game provides a more visually intuitive way to understand what I did.
 
@@ -360,7 +360,7 @@ Translated, it reads "per arenam ad astra", which is Latin for "Through the aren
 
 ### Other Messages the Design Can Output:
 
-In the example inputs vcd, there was the message `TRY AGAIN` on output `O[7:0]` in ASCII. Obviously after solving, the message `(* TWO STAR *)`. There were a few more I found:
+In the example inputs vcd, there was the message `TRY AGAIN` on output `O[7:0]` in ASCII. Obviously after solving, the message `(* TWO STARS *)`. There were a few more I found:
 
 - "BIG BANG" when `I` is high for all 121 cycles
 - "EMPTY SKY" when `I` is low for all 121 cycles
