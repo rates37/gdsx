@@ -1,5 +1,11 @@
 # Journal
 
+## Intro (added afterwards):
+
+This document is a journal of my progress and thoughts while going through the puzzle (over the span of a couple of weeks). They were meant to just keep a record/note of specific things I did and track progress/ideas. Reading it may appear somewhat deranged. For a better sense of how I solved the puzzle, see the writeup.md / writeup.pdf.
+
+## Rest of Original Journal:
+
 Since I'm not super familiar with ASIC design, I want to abstract it asap. Will keep high level plan notes at the top of this doc and extend them as I go. Rest of the doc is just a rough journal of progress and design decisions.
 
 - Map the GDS to low level tech agnostic netlist
