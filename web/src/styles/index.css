@@ -20,3 +20,21 @@
 @import "./model-builder.css";
 @import "./register-inspector.css";
 @import "./repl.css";
+
+/* `hidden` must actually hide.
+
+   Panels toggle visibility with the `hidden` property, which relies on the
+   user agent's `[hidden] { display: none }`. That rule is the weakest one
+   there is, so any class selector setting `display` beats it and the element
+   stays on screen with its attribute set and nobody the wiser. Two had already
+   gone that way: the Notebook's write-up drawer (`display: flex`) sat open
+   with an empty text area from the moment the panel was opened, and the guided
+   walkthrough's card (`display: flex`, `position: fixed`) left an empty
+   bordered sliver pinned to the bottom-left corner of every level whether or
+   not the walkthrough was running.
+
+   Last in the file and `!important`, because the whole point is to outrank
+   whatever a panel's own stylesheet says. */
+[hidden] {
+  display: none !important;
+}

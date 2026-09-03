@@ -502,9 +502,18 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         }
       }
 
-      /** The cycle numbers a watched element responded at, read back out of
-       *  the run labels. `single-pulse` names its runs "cycle N", which is the
-       *  only form the constraints system can consume. */
+      /**
+       * The cycle numbers a watched element responded at, read back out of
+       * the run labels.
+       *
+       * A constraint row is "exactly k of these candidate cycles", so it can
+       * only be built from runs that each name one cycle. `single-pulse`
+       * ("cycle 7") and `bit-flip` ("cycle 7 1→0") do; `gap` does not -- its
+       * runs perturb a pair ("gap 3 (7, 10)"), and the set of cycles involved
+       * in the pairs that moved an element is a different statement from the
+       * one a row makes. So this comes back empty there, and the caller offers
+       * no button rather than pushing a row that means something else.
+       */
       function cycleNumbersFor(columnIndex: number): number[] {
         if (!result) return [];
         const out: number[] = [];
@@ -655,12 +664,23 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
           const cycles = cycleNumbersFor(c);
           const send = el("button", "xp-to-constraints", "→ constraints") as HTMLButtonElement;
           send.type = "button";
-          send.title = `send "${element} moves at ${cycles.join(", ")}" to the Constraints panel`;
-          send.addEventListener("click", () => {
-            constraintsInbox.push({ name: element, elements: cycles, source: "experiments" });
-            send.textContent = "sent";
+          if (cycles.length === 0) {
+            // Enabled, it pushed a row with an empty candidate set and a
+            // tooltip that read "…moves at " -- a constraint over nothing,
+            // silently added to the system the player is about to solve.
             send.disabled = true;
-          });
+            send.title =
+              `this recipe's runs each perturb more than one cycle, so what moved ` +
+              `${element} is not a set of candidate cycles a constraint row can be ` +
+              `built from — use the single-pulse or bit-flip sweep for that`;
+          } else {
+            send.title = `send "${element} moves at ${cycles.join(", ")}" to the Constraints panel`;
+            send.addEventListener("click", () => {
+              constraintsInbox.push({ name: element, elements: cycles, source: "experiments" });
+              send.textContent = "sent";
+              send.disabled = true;
+            });
+          }
           line.append(send);
           table.append(line);
         }

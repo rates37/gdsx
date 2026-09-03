@@ -1,6 +1,10 @@
-// The Python REPL drawer: Pyodide with `gdsx` preloaded
-// and the current design bound to `nl`, `sim`, `design` -- full library
-// access, including everything the GUI does not surface. History persists
+// The Python REPL drawer: Pyodide with `gdsx` preloaded and the current design
+// bound -- full library
+// access, including everything the GUI does not surface. What "bound" means is
+// not written down here: the names come from `_gdsx_repl_bindings` in
+// worker.ts and are printed above the prompt at run time, because three
+// hand-maintained copies of that list had drifted to three different subsets
+// of it. History persists
 // per puzzle; snippets from any panel's `{ }` button paste in here (copy from
 // the popover, paste into the input -- the popover is read-only display, so
 // that hand-off is copy/paste rather than a second code path).
@@ -85,6 +89,7 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
       container.innerHTML = `
         <div class="repl-loading">waiting on the analysis engine…</div>
         <div class="repl-body" hidden>
+          <div class="repl-scope" hidden></div>
           <div class="repl-output"></div>
           <div class="repl-input-row">
             <span class="repl-prompt">&gt;&gt;&gt;</span>
@@ -95,6 +100,7 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
 
       const loadingEl = container.querySelector(".repl-loading") as HTMLDivElement;
       const bodyEl = container.querySelector(".repl-body") as HTMLDivElement;
+      const scopeEl = container.querySelector(".repl-scope") as HTMLDivElement;
       const outputEl = container.querySelector(".repl-output") as HTMLDivElement;
       const inputEl = container.querySelector(".repl-input") as HTMLTextAreaElement;
       const runBtn = container.querySelector(".repl-run") as HTMLButtonElement;
@@ -167,6 +173,18 @@ export function replPanel(options: ReplPanelOptions): PanelDef {
           bodyEl.hidden = false;
           runBtn.disabled = false;
           inputEl.focus();
+          // What is actually in scope, from the namespace itself. A session
+          // you have to guess the bindings of is a session you use for one
+          // line at a time.
+          void options.api.replBindings(d.handle).then((names) => {
+            if (disposed || names.length === 0) return;
+            scopeEl.replaceChildren(
+              el("span", "repl-scope-label", "in scope"),
+              el("span", "repl-scope-names", names.join("  ")),
+              el("span", "repl-scope-hint", "enter runs · shift+enter for a new line"),
+            );
+            scopeEl.hidden = false;
+          });
         })
         .catch((err: Envelope | Error) => {
           loadingEl.textContent = `ERROR: ${err instanceof Error ? err.message : JSON.stringify(err)}`;

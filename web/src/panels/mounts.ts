@@ -83,17 +83,23 @@ export function drawer(
   const root = document.createElement("div");
   root.className = "pd-drawer";
   root.innerHTML = `
-    <button class="pd-drawer-head" type="button" aria-expanded="false">
-      <span class="pd-drawer-caret">▸</span>
-      <span class="pd-drawer-title"></span>
-      <span class="pd-drawer-badge"></span>
-    </button>
-    <div class="pd-drawer-body" hidden></div>`;
+    <div class="pd-drawer-bar">
+      <button class="pd-drawer-head" type="button" aria-expanded="false">
+        <span class="pd-drawer-caret">▸</span>
+        <span class="pd-drawer-title"></span>
+        <span class="pd-drawer-badge"></span>
+      </button>
+      <button class="pd-drawer-close" type="button" hidden>×</button>
+    </div>
+    <div class="pd-drawer-body" tabindex="-1" hidden></div>`;
   (root.querySelector(".pd-drawer-title") as HTMLElement).textContent = opts.title;
   const head = root.querySelector(".pd-drawer-head") as HTMLButtonElement;
+  const closeBtn = root.querySelector(".pd-drawer-close") as HTMLButtonElement;
   const caret = root.querySelector(".pd-drawer-caret") as HTMLElement;
   const badge = root.querySelector(".pd-drawer-badge") as HTMLElement;
   const body = root.querySelector(".pd-drawer-body") as HTMLElement;
+  closeBtn.title = `close ${opts.title}`;
+  closeBtn.setAttribute("aria-label", `close ${opts.title}`);
   container.append(root);
 
   let open = false;
@@ -102,6 +108,7 @@ export function drawer(
   function setOpen(next: boolean, remember = false): void {
     open = next;
     body.hidden = !open;
+    closeBtn.hidden = !open;
     caret.textContent = open ? "▾" : "▸";
     head.setAttribute("aria-expanded", String(open));
     root.classList.toggle("on", open);
@@ -116,6 +123,29 @@ export function drawer(
   }
 
   head.addEventListener("click", () => setOpen(!open, true));
+
+  // Opening a bottom-pinned drawer moves its own header *up* by the height of
+  // the body it just revealed, so the second click of the obvious
+  // click-again-to-close gesture lands inside the body and does nothing. The
+  // drawer read as stuck open. These are the two ways out that do not depend
+  // on noticing the header moved: a close button on the header, and Escape
+  // from anywhere inside the drawer.
+  closeBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setOpen(false, true);
+  });
+  // The body carries tabindex="-1" so that clicking anywhere inside it puts
+  // focus in the drawer; without that, Escape after a click on plain text
+  // would be delivered to <body> and this listener would never see it. Scoped
+  // to the drawer rather than the document on purpose: the toolbar's popovers
+  // and the context menu take Escape too, and the innermost open thing should
+  // win.
+  root.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !open) return;
+    event.stopPropagation();
+    setOpen(false, true);
+    head.focus();
+  });
 
   let initial = false;
   try {

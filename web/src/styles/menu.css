@@ -50,6 +50,18 @@
   flex: none;
 }
 
+.menu-manual-link {
+  color: var(--df-ink-2);
+  background: var(--df-plate-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 4px 10px;
+  text-decoration: none;
+}
+.menu-manual-link:hover {
+  border-color: var(--df-edge-hi);
+}
+
 /* ---- settings: what is stored, and how to throw it away -------------- */
 .menu-settings {
   position: relative;

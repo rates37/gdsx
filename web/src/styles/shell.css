@@ -666,11 +666,16 @@ body {
   border-top: 1px solid var(--df-edge-2);
   background: var(--df-void);
 }
+.pd-drawer-bar {
+  display: flex;
+  align-items: center;
+}
 .pd-drawer-head {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   background: transparent;
   border: 0;
   border-radius: var(--df-radius);
@@ -680,6 +685,24 @@ body {
   cursor: pointer;
 }
 .pd-drawer-head:hover {
+  color: var(--df-ink-2);
+  background: var(--df-plate-2);
+}
+/* Only shown while the drawer is open: the escape hatch for a header that has
+   just moved out from under the cursor. */
+.pd-drawer-close {
+  flex: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--df-radius);
+  padding: 2px 8px;
+  margin-right: 4px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--df-dim);
+  cursor: pointer;
+}
+.pd-drawer-close:hover {
   color: var(--df-ink-2);
   background: var(--df-plate-2);
 }
@@ -705,6 +728,11 @@ body {
   max-height: 45vh;
   overflow-y: auto;
   border-top: 1px solid var(--df-edge);
+}
+/* It is focusable only so that Escape works after a click inside it; it is
+   not a control, so it should not draw a focus ring. */
+.pd-drawer-body:focus {
+  outline: none;
 }
 
 /* ---- waveform + sequence editor: shared bits ----------------------- */

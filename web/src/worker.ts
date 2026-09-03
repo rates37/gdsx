@@ -83,8 +83,8 @@ export interface ReplResult {
 
 // Defines `_gdsx_repl_eval(handle, source)` once, in Pyodide's global
 // namespace, rather than re-building a multi-line exec/eval dance from JS on
-// every keystroke. `nl`, `sim`, `design` are bound to the open design --
-// the same three names the panel's own text promises.
+// every keystroke. `_gdsx_repl_bindings` below is the one statement of what is
+// in scope; the panel prints that list rather than carrying its own copy.
 //
 // The namespace those names live in is created once per design and kept for
 // the session. It used to be rebuilt on every call, which meant a name the
@@ -133,6 +133,20 @@ def _gdsx_repl_namespace(_handle):
         _ns["reset"] = lambda: _ns.update(_gdsx_repl_bindings(_handle))
         _GDSX_REPL_NAMESPACES[_handle] = _ns
     return _ns
+
+
+def _gdsx_repl_names(_handle):
+    """The names in scope, as JSON, for the panel to show the player.
+
+    Read off the live namespace rather than written down again in TypeScript:
+    the bindings were listed in three places -- this module's header, the
+    panel's placeholder and the guided walkthrough -- and all three had drifted
+    to a different subset of the truth. Two of those were prose and stay prose;
+    the one the player actually reads while typing now comes from here.
+    """
+    import json
+
+    return json.dumps(sorted(_gdsx_repl_namespace(_handle)))
 
 
 def _gdsx_repl_eval(_handle, _source):
@@ -188,6 +202,21 @@ const worker = {
     if (fn === undefined) throw new Error(`gdsx.api has no endpoint '${name}'`);
     const result: string = fn(...args.map((a) => toPython(a, pyodide)));
     return JSON.parse(result) as Envelope;
+  },
+
+  /** The names bound in `handle`'s REPL session, sorted. What the panel
+   *  prints above the prompt, so the advertised scope cannot drift from the
+   *  real one. */
+  async replBindings(handle: string): Promise<string[]> {
+    const pyodide = await getPyodide();
+    const fn = pyodide.globals.get("_gdsx_repl_names") as (handle: string) => string;
+    try {
+      return JSON.parse(fn(handle)) as string[];
+    } catch {
+      // The panel is fully usable without the line; it just does not get to
+      // say what is in scope.
+      return [];
+    }
   },
 
   /** Run one REPL entry against the open design at `handle`. Never throws --

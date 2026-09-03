@@ -41,6 +41,11 @@ export interface MenuOptions {
   progress?: ProgressRecord[];
 }
 
+/**
+ * Where the written guides live.
+ */
+const MANUAL_URL = "https://github.com/rates37/gdsx/blob/main/docs/manual.md";
+
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className?: string,
@@ -315,6 +320,12 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
     head.append(el("h1", "menu-title", "Dieshark"));
     head.append(el("p", "menu-tagline", `${entries.length} levels · ${solved} solved`));
     const actions = el("div", "menu-head-actions");
+    const manualLink = el("a", "menu-manual-link", "manual");
+    manualLink.href = MANUAL_URL;
+    manualLink.target = "_blank";
+    manualLink.rel = "noopener";
+    manualLink.title = "how to play, panel by panel -- opens in a new tab";
+    actions.append(manualLink);
     actions.append(settingsButton(entries.length, draw));
     head.append(actions);
     inner.append(head);
