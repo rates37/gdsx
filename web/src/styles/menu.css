@@ -224,41 +224,14 @@
 
 /* ---- the routing mark ------------------------------------------------ */
 /*
-   A generated ornament, not the level's layout: the menu paints on
-   `index.json` alone and has no render bundle to draw from. `menu.ts`'s
-   `plate()` sets the three pitches from a hash of the puzzle id, so a level's
-   mark is stable and distinct without anything being added to the catalog.
+   The gradients themselves are `.gdsx-plate`, in shell.css: the briefing card
+   draws the same mark for the level it describes, and one ornament defined
+   twice is one ornament that drifts. What stays here is only how the menu
+   card *sizes* it -- a full-height band down the left of a row.
 */
 .menu-card-plate {
-  --pitch-a: 8px;
-  --pitch-b: 17px;
-  --pitch-c: 47px;
   align-self: stretch;
   min-height: 96px;
-  /* Routing, not graph paper: dense fine tracks running one way, sparse
-     heavy ones running the other, and a band of cell rows under both. An
-     even grid in both axes is the one thing a real floorplan never looks
-     like. */
-  background-image:
-    /* heavy straps: the few wide nets that cross the whole block */
-    repeating-linear-gradient(
-      90deg,
-      var(--df-layer-met4) 0 2px,
-      transparent 2px var(--pitch-c)
-    ),
-    /* routing channels: dense, fine, and all running the same way */
-      repeating-linear-gradient(
-        90deg,
-        var(--df-layer-met2) 0 1px,
-        transparent 1px var(--pitch-a)
-      ),
-    /* standard-cell rows: banded across the grain, which is the thing that
-       makes a die look like a die rather than like squared paper */
-      repeating-linear-gradient(
-        0deg,
-        var(--df-layer-cells) 0 3px,
-        transparent 3px var(--pitch-b)
-      );
   /* Dissolves the right-hand edge into the page instead of ending on a
      border, which is what stops it reading as a framed thumbnail. */
   mask-image: linear-gradient(90deg, #000 0 46%, transparent 100%);
@@ -317,7 +290,7 @@
   padding: 0;
   white-space: nowrap;
 }
-/* Same gold as the toolbar's objective: it is the same sentence, and a
+/* Same gold as the briefing card's goal line: it is the same sentence, and a
    player moving between the two screens should recognise it. */
 .menu-chip-goal {
   color: var(--df-gold);

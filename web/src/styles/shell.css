@@ -21,6 +21,12 @@ body {
   inset: 0;
 }
 
+/* The toolbar's height, shared with the dock mount positioned below it. See
+   `.gdsx-toolbar` for why it changes. */
+:root {
+  --gdsx-toolbar-h: 32px;
+}
+
 /* Scrollbars. Almost every panel is a long list, so the browser default --
    a light grey bar on a light track -- ends up being one of the brightest
    things on screen, several times over. `scrollbar-color` covers Firefox and
@@ -200,12 +206,26 @@ body {
 }
 
 /* ---- app toolbar: reset layout, reopen closed tabs --------------- */
+/*
+   One strip, and everything in it is fixed-width -- the level description
+   that used to sit here elastically is now the briefing card. That does not
+   make the bar narrow: a dozen controls plus three menus want ~1170px, so it
+   still has to degrade, and the two queries below are that. The wordmark goes
+   first (it is a name, not a control, and `‹ levels` already says where you
+   are), and below that the bar wraps to two rows rather than clipping its
+   right-hand end off screen -- an unreachable `submit` button is a broken
+   game, and a two-row bar is only slightly less tidy.
+
+   `--gdsx-toolbar-h` is why the height is a variable: `.gdsx-dock-mount` is
+   positioned under the bar and has to move with it. Both read the same token,
+   so the wrapped bar cannot end up overlapping the panels.
+*/
 .gdsx-toolbar {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 32px;
+  height: var(--gdsx-toolbar-h);
   z-index: 30;
   display: flex;
   align-items: center;
@@ -230,6 +250,29 @@ body {
 .gdsx-toolbar-spacer {
   flex: 1;
 }
+@media (max-width: 1180px) {
+  .gdsx-toolbar-title {
+    display: none;
+  }
+}
+@media (max-width: 1040px) {
+  :root {
+    --gdsx-toolbar-h: 62px;
+  }
+  .gdsx-toolbar {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 5px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  /* The spacer would otherwise eat the first row's slack and leave the second
+     row looking like an unrelated strip of buttons. Zero-width when wrapped:
+     the rows then read as one block that ran out of room. */
+  .gdsx-toolbar-spacer {
+    flex: 0;
+  }
+}
 /* The way back to the level menu. Styled as a link rather than a button --
    it navigates, and the browser should say so on hover. */
 .gdsx-home {
@@ -246,7 +289,7 @@ body {
   background: var(--df-plate-2);
   border-color: var(--df-edge-2);
 }
-/* "You have solved this one", beside the objective. Absent, not greyed, when
+/* "You have solved this one", after the level picker. Absent, not greyed, when
    the puzzle is unsolved -- which is most puzzles most of the time. */
 .gdsx-solved {
   flex: none;
@@ -306,31 +349,6 @@ body {
   opacity: 0.5;
   cursor: progress;
 }
-/* The objective. `min-width: 0` plus the blurb's own ellipsis is what
-   lets the sentence give up room first while the goal phrase -- the half
-   that actually says what ends the puzzle -- always survives. */
-.gdsx-objective {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  font-size: 11px;
-  cursor: default;
-}
-.gdsx-objective-goal {
-  flex: none;
-  color: var(--df-gold);
-  border: 1px solid var(--df-gold-edge);
-  border-radius: var(--df-radius);
-  padding: 0 5px;
-  white-space: nowrap;
-}
-.gdsx-objective-blurb {
-  color: var(--df-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .gdsx-toolbar button {
   background: var(--df-plate-2);
   color: var(--df-ink-2);
@@ -339,8 +357,9 @@ body {
   padding: 3px 8px;
   font: inherit;
   cursor: pointer;
-  /* The objective beside the level picker is elastic; these are not.
-     Without this the buttons wrap to two lines inside a 28px bar. */
+  /* Nothing in the bar is elastic any more -- the level description moved
+     into the briefing card -- but a long level title in the picker still
+     is. Without this the buttons wrap to two lines inside a 28px bar. */
   flex: none;
   white-space: nowrap;
 }
@@ -590,8 +609,7 @@ body {
 }
 .gdsx-dock-mount {
   position: absolute;
-  /* Matches `.gdsx-toolbar`'s height. */
-  top: 32px;
+  top: var(--gdsx-toolbar-h);
   left: 0;
   right: 0;
   bottom: 0;
@@ -865,7 +883,220 @@ body {
   border-radius: var(--df-radius);
   padding: 2px 4px;
 }
-.gdsx-guide-btn.on {
+.gdsx-guide-btn.on,
+.gdsx-briefing-btn.on {
   border-color: var(--df-gold-edge);
   color: var(--df-gold);
+}
+
+/* ---- the routing mark, shared by the menu card and the briefing ------- */
+/*
+   A generated ornament rather than a picture of the level: both screens that
+   draw it are showing a puzzle they have no geometry for -- the menu has only
+   `index.json`, and the briefing opens while the render bundle is still on
+   the wire. `puzzles/plate.ts` sets the three pitches from a hash of the
+   puzzle id, so a level's mark is stable and distinct with nothing added to
+   the catalog. Each screen sizes and masks it itself.
+*/
+.gdsx-plate {
+  --pitch-a: 8px;
+  --pitch-b: 17px;
+  --pitch-c: 47px;
+  /* Routing, not graph paper: dense fine tracks running one way, sparse
+     heavy ones running the other, and a band of cell rows under both. An
+     even grid in both axes is the one thing a real floorplan never looks
+     like. */
+  background-image:
+    /* heavy straps: the few wide nets that cross the whole block */
+    repeating-linear-gradient(
+      90deg,
+      var(--df-layer-met4) 0 2px,
+      transparent 2px var(--pitch-c)
+    ),
+    /* routing channels: dense, fine, and all running the same way */
+      repeating-linear-gradient(
+        90deg,
+        var(--df-layer-met2) 0 1px,
+        transparent 1px var(--pitch-a)
+      ),
+    /* standard-cell rows: banded across the grain, which is the thing that
+       makes a die look like a die rather than like squared paper */
+      repeating-linear-gradient(
+        0deg,
+        var(--df-layer-cells) 0 3px,
+        transparent 3px var(--pitch-b)
+      );
+}
+
+/* ---- the briefing (workspace/briefing.ts) ----------------------------- */
+/*
+   The only modal in the game. Everything else that floats -- hints, submit,
+   the guide -- is a popover anchored to its button, because it is something
+   you consult *while* working. The briefing is the opposite: it is what you
+   read before you start, it is the one surface that has the player's whole
+   attention, and the level's own description had nowhere else to go that was
+   not the toolbar (where it did not fit at any ordinary window width).
+
+   Drawn as a `<dialog>` so the browser owns the modal behaviour -- the top
+   layer, the backdrop, inertness of the page behind, initial focus and
+   Escape -- rather than a div with a z-index and four listeners
+   reimplementing it.
+*/
+.briefing[open] {
+  display: flex;
+  flex-direction: column;
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(80vh, 760px);
+  padding: 0;
+  background: var(--df-plate);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-3);
+  border-radius: var(--df-radius);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+}
+.briefing::backdrop {
+  background: rgba(6, 7, 9, 0.72);
+}
+
+/* The head: the mark behind the title, which is the one place in the game
+   where a level gets to look like a thing rather than a row. */
+.briefing-head {
+  position: relative;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--df-edge-2);
+  overflow: hidden;
+}
+.briefing-plate {
+  position: absolute;
+  inset: 0;
+  /* Fades out downward as well as to the left, so the title sits on plate
+     rather than in front of it. */
+  mask-image: linear-gradient(200deg, #000 0 18%, transparent 78%);
+  opacity: 0.3;
+}
+.briefing-head > *:not(.briefing-plate) {
+  position: relative;
+}
+.briefing-eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--df-dim);
+}
+.briefing-solved {
+  color: var(--df-teal);
+}
+.briefing-title {
+  margin: 4px 0 0;
+  font-family: var(--df-display);
+  font-optical-sizing: auto;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--df-ink);
+}
+/* The same gold the menu card's goal chip uses: it is the same sentence, and
+   a player moving between the two screens should recognise it. */
+.briefing-goal {
+  margin-top: 6px;
+  color: var(--df-gold);
+  font-size: 13px;
+}
+
+.briefing-body {
+  padding: 16px 22px 18px;
+  overflow-y: auto;
+}
+.briefing-blurb {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--df-ink-3);
+}
+/* Where the design came from. Quieter and narrower-measured than the blurb
+   above it: the blurb is what you are being asked to do, this is why anyone
+   would ask. */
+.briefing-story {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--df-dim);
+}
+.briefing-link {
+  color: var(--df-blue);
+  text-decoration: none;
+  border-bottom: 1px solid var(--df-blue-edge);
+  /* A URL is the one thing on the card that will not fit a line. */
+  overflow-wrap: anywhere;
+}
+.briefing-link:hover {
+  color: var(--df-blue-hi);
+  border-bottom-color: var(--df-blue);
+}
+
+/* Label / value rows: "to solve" and "your answer". A two-column grid rather
+   than a definition list of stacked lines -- the labels are short and fixed,
+   and lining the values up is what makes the pair read as one block of facts
+   rather than as two more sentences. */
+.briefing-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 10px 16px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--df-edge);
+}
+@media (max-width: 520px) {
+  .briefing-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .briefing-fact-label {
+    padding-top: 8px;
+  }
+}
+.briefing-fact-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--df-dim);
+  padding-top: 2px;
+}
+.briefing-fact-value {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--df-ink-2);
+  min-width: 0;
+}
+.briefing-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--df-edge-2);
+  background: var(--df-void);
+}
+.briefing-foot-note {
+  margin-right: auto;
+  font-size: 11px;
+  color: var(--df-faint);
+}
+.briefing button {
+  background: var(--df-plate-2);
+  color: var(--df-ink-2);
+  border: 1px solid var(--df-edge-2);
+  border-radius: var(--df-radius);
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.briefing button:hover {
+  border-color: var(--df-edge-hi);
+}
+.briefing-start {
+  color: var(--df-ink);
+  font-weight: 600;
 }

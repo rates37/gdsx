@@ -1,0 +1,545 @@
+{
+  "schema_version": 1,
+  "author": "gdsx",
+  "puzzles": [
+    {
+      "id": "0-first-light",
+      "manifest": {
+        "title": "First Light",
+        "difficulty": "easy",
+        "blurb": "Guided. Six flops, one comparator, one lock, and a walkthrough of every tool.",
+        "backstory": [
+          "A small die, first out of the imaging rig. The fab keeps parts like this around to focus it. Nothing on this one is intentionally hidden.",
+          "Start here. Try to use every tool in the kit at least once, to get a feel for them."
+        ],
+        "answer_kind": "sequence",
+        "tools_enabled": [
+          "die",
+          "netlist",
+          "cone",
+          "requirements",
+          "registers",
+          "register-decoder",
+          "sticky",
+          "waveform",
+          "sequence",
+          "experiments",
+          "sensitivity",
+          "constraints",
+          "notebook",
+          "model",
+          "labels",
+          "repl"
+        ],
+        "par_seconds": 900,
+        "guide": true
+      },
+      "solution": {
+        "schema_version": 3,
+        "answer_kind": "sequence",
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "I": 0
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low clears the shift register and the lock. Every subsequent cycle runs with rst_n high."
+          },
+          "input_cycles": 12
+        },
+        "key": {
+          "tracks": [
+            {
+              "port": "I",
+              "bits": "101101"
+            }
+          ],
+          "note": "The six-bit word the comparator tests, driven MSB first on cycles 0-5. The shift register holds it at cycle 5 and the lock is set on the next edge, at cycle 6. Cycles 6-11 drive 0 and exist only so the waveform shows that success stays high once the word has shifted back out again."
+        },
+        "verify": {
+          "method": "simulate",
+          "predicate": {
+            "type": "port_reaches_value_by_cycle",
+            "port": "success",
+            "value": 1,
+            "by_cycle": 6,
+            "sticky": true
+          }
+        },
+        "hint": "Flatten the success cone. Six leaves, each forced to a value, and they are the word in shift order."
+      }
+    },
+    {
+      "id": "1-warm-start",
+      "manifest": {
+        "title": "Warm Start",
+        "difficulty": "easy",
+        "blurb": "An accumulator with a non-zero reset. Read O when success goes high.",
+        "backstory": [
+          "A crate of controllers turns up from a liquidator. No datasheet, no part number, no schematic. One works.",
+          "Power it up. Hold reset as long as you like, then let go. There is already a number in it. Someone put that number in at the mask level, and no reset will clear it."
+        ],
+        "answer_kind": "constant",
+        "tools_enabled": [
+          "die",
+          "netlist",
+          "registers",
+          "cone",
+          "waveform",
+          "repl"
+        ],
+        "par_seconds": 1200
+      },
+      "solution": {
+        "schema_version": 2,
+        "answer_kind": "constant",
+        "answer": {
+          "value": 8,
+          "width": 8,
+          "note": "O[7:0] at the cycle success first goes high. acc = 0xA5C + 375*37 = 16527, which is 0x08F modulo 4096; O is acc[11:4], so 0x08. The trap is 375 rather than 500: the phase counter suppresses one accumulate in four. Assuming 500 gives 0x2A, which is also a plausible-looking byte."
+        },
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "enable": 1
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low clears the async resets, including the async-set flops holding the non-zero reset value. Every subsequent cycle runs with rst_n high."
+          },
+          "static_inputs": {
+            "enable": 1
+          },
+          "run_cycles": 520
+        },
+        "verify": {
+          "method": "simulate",
+          "predicate": {
+            "type": "bus_equals_when",
+            "bus": [
+              "O[7]",
+              "O[6]",
+              "O[5]",
+              "O[4]",
+              "O[3]",
+              "O[2]",
+              "O[1]",
+              "O[0]"
+            ],
+            "value": 8,
+            "when": {
+              "port": "success",
+              "value": 1
+            }
+          }
+        },
+        "hint": "The accumulator does not advance on every cycle. Orbit the two-bit group before extrapolating."
+      }
+    },
+    {
+      "id": "2-polynomial",
+      "manifest": {
+        "title": "Polynomial",
+        "difficulty": "medium",
+        "blurb": "A free-running 32-bit register with no lock. Recover its feedback polynomial and jump its state ahead a trillion cycles.",
+        "backstory": [
+          "Two radios stay in step by starting from the same seed and stepping it the same number of times. This die is the part that steps.",
+          "Yours has been off for a while. The other one has not. To catch up you need the state it will be in by now. You do not have a trillion cycles to spare."
+        ],
+        "answer_kind": "parameter",
+        "tools_enabled": [
+          "die",
+          "netlist",
+          "registers",
+          "cone",
+          "waveform",
+          "repl"
+        ],
+        "par_seconds": 1800
+      },
+      "solution": {
+        "schema_version": 3,
+        "answer_kind": "parameter",
+        "answer": {
+          "fields": [
+            {
+              "name": "polynomial",
+              "value": "0xA3000000",
+              "check": {
+                "type": "declared",
+                "reason": "the tap mask is a structural property of the wiring -- which of the 32 flops' D nets are driven by an XOR rather than by the neighbouring stage's Q -- not a value carried on any observable bus, so there is no bus_at_cycle/bus_equals_when check to write. It is checked instead by this puzzle's own bake assertion, which inspects the extracted netlist's Q-to-D adjacency directly and confirms exactly three XOR interruptions at the tap positions this mask predicts."
+              }
+            },
+            {
+              "name": "state_at_cycle_1e12",
+              "value": "0xBAB7B0EF",
+              "check": {
+                "type": "declared",
+                "reason": "10**12 cycles cannot be simulated in the time this bakes in. The value is state = M^(N+1) . seed over GF(2), where M is the Galois LFSR's 32x32 linear transition map for mask 0xA3000000, seed is 0x13579BDF, N = 10**12, and the +1 matches the pack's cycle-0-origin convention (cycle N is the design's state after N+1 clock edges past reset, same convention as puzzle 1). Computed by repeated-squaring matrix exponentiation and cross-checked bit-for-bit against direct RTL and netlist simulation for every N from 0 to 4099."
+              }
+            }
+          ]
+        },
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "enable": 1
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low clears the async-set and async-reset flops to the seed 0x13579BDF. Every subsequent cycle runs with rst_n high and enable high -- the design free-runs with no stimulus."
+          },
+          "static_inputs": {
+            "enable": 1
+          },
+          "run_cycles": 4096
+        },
+        "hint": "The 32 flops form a single chain once you look past each one's own clock-enable mux (every flop's D is mux(enable, hold-at-Q, real-next-value); the real-next-value is the interesting input). Three flops take their real-next-value from an XOR instead of the neighbouring stage's Q -- those are the taps, and the XOR's other input is the same flop in all three cases."
+      }
+    },
+    {
+      "id": "3-gatekeeper",
+      "manifest": {
+        "title": "Gatekeeper",
+        "difficulty": "medium",
+        "blurb": "A command-driven register file with one privileged register. Find the command sequence that unlocks it.",
+        "backstory": [
+          "You are given a dead board with a live chip on it. This is the service processor's mailbox: an address bus, a data bus, sixteen registers, and a mode field nobody wrote down.",
+          "Fifteen registers respond to anything you write. The sixteenth stays shut unless the commands arrive in the right order. Nothing on the pins changes when you get part of it right, so guessing at the board will not get you there."
+        ],
+        "answer_kind": "sequence",
+        "tools_enabled": [
+          "die",
+          "netlist",
+          "registers",
+          "cone",
+          "waveform",
+          "repl"
+        ],
+        "par_seconds": 2100
+      },
+      "solution": {
+        "schema_version": 3,
+        "answer_kind": "sequence",
+        "key": {
+          "tracks": [
+            {
+              "bus": ["mode[3]", "mode[2]", "mode[1]", "mode[0]"],
+              "values": [11, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            {
+              "bus": ["addr[2]", "addr[1]", "addr[0]"],
+              "values": [6, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            {
+              "port": "go",
+              "bits": "1000100000000000"
+            },
+            {
+              "bus": [
+                "D[7]",
+                "D[6]",
+                "D[5]",
+                "D[4]",
+                "D[3]",
+                "D[2]",
+                "D[1]",
+                "D[0]"
+              ],
+              "values": [0, 0, 0, 0, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            {
+              "port": "enable",
+              "bits": "1111111111111111"
+            }
+          ],
+          "note": "Cycle 0 arms: mode=1011, addr=6, go=1 -- the arm command's address field names 6, not the register it unlocks. That load also sets the settle counter to 3, so cycles 1-3 must idle. Cycle 4 is the privileged write: mode=0110, addr=5, go=1, D=0x5A. r5 holds 0x5A from cycle 5, and success latches at cycle 5. The stimulus is deliberately not unique -- any longer idle gap works, and the seven ordinary registers may be written at any time -- because this puzzle is about conditions, not counting."
+        },
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "enable": 1,
+                  "go": 0
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low clears every bank, the arm flag, the settle counter and the success latch. Every subsequent cycle runs with rst_n high; enable is a stimulus track rather than a static input, so a player may gate the whole command port with it."
+          },
+          "input_cycles": 16
+        },
+        "verify": {
+          "method": "simulate",
+          "predicate": {
+            "type": "port_reaches_value_by_cycle",
+            "port": "success",
+            "value": 1,
+            "by_cycle": 5,
+            "sticky": true
+          }
+        },
+        "hint": "Seven of the eight banks share one write enable and the eighth does not. Every extra term in that eighth enable is itself a register, so keep justifying backwards until each term is grounded in an input word or in a count of cycles -- and do not assume the address field names the register a command acts on."
+      }
+    },
+    {
+      "id": "4-nine-lives",
+      "manifest": {
+        "title": "Nine Lives",
+        "difficulty": "hard",
+        "blurb": "A one-hot state machine with nine lives, one word it accepts, and three states it never leaves.",
+        "backstory": [
+          "An access-control decoder, off the back of a door reader. It reads a stream of symbols and raises one line for one particular word.",
+          "Nine flops, one per state. Some of those states have no exit. Land on one and the clock keeps running, but the line will never go high again. Work the machine out before you drive it."
+        ],
+        "answer_kind": "sequence",
+        "tools_enabled": [
+          "die",
+          "netlist",
+          "registers",
+          "cone",
+          "waveform",
+          "repl"
+        ],
+        "par_seconds": 2700
+      },
+      "solution": {
+        "schema_version": 3,
+        "answer_kind": "sequence",
+        "key": {
+          "tracks": [
+            {
+              "bus": ["I[1]", "I[0]"],
+              "values": [2, 3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            {
+              "port": "enable",
+              "bits": "1111111111111111"
+            }
+          ],
+          "note": "The accepting word is 2 3 1 0 2, walking S0 -2-> S1 -3-> S2 -1-> S3 -0-> S4 -2-> S8. State flop 8 is set at the end of cycle 4 and `success` latches one cycle later, at cycle 5. Every symbol after that is free, which is why the track is padded with zeros: S8 is absorbing and is `good` on all four symbols, so `lives` never moves once the machine has accepted. The word is unique as a path, and it is unique as an answer too, because any deviation spends a life and the accept condition requires lives to still read 9 -- a spent life can never be recovered. Leading enable-low cycles are equally harmless, so the verifier checks the outcome rather than the literal stimulus. The brute-force route exists and the game does not pretend otherwise: 4^5 is 1024 words.",
+          "trap": "From S2 the symbol 3 -- the symbol that was correct one state earlier, at S1 -- leads to S5, and S5/S6/S7 are strongly connected with no edge out. A forward walk that greedily reuses a symbol that worked before falls in and can never reach S8. O[6:4] numbers the sink state, so the evidence is on the bus, but nothing announces that the component is a sink."
+        },
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "enable": 1,
+                  "I[1]": 0,
+                  "I[0]": 0
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low puts the machine in S0 (state flop 0 is an async-set flop, the other eight are async-reset), lives at 9, locked and success clear. Every subsequent cycle runs with rst_n high; enable is a stimulus track rather than a static input, so a player may gate the machine with it."
+          },
+          "input_cycles": 16
+        },
+        "verify": {
+          "method": "simulate",
+          "predicate": {
+            "type": "port_reaches_value_by_cycle",
+            "port": "success",
+            "value": 1,
+            "by_cycle": 5,
+            "sticky": true
+          }
+        },
+        "hint": "Recover the transition relation before you drive anything: for each of the nine state flops, evaluate its D under each of the four symbols with that flop's own state asserted. Thirty-six evaluations give you a graph, and the question is then which of its states can reach flop 8 -- three of them cannot reach anything outside themselves. Then read the success cone rather than assuming what it says: it names the counter as well as the state."
+      }
+    },
+    {
+      "id": "5-magic-number",
+      "manifest": {
+        "title": "Magic Number",
+        "difficulty": "hard",
+        "blurb": "A 32-bit serial comparator and four decoys, laid out so the die view actively misleads.",
+        "backstory": [
+          "The constant isn't in a ROM. It is not in a fuse bank. It is wired into the gates. And the floor plan was drawn by someone who knew you would look at the picture first.",
+          "Five comparators sit in a row: same width, same cells, same spacing. Four are decoys. You probably can't tell them apart by eye."
+        ],
+        "answer_kind": "constant",
+        "tools_enabled": [
+          "die",
+          "netlist",
+          "registers",
+          "cone",
+          "waveform",
+          "repl"
+        ],
+        "par_seconds": 2400
+      },
+      "solution": {
+        "schema_version": 3,
+        "answer_kind": "constant",
+        "answer": {
+          "value": "0x5eedc0de",
+          "width": 32,
+          "note": "The 32-bit constant the real comparator tests `sr` against. It is not observable anywhere: it is read out of the gates, by flattening the first of the two OR terms under `success` into 32 polarity-annotated leaves and mapping each leaf onto a stage of the shift register recovered from Q->D adjacency. Sampling net values cannot distinguish the real comparator from the four decoys, which is the whole point of the puzzle. The second OR term, `decoy_a & never`, is reachable in structure and unsatisfiable in fact: `never` is only set when all 32 stages are high at a cycle when only 8 of them can be anything but their reset value."
+        },
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "enable": 1,
+                  "I": 0
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low clears sr, cnt, never and success. Every subsequent cycle runs with rst_n high and enable high."
+          },
+          "static_inputs": {
+            "enable": 1
+          },
+          "input_cycles": 40
+        },
+        "key": {
+          "tracks": [
+            {
+              "port": "I",
+              "bits": "01011110111011011100000011011110"
+            }
+          ],
+          "note": "The confirmation run, not the graded answer: the constant driven in MSB-first. After 32 shifts sr holds it and cnt is 32, so success is set on the next edge, at cycle 32."
+        },
+        "verify": {
+          "method": "simulate",
+          "predicate": {
+            "type": "bus_equals_when",
+            "bus": [
+              "O[7]",
+              "O[6]",
+              "O[5]",
+              "O[4]",
+              "O[3]",
+              "O[2]",
+              "O[1]",
+              "O[0]"
+            ],
+            "value": 12,
+            "when": {
+              "port": "success",
+              "value": 1
+            },
+            "note": "`constant` puzzles are verified by observation, and this design's answer is an input-space constant with no port to read it on. So what is checked here is the confirmation run: driving the key raises success, and at that cycle O reads 0x0c -- all four decoy bits low, sr[3:0] = 0xc, one shift past the match."
+          }
+        },
+        "hint": "Five wide equality comparators, one lock. Which of them the die view puts next to which tells you nothing; read the success cone instead."
+      }
+    },
+    {
+      "id": "original-puzzle",
+      "manifest": {
+        "title": "Original Puzzle",
+        "difficulty": "hard",
+        "blurb": "One data input, one clock, one reset and a success flag. Find the sequence that raises it and recover the hidden message.",
+        "backstory": [
+          "This puzzle is the one that inspired this game, from the Jane Street challenge: https://blog.janestreet.com/can-you-reverse-engineer-an-asic/"
+        ],
+        "tools_enabled": ["cone", "guards", "registers", "fsm", "sensitivity"],
+        "par_seconds": 7200
+      },
+      "solution": {
+        "schema_version": 1,
+        "answer_kind": "sequence",
+        "key": {
+          "port": "I",
+          "bits": "0000000101010000100000000000010101010000000000001010000001000001000000100000101000010000000100000010000010010001010000000"
+        },
+        "driver": {
+          "clock": {
+            "port": "clk"
+          },
+          "reset": {
+            "port": "rst_n",
+            "active_low": true,
+            "protocol": [
+              {
+                "cycles": 1,
+                "values": {
+                  "rst_n": 0,
+                  "enable": 1,
+                  "I": 0
+                }
+              }
+            ],
+            "note": "One cycle with rst_n low clears the design's async resets, including the async-set flops that power up at 1. Every subsequent cycle runs with rst_n high."
+          },
+          "static_inputs": {
+            "enable": 1
+          },
+          "input_port": "I",
+          "start_cycle": 1,
+          "input_cycles": 121
+        },
+        "verify": {
+          "method": "simulate",
+          "predicate": {
+            "type": "port_reaches_value_by_cycle",
+            "port": "success",
+            "value": 1,
+            "by_cycle": 121,
+            "sticky": true
+          }
+        },
+        "reveal": {
+          "description": "Once success is high, O[7:0] streams an ASCII message, one byte per cycle, bit i of the byte on O[i].",
+          "port": "O",
+          "width": 8,
+          "condition": "success == 1",
+          "encoding": "ascii_lsb_first"
+        }
+      }
+    }
+  ]
+}

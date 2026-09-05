@@ -230,6 +230,20 @@ function parMinutes(manifest) {
   return null;
 }
 
+/**
+ * The manifest's `backstory`: where the design came from, one entry per
+ * paragraph, shown on the briefing card under the blurb.
+ *
+ * Authored prose, so there is nothing to validate -- but anything that is not
+ * a non-empty string is dropped rather than shipped for a screen to render as
+ * `undefined`, and a manifest with no backstory at all is simply a card with
+ * no background section.
+ */
+function backstory(manifest) {
+  if (!Array.isArray(manifest.backstory)) return [];
+  return manifest.backstory.filter((p) => typeof p === "string" && p.trim() !== "");
+}
+
 /** The three difficulty bands a manifest may declare. */
 export const DIFFICULTIES = ["easy", "medium", "hard"];
 
@@ -277,6 +291,7 @@ export function describe(dir, manifest, solution, hints = {}) {
     title: manifest.title ?? dir,
     blurb: manifest.blurb ?? "",
     difficulty: difficulty(dir, manifest),
+    backstory: backstory(manifest),
     parMinutes: parMinutes(manifest),
     answerKind: solution.answer_kind ?? manifest.answer_kind ?? null,
     toolsEnabled: manifest.tools_enabled ?? [],

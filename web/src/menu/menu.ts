@@ -28,6 +28,7 @@ import {
   type ProgressRecord,
   type StorageUsage,
 } from "../store/progress.ts";
+import { plateElement } from "../puzzles/plate.ts";
 import { confirmDestructive } from "./confirm.ts";
 import { continueEntry, menuEntries, type MenuEntry } from "./entries.ts";
 
@@ -125,36 +126,13 @@ function copyLinkButton(entry: MenuEntry): HTMLElement {
   return button;
 }
 
-/**
- * The routing ornament at the head of a card.
- *
- * It is a generated mark, not a picture of the level: this screen loads
- * `index.json` and nothing else, and the render bundle that would let it draw
- * a real layout is 30 seconds and a megabyte away. Three integers derived
- * from the id set the pitch of three gradient tracks, so a level's mark is
- * stable across reloads and different from its neighbours' -- and that is the
- * whole of what it claims to be.
- *
- * `aria-hidden`: it carries no information a screen reader could want.
- */
-function plate(id: string): HTMLElement {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  const node = el("span", "menu-card-plate");
-  node.setAttribute("aria-hidden", "true");
-  node.style.setProperty("--pitch-a", `${5 + (hash % 4)}px`);
-  node.style.setProperty("--pitch-b", `${16 + ((hash >>> 4) % 9)}px`);
-  node.style.setProperty("--pitch-c", `${41 + ((hash >>> 9) % 33)}px`);
-  return node;
-}
-
 function card(entry: MenuEntry, onCleared: () => void): HTMLElement {
   const item = el("li", entry.solved ? "menu-card menu-card-is-solved" : "menu-card");
   item.dataset.puzzle = entry.id;
 
   const link = el("a", "menu-card-link");
   link.href = entry.href;
-  link.append(plate(entry.id));
+  link.append(plateElement(entry.id, "menu-card-plate"));
 
   // The body is the middle column: what the level is called and what it is.
   // The meta chips move out of it into a column of their own, so a long blurb

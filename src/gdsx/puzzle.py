@@ -2,16 +2,18 @@
 
 A puzzle bundle is one directory (optionally zipped to `<id>.gdsxpuzzle`):
 
-    manifest.json   id, title, difficulty, ...            (authored by hand)
     design.gds      the layout                            (authored by hand)
-    solution.json   the intended key and verifier spec     (authored by hand)
+    manifest.json   id, title, difficulty, ...             (written by `sync`)
+    solution.json   the intended key and verifier spec     (written by `sync`)
     netlist.json    precomputed extraction                 (written by `bake`)
     render.bin      die-view bundle                        (written by `bake`)
     tape.bin        compiled gate tape                     (written by `bake`)
     hints.json      graded hint tree, tiers 0-4             (written by `bake`)
 
-Everything here works from `design.gds` and the two authored JSON files; none
-of it shells out to another tool. Building a puzzle from RTL (`gdsx puzzle
+Everything here works from `design.gds` and the two JSON files; none of it
+shells out to another tool. Those two are generated as well, from
+`puzzles/catalog.json` -- that is `gdsx puzzle sync` and it lives in
+`catalog.py`; this module only reads what it wrote. Building a puzzle from RTL (`gdsx puzzle
 build`) is a separate, much heavier flow and is out of scope for this module.
 
 `solution.json` schema

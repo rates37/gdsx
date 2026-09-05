@@ -93,6 +93,11 @@ export interface PuzzleDescriptor {
    *  Validated at sync time by web/scripts/puzzle-index.mjs, which refuses
    *  anything else, so this is safe to show verbatim. */
   difficulty: string | null;
+  /** Where the design came from, one entry per paragraph: authored prose,
+   *  shown on the briefing card and nowhere else. Empty for a manifest that
+   *  declares none, which is a card with no background section rather than an
+   *  error. */
+  backstory: string[];
   parMinutes: number | null;
   answerKind: string | null;
   toolsEnabled: string[];

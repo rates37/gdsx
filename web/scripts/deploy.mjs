@@ -12,11 +12,12 @@
 //
 //   0. preconditions      -- clean tree, commit pushed, origin resolves
 //   1. build the wheel    -- repo root ../dist/*.whl, cleared first
-//   2. npm ci             -- exact lockfile install; wipes node_modules
-//   3. fetch-runtime-deps -- refills node_modules/.pyodide-extra (needs net)
-//   4. npm test           -- the web suite; aborts the deploy on failure
-//   5. npm run build      -- public/ and dist/ cleared first, GDSX_BASE set
-//   6. publish            -- one orphan commit force-pushed to gh-pages
+//   2. bootstrap          -- the puzzle artifacts, which git does not track
+//   3. npm ci             -- exact lockfile install; wipes node_modules
+//   4. fetch-runtime-deps -- refills node_modules/.pyodide-extra (needs net)
+//   5. npm test           -- the web suite; aborts the deploy on failure
+//   6. npm run build      -- public/ and dist/ cleared first, GDSX_BASE set
+//   7. publish            -- one orphan commit force-pushed to gh-pages
 //
 // The wheel is built before `npm ci` and the tests, not after, because
 // scripts/sync-assets.mjs refuses to run without a wheel in ../dist -- and
@@ -26,7 +27,7 @@
 // than precede it. No npm lifecycle hook runs the fetch, which is why it is
 // spelled out here.
 //
-// Steps 1 and 5 delete their output directories first. A deploy that reuses a
+// Steps 1 and 6 delete their output directories first. A deploy that reuses a
 // stale public/ or dist/ ships a half-old bundle -- the failure mode where the
 // page loads, most of it works, and one panel is three commits behind. Full
 // rebuild every time; the deploy is not the place to save ninety seconds.
@@ -253,32 +254,49 @@ if (existsSync(distRoot)) {
     if (name.endsWith(".whl") || name.endsWith(".tar.gz")) unlinkSync(path.join(distRoot, name));
   }
 }
-run("1/6  build the gdsx wheel (with config/ inside it)", "uv", ["run", "python", "scripts/build_wheel.py"], repoDir);
+run("1/7  build the gdsx wheel (with config/ inside it)", "uv", ["run", "python", "scripts/build_wheel.py"], repoDir);
 
-// --- 2. node dependencies, from the lockfile -----------------------------
+// --- 2. the generated puzzle artifacts -----------------------------------
+//
+// git tracks each level's design.gds and puzzles/catalog.json, not the files
+// derived from them: the manifests, the extraction, the render bundle, the
+// gate tape, the hints and the zips. A clone has none of them, and the build
+// reads all of them -- sync-assets copies netlist/render/tape into public/
+// and turns the manifests into index.json.
+//
+// So the deploy rebuilds them, for the same reason it rebuilds the wheel and
+// empties public/ and dist/: what is published should be a function of the
+// source commit and nothing else. Ten seconds, and it means a stale artifact
+// left on this machine by an experiment cannot reach the site.
+//
+// This writes only gitignored paths, so it cannot dirty the tree the
+// precondition above just checked.
+run("2/7  rebuild the generated puzzle artifacts", "uv", ["run", "python", "scripts/bootstrap.py"], repoDir);
+
+// --- 3. node dependencies, from the lockfile -----------------------------
 //
 // `npm ci` rather than `npm install`: it installs exactly what
 // package-lock.json says and fails if the lockfile and package.json disagree,
 // so what is published is built from a dependency set that is written down.
 // It also deletes node_modules first, which is why step 3 comes after it.
-run("2/6  install node dependencies (npm ci)", "npm", ["ci"], webDir);
+run("3/7  install node dependencies (npm ci)", "npm", ["ci"], webDir);
 
-// --- 3. pyodide runtime wheels ------------------------------------------
+// --- 4. pyodide runtime wheels ------------------------------------------
 //
 // Needs network. No npm lifecycle hook runs this; sync-assets.mjs only checks
 // that its output is present and refuses to build otherwise. Unconditional
 // rather than --if-needed, because npm ci just deleted the staging directory.
-run("3/6  fetch the pyodide runtime wheels", "node", ["scripts/fetch-runtime-deps.mjs"], webDir);
+run("4/7  fetch the pyodide runtime wheels", "node", ["scripts/fetch-runtime-deps.mjs"], webDir);
 
-// --- 4. the web test suite ----------------------------------------------
+// --- 5. the web test suite ----------------------------------------------
 //
 // Nothing else runs these -- there is no CI in this repository -- so the
 // deploy runs them. The suite ends with test:base-path, which builds and
 // drives the app under a sub-path in a real browser: the one check that would
 // otherwise only fail after publishing.
-run("4/6  run the web test suite", "npm", ["test"], webDir);
+run("5/7  run the web test suite", "npm", ["test"], webDir);
 
-// --- 5. the production build --------------------------------------------
+// --- 6. the production build --------------------------------------------
 //
 // public/ and dist/ are both removed first. public/ persists between runs and
 // Vite copies whatever is in it into dist wholesale, so a `npm run dev` from
@@ -289,7 +307,7 @@ const publicDir = path.join(webDir, "public");
 const buildDir = path.join(webDir, "dist");
 rmSync(publicDir, { recursive: true, force: true });
 rmSync(buildDir, { recursive: true, force: true });
-run("5/6  production build", "npm", ["run", "build"], webDir, { GDSX_BASE: BASE });
+run("6/7  production build", "npm", ["run", "build"], webDir, { GDSX_BASE: BASE });
 
 if (!existsSync(path.join(buildDir, "index.html"))) {
   fail(`the build produced no ${path.relative(repoDir, buildDir)}/index.html; nothing to publish.`);
@@ -303,7 +321,7 @@ if (!existsSync(path.join(buildDir, "index.html"))) {
 // line looks deletable. It is not.
 writeFileSync(path.join(buildDir, ".nojekyll"), "");
 
-// --- 6. publish as a single orphan commit --------------------------------
+// --- 7. publish as a single orphan commit --------------------------------
 //
 // dist/ is ~38 MB, most of it one 9.6 MB pyodide.asm.wasm. Appending each
 // deploy to a branch would grow the repository without bound and there is no
@@ -319,7 +337,7 @@ writeFileSync(path.join(buildDir, ".nojekyll"), "");
 // commands. The scratch index also means the deploy never touches the working
 // tree, the real index, or any local branch -- if the push fails, the
 // repository is in exactly the state it started in.
-console.log(`\n=== 6/6  publish ${path.relative(repoDir, buildDir)}/ to ${REMOTE}/${BRANCH}`);
+console.log(`\n=== 7/7  publish ${path.relative(repoDir, buildDir)}/ to ${REMOTE}/${BRANCH}`);
 
 const indexDir = mkdtempSync(path.join(tmpdir(), "gdsx-deploy-"));
 const indexFile = path.join(indexDir, "index");

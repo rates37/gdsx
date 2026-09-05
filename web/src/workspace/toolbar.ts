@@ -9,7 +9,6 @@ import type { MenuGroup, Workspace } from "./workspace.ts";
 import type { HintTier, PuzzleChecks } from "../puzzles/catalog.ts";
 import type { Submission, Verdict } from "../puzzles/answer-check.ts";
 import type { ScoreCard } from "../notebook/scoring.ts";
-import { goalFor } from "../puzzles/goals.ts";
 
 /** The guided-walkthrough button's wiring. Supplied by main.ts, which owns
  *  the Guide; the toolbar only renders a button for it. Absent when the
@@ -60,23 +59,31 @@ export interface SubmitControl {
  *  about a choice. Supplied by main.ts, which owns the catalog; the toolbar
  *  only renders it. */
 export interface LevelPicker {
-  puzzles: { id: string; title: string; blurb?: string; parMinutes?: number | null }[];
+  puzzles: { id: string; title: string; blurb?: string }[];
   currentId: string;
   onSelect: (id: string) => void;
 }
 
 /**
- * What the loaded puzzle is asking for. Until this existed the objective was
- * reachable only as a `title=` tooltip on an option inside the level
- * `<select>` -- so a player who never opened that dropdown was never told what
- * they were trying to do.
+ * The briefing card's wiring: what the loaded puzzle is asking for, and where
+ * to read it.
+ *
+ * This used to be an `Objective` the toolbar rendered inline -- the goal
+ * phrase plus the blurb, in the bar itself. It was the only elastic item
+ * among a dozen fixed-width buttons, so at any ordinary window width the
+ * description was ellipsised to a few words and the bar overflowed anyway.
+ * The text now lives in `workspace/briefing.ts` and the toolbar draws a
+ * button, which is the shape the rest of the bar already has.
+ *
+ * Supplied by boot.ts, which owns the descriptor; the toolbar neither builds
+ * the card nor knows what is on it.
  */
-export interface Objective {
-  /** `manifest.blurb`. */
-  blurb: string;
-  /** `solution.answer_kind`, or null for a puzzle that declares none. */
-  answerKind: string | null;
-  parMinutes?: number | null;
+export interface BriefingControl {
+  /** True while the card is on screen. */
+  isOpen: () => boolean;
+  open: () => void;
+  /** Re-renders the button when the card closes by Escape or backdrop. */
+  subscribe: (fn: () => void) => void;
 }
 
 /** Whether this puzzle is already solved, as `store/progress.ts` records it.
@@ -149,7 +156,7 @@ export interface ToolbarHandle {
 export interface ToolbarOptions {
   levels?: LevelPicker;
   guide?: GuideControl;
-  objective?: Objective;
+  briefing?: BriefingControl;
   submit?: SubmitControl;
   home?: HomeLink;
   /** Absent for a puzzle that has never been solved. */
@@ -163,7 +170,7 @@ export function attachToolbar(
   menus: MenuGroup[],
   opts: ToolbarOptions = {},
 ): ToolbarHandle {
-  const { levels, guide, objective, submit, home } = opts;
+  const { levels, guide, briefing, submit, home } = opts;
   const bar = document.createElement("div");
   bar.className = "gdsx-toolbar";
   bar.innerHTML = `
@@ -172,7 +179,6 @@ export function attachToolbar(
     <nav class="gdsx-menubar"></nav>
     <span class="gdsx-level-wrap"></span>
     <span class="gdsx-solved"></span>
-    <span class="gdsx-objective"></span>
     <div class="gdsx-toolbar-spacer"></div>
     <span class="gdsx-ready-wrap"></span>
     <button class="gdsx-notebook-btn" type="button" title="your notebook — the only scored surface in the game">
@@ -180,6 +186,9 @@ export function attachToolbar(
     </button>
     <span class="gdsx-submit-slot"></span>
     <span class="gdsx-hints-slot"></span>
+    <button class="gdsx-briefing-btn" type="button" title="what this level is, what you have to work with, and what ends it">
+      briefing
+    </button>
     <button class="gdsx-guide-btn" type="button" title="a step-by-step walkthrough of every panel, on the tutorial puzzle">
       guide
     </button>
@@ -196,8 +205,6 @@ export function attachToolbar(
   const setSolved = attachSolvedChip(bar.querySelector(".gdsx-solved") as HTMLSpanElement);
   if (opts.solved) setSolved(opts.solved);
 
-  attachObjective(bar.querySelector(".gdsx-objective") as HTMLSpanElement, objective);
-
   const setReadiness = attachReadinessPill(bar.querySelector(".gdsx-ready-wrap") as HTMLSpanElement);
 
   const updateMenuChecks = attachMenuBar(bar.querySelector(".gdsx-menubar") as HTMLElement, workspace, menus);
@@ -211,6 +218,8 @@ export function attachToolbar(
   attachSubmitButton(bar.querySelector(".gdsx-submit-slot") as HTMLSpanElement, submit);
 
   attachHintsButton(bar.querySelector(".gdsx-hints-slot") as HTMLSpanElement, opts.hints);
+
+  attachBriefingButton(bar.querySelector(".gdsx-briefing-btn") as HTMLButtonElement, briefing);
 
   attachGuideButton(bar.querySelector(".gdsx-guide-btn") as HTMLButtonElement, guide);
 
@@ -253,13 +262,12 @@ function attachHomeLink(host: HTMLSpanElement, home?: HomeLink): void {
 }
 
 /**
- * "You have solved this one", beside the objective.
+ * "You have solved this one", after the level picker.
  *
  * Drawn only when it is true: a puzzle nobody has solved says nothing rather
  * than carrying a permanent "not solved", which would be the state of most
- * puzzles most of the time and would crowd out the objective it sits next to.
- * The date and attempt count go in the tooltip -- the top bar has room for the
- * fact, not the history.
+ * puzzles most of the time. The date and attempt count go in the tooltip --
+ * the top bar has room for the fact, not the history.
  */
 function attachSolvedChip(host: HTMLSpanElement): (state: SolvedState) => void {
   host.hidden = true;
@@ -418,9 +426,11 @@ function attachLevelPicker(host: HTMLSpanElement, levels?: LevelPicker): void {
   for (const puzzle of levels.puzzles) {
     const option = document.createElement("option");
     option.value = puzzle.id;
-    option.textContent = puzzle.parMinutes
-      ? `${puzzle.title} · par ${puzzle.parMinutes}m`
-      : puzzle.title;
+    // The title alone. Par used to be appended here, which made this the
+    // widest control in a bar that already did not fit; it is on the briefing
+    // card and on every menu card, and a dropdown of levels is answering
+    // "which one am I on", not "how long should it take".
+    option.textContent = puzzle.title;
     option.title = puzzle.blurb ?? "";
     select.append(option);
   }
@@ -438,37 +448,27 @@ function attachLevelPicker(host: HTMLSpanElement, levels?: LevelPicker): void {
   host.append(select);
 }
 /**
- * The objective, immediately right of the level picker -- the first place you
- * look after "which puzzle am I on".
+ * The briefing button, left of the guide's.
  *
- * The goal phrase is always drawn; the blurb after it is allowed to ellipsise,
- * because on a narrow window "recover a value" is the half worth keeping. The
- * full text is on the `title` either way.
+ * Beside `guide` on purpose: the two are the same kind of thing -- "tell me
+ * about this" rather than "do something to the design" -- and a player
+ * looking for one will find the other. Removed entirely when the shell
+ * supplies no card, same convention as `submit` and `hints`.
  */
-function attachObjective(host: HTMLSpanElement, objective?: Objective): void {
-  if (!objective || (!objective.blurb && !objective.answerKind)) {
-    host.remove();
+function attachBriefingButton(button: HTMLButtonElement, briefing?: BriefingControl): void {
+  if (!briefing) {
+    button.remove();
     return;
   }
-
-  const goal = goalFor(objective.answerKind);
-  if (goal) {
-    const goalEl = document.createElement("span");
-    goalEl.className = "gdsx-objective-goal";
-    goalEl.textContent = goal;
-    host.append(goalEl);
-  }
-  if (objective.blurb) {
-    const blurbEl = document.createElement("span");
-    blurbEl.className = "gdsx-objective-blurb";
-    blurbEl.textContent = objective.blurb;
-    host.append(blurbEl);
-  }
-
-  const par = objective.parMinutes ? ` · par ${objective.parMinutes} min` : "";
-  host.title = [goal ? `Goal: ${goal}` : null, objective.blurb]
-    .filter(Boolean)
-    .join("\n") + par;
+  const refresh = (): void => {
+    button.classList.toggle("on", briefing.isOpen());
+  };
+  button.addEventListener("click", () => {
+    briefing.open();
+    refresh();
+  });
+  briefing.subscribe(refresh);
+  refresh();
 }
 
 /**

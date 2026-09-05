@@ -101,9 +101,9 @@ export class Workspace {
 
   /**
    * Everything in `opts` beyond `menus`, `defaultPanelIds` and `puzzleId` is
-   * handed straight to the toolbar -- the level picker, the guide button, the
-   * objective, the submit surface, the way back to the menu and the solved
-   * marker. The shell still does not know what a puzzle *is*; it only knows
+   * handed straight to the toolbar -- the level picker, the guide and
+   * briefing buttons, the submit surface, the way back to the menu and the
+   * solved marker. The shell still does not know what a puzzle *is*; it only knows
    * which one this layout belongs to.
    */
   constructor(container: HTMLElement, panels: PanelDef[], opts: WorkspaceOptions) {
@@ -160,7 +160,7 @@ export class Workspace {
     this.toolbar.readiness(state);
   }
 
-  /** Show the solved marker beside the objective. Called at load for a puzzle
+  /** Show the solved marker in the toolbar. Called at load for a puzzle
    *  already solved, and again the moment a submission is accepted -- the bar
    *  should not still be claiming an unsolved puzzle while the popover says
    *  "✓ accepted". */

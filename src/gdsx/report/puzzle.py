@@ -1,10 +1,27 @@
-"""Rendering for gdsx.puzzle: bake, verify, stats"""
+"""Rendering for gdsx.puzzle: bake, verify, stats -- and gdsx.catalog: sync"""
 
 from __future__ import annotations
 
 from rich.console import Console
 
+from ..catalog import SyncResult
 from ..puzzle import BakeResult, StatsResult, VerifyResult
+
+
+def render_sync(console: Console, result: SyncResult, *, check: bool) -> bool:
+    """The catalog sync. Returns False when a check found drift, so the CLI
+    can exit non-zero without this function deciding what that means."""
+    if result.clean:
+        console.print(f"[green]catalog clean[/] -- {len(result.checked)} file(s) up to date")
+        return True
+    verb = "would rewrite" if check else "wrote"
+    colour = "yellow" if check else "green"
+    console.print(f"[{colour}]{verb}[/] {len(result.written)} of {len(result.checked)} file(s)")
+    for path in result.written:
+        console.print(f"  {path}")
+    if check:
+        console.print("[yellow]run `gdsx puzzle sync` to bring them back in line[/]")
+    return not check
 
 
 def render_bake(console: Console, result: BakeResult) -> None:

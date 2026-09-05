@@ -20,6 +20,7 @@ from . import (
     sequential,
 )
 from . import lift as lifting, normalise as _normalise, verify as equiv
+from . import catalog as catalog_mod
 from . import puzzle as puzzle_mod
 from .core.context import Design
 from .physical import draw as _fp, placement as _geo
@@ -432,6 +433,38 @@ PuzzleDirArg = typer.Argument(
     file_okay=False,
     help="a puzzle directory (manifest.json, design.gds, solution.json, ...)",
 )
+
+
+@puzzle_app.command("sync")
+def puzzle_sync(
+    puzzles_dir: Path = typer.Argument(
+        Path("puzzles"),
+        exists=True,
+        file_okay=False,
+        help="the directory holding catalog.json and one directory per level",
+    ),
+    check: bool = typer.Option(
+        False, "--check", help="report drift and exit non-zero, writing nothing"
+    ),
+) -> None:
+    """Write every level's manifest.json and solution.json from catalog.json
+
+    `puzzles/catalog.json` is the single source of truth for a level's
+    authored data -- title, difficulty, blurb, backstory, par, tools, answer
+    key and verifier spec. Edit it, run this, then `gdsx puzzle bake`
+    to regenerate the artefacts derived from `design.gds`.
+    """
+    try:
+        result = catalog_mod.sync(puzzles_dir, check=check)
+        stray = catalog_mod.undeclared(puzzles_dir)
+    except catalog_mod.CatalogError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(1)
+    ok = report_puzzle.render_sync(console, result, check=check)
+    for name in stray:
+        console.print(f"[yellow]{name} has a design.gds but no catalog entry[/]")
+    if not ok or stray:
+        raise typer.Exit(1)
 
 
 @puzzle_app.command("bake")

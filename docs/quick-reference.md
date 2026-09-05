@@ -13,10 +13,10 @@ Lets you access the main tools/views in the game + navigation.
 | Analyse menu     | Open the Cone Walker, Registers, Python Shell tabs                                     |
 | Experiments menu | Open the sequence editor, experiments, and model builder tabs                          |
 | level dropdown   | Quickly switch between different levels (progress is saved)                            |
-| objective        | States the goal of the current level                                                   |
 | `notebook`       | Opens the notebook (the scored panel)                                                  |
 | `submit`         | Opens a form to submit a solution                                                      |
 | `hints`          | Get tiered hints for the current level. Each hint used reduces final score             |
+| `briefing`       | Opens the level's brief: what it is, where it came from, and what ends it. Opens by itself the first time you play a level |
 | `guide`          | Opens the guided walkthrough of the tutorial level. Progress of current level is saved |
 | `reset layout`   | Resets the panel layout to default arrangement                                         |
 

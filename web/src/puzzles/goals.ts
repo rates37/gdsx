@@ -2,7 +2,7 @@
 //
 // The point is to tell the player what *shape* of answer ends the puzzle:
 // "find the input sequence" and "recover a value" are very different sessions.
-// Both screens say it -- the menu on every card, the workspace toolbar for the
+// Both screens say it -- the menu on every card, the briefing card for the
 // puzzle that is open -- and they must say it the same way, which is why the
 // table is here rather than in either of them.
 

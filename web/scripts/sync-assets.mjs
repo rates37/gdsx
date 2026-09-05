@@ -189,12 +189,20 @@ const entries = existsSync(puzzlesDir)
       .sort()
   : [];
 
+// A directory missing its generated files is not a warning to scroll past.
+// The repository tracks a level's `design.gds` and its entry in
+// `puzzles/catalog.json`, not the artifacts derived from them, so a fresh
+// clone has *every* level in this state -- and skipping them all produces an
+// empty index.json, a menu that says the build is unsynced, and no clue what
+// to run. `scripts/bootstrap.py` is what to run.
 const index = [];
+const unbaked = [];
 for (const dir of entries) {
   const src = path.join(puzzlesDir, dir);
+  if (!existsSync(path.join(src, "design.gds"))) continue; // not a level
   const missing = REQUIRED.filter((f) => !existsSync(path.join(src, f)));
   if (missing.length > 0) {
-    console.warn(`warning: puzzles/${dir} is missing ${missing.join(", ")}, not offering it`);
+    unbaked.push(`  puzzles/${dir} is missing ${missing.join(", ")}`);
     continue;
   }
   const read = (f) => JSON.parse(readFileSync(path.join(src, f), "utf8"));
@@ -202,6 +210,17 @@ for (const dir of entries) {
     copy(path.join(src, name), path.join(puzzlesOut, dir, name));
   }
   index.push(describe(dir, read("manifest.json"), read("solution.json"), read("hints.json")));
+}
+
+if (unbaked.length > 0) {
+  console.error(
+    `\nsync-assets refused: ${unbaked.length} level(s) have not been built yet.\n\n` +
+      unbaked.join("\n") +
+      `\n\n  These are generated from each level's design.gds and puzzles/catalog.json,\n` +
+      `  and are not tracked by git -- a fresh clone always starts here.\n\n` +
+      `  Fix:  uv run python scripts/bootstrap.py     (from the repository root)\n`,
+  );
+  process.exit(1);
 }
 
 writeFileSync(

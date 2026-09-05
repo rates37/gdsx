@@ -45,7 +45,7 @@ def _normalise(text: str, run_dir: Path) -> str:
 
     `run_dir` is the per-case scratch cwd (see `_run_case`); it stands in for
     the repo root here because commands are deliberately run outside it, to
-    avoid ever writing into the tracked `out/` directory.
+    avoid ever writing into the repo's own `out/` directory.
     """
     text = text.replace(str(run_dir), "<ROOT>")
     text = text.replace(str(ROOT), "<ROOT>")
@@ -57,7 +57,8 @@ def _run_case(name: str, template: list[str], tmp_base: Path) -> str:
 
     The cwd is isolated (not the repo root) so that commands which write
     files using a relative default (e.g. `normalise` writes to `./out`) never
-    touch the repo's tracked `out/` directory. `uv run --project` lets `uv`
+    touch the repo's own `out/` directory -- which is scratch, and no longer
+    tracked, but should still not be silently rewritten by a golden run. `uv run --project` lets `uv`
     find the project regardless of cwd.
     """
     run_dir = tmp_base / name

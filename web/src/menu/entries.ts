@@ -25,8 +25,7 @@ export interface MenuEntry {
   difficulty: string | null;
   /** "par 20m", or null. */
   par: string | null;
-  /** The answer kind said in the imperative, shared with the toolbar's
-   *  objective. Null for a puzzle declaring an answer kind we have no phrase
+  /** The answer kind said in the imperative, shared with the briefing card. Null for a puzzle declaring an answer kind we have no phrase
    *  for -- the card then says nothing rather than guessing. */
   goal: string | null;
   /** True once a submission for this puzzle has been accepted. */

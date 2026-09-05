@@ -304,6 +304,7 @@ export const KEY_RULES: readonly KeyRule[] = [
   perPuzzleVersioned("repl-history", "repl-history"),
   perPuzzleVersioned("sticky-classification", "sticky-classification"),
   perPuzzleVersioned("stimulus", "stimulus"),
+  perPuzzleVersioned("briefing", "briefing"),
   perPuzzleVersioned("progress", "progress"),
 ];
 

@@ -52,6 +52,8 @@ import { SimStore } from "./sim/store";
 import { persistStimulus, restoreStimulus } from "./sim/stimulus";
 import { menuUrl, openPuzzle, rememberPuzzle, type PuzzleDescriptor } from "./puzzles/catalog";
 import { panelsFor } from "./puzzles/tools";
+import { briefingFor, takeFirstVisit } from "./puzzles/briefing";
+import { createBriefing, type BriefingHandle } from "./workspace/briefing";
 import { assetUrl } from "./asset-url.ts";
 
 // The toolbar's menu bar, macOS/Windows style. The Notebook is deliberately
@@ -441,6 +443,27 @@ export async function bootWorkspace(
       }
     : undefined;
 
+  // The briefing card: built on first open rather than here, so that a player
+  // who never presses the button never pays for the DOM. Same
+  // build-it-when-asked shape as `guideControl` above, and the same reason the
+  // listener list is held separately -- the toolbar subscribes to the control
+  // while constructing the bar, which is before the card exists.
+  let briefing: BriefingHandle | null = null;
+  const briefingListeners: (() => void)[] = [];
+  const briefingCard = (): BriefingHandle => {
+    briefing ??= createBriefing({ brief: briefingFor(puzzle), solved: solvedNow });
+    for (const fn of briefingListeners.splice(0)) briefing.subscribe(fn);
+    return briefing;
+  };
+  const briefingControl = {
+    isOpen: () => briefing?.isOpen() ?? false,
+    open: () => briefingCard().open(),
+    subscribe: (fn: () => void) => {
+      if (briefing) briefing.subscribe(fn);
+      else briefingListeners.push(fn);
+    },
+  };
+
   const workspaceEl = document.getElementById("workspace") as HTMLDivElement;
   const workspace = new Workspace(
     workspaceEl,
@@ -502,21 +525,12 @@ export async function bootWorkspace(
       //: a player's very first puzzle.
       puzzleId: puzzle.id,
       levels: {
-        puzzles: catalog.map((p) => ({
-          id: p.id,
-          title: p.title,
-          blurb: p.blurb,
-          parMinutes: p.parMinutes,
-        })),
+        puzzles: catalog.map((p) => ({ id: p.id, title: p.title, blurb: p.blurb })),
         currentId: puzzle.id,
         onSelect: openPuzzle,
       },
       guide: guideControl,
-      objective: {
-        blurb: puzzle.blurb,
-        answerKind: puzzle.answerKind,
-        parMinutes: puzzle.parMinutes,
-      },
+      briefing: briefingControl,
       submit: submitControl,
       hints: hintsControl,
       // The way out. Everything else in the query survives the trip, so a
@@ -531,6 +545,17 @@ export async function bootWorkspace(
     guide.subscribe(notifyGuideChange);
     notifyGuideChange();
   }
+
+  // The brief opens itself the first time a player reaches a level, and never
+  // again -- it is the level's introduction, so it should be read once without
+  // having to be asked for, and be a button every time after.
+  //
+  // After the Guide is constructed, and never over a running walkthrough: the
+  // guide is already a card telling the player what to do next, and two of
+  // those at once is one too many. `takeFirstVisit` is still not called in
+  // that case, so the brief is not silently spent -- it opens on the next
+  // load, once the walkthrough is done.
+  if (!guide?.active && takeFirstVisit(puzzle.id)) briefingCard().open();
 
   // Ready means the design handle exists, not merely that Pyodide answered:
   // that is the point at which the analysis panels stop saying "loading…",
