@@ -325,6 +325,16 @@ def build(
         str(dense_of[raw]): net_names.get(raw, f"n{raw}") for raw in raw_roots
     }
 
+    # Tracing finds every electrically distinct piece of metal; the netlist
+    # keeps only the ones that reach a logic cell's pin. The rest -- power
+    # stubs under fill and tap cells, stray routing that ends nowhere -- are
+    # still drawn and still pickable, and their `n<id>` fallback name above
+    # looks exactly like a real net's. Say plainly which ones they are, so a
+    # viewer can offer "open this in the netlist" only where that will work.
+    # (The fallback cannot collide with a real name: both are `n<raw id>`
+    # over the same ids, so the same string always means the same net.)
+    unextracted = [dense_of[raw] for raw in raw_roots if raw not in net_names]
+
     net_of_shape = [
         dense_of[raw] if raw is not None else -1 for raw in shape_net_raw
     ]
@@ -389,6 +399,8 @@ def build(
         "cell_names": cell_names,
         "n_nets": n_nets,
         "net_names": net_names_out,
+        # Dense ids with no counterpart in the netlist (see above). Sorted.
+        "unextracted_nets": unextracted,
         "n_shapes": len(shape_net_raw),
         "net_of_shape": blob.add_i32(net_of_shape, stride=1),
         "net_shapes": {

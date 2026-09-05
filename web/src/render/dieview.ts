@@ -116,6 +116,9 @@ interface Batch {
 export interface NetHit {
   id: number;
   name: string;
+  /** False for metal the netlist has no entry for: it is drawn and pickable,
+   *  but nothing that asks Python about a *net* will find it. */
+  extracted: boolean;
 }
 
 export interface ViewState {
@@ -145,6 +148,8 @@ export class DieView {
   private readonly netOfShape: Int32Array;
   private readonly netNameById = new Map<number, string>();
   private readonly netIdByName = new Map<string, number>();
+  /** Nets the netlist has no entry for -- see `RenderHeader.unextracted_nets`. */
+  private readonly unextracted = new Set<number>();
   /** -1 = nothing selected. */
   private highlightedNet = -1;
 
@@ -194,6 +199,7 @@ export class DieView {
       this.netNameById.set(n, name);
       this.netIdByName.set(name, n);
     }
+    for (const n of h.unextracted_nets ?? []) this.unextracted.add(n);
 
     const quad = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -469,7 +475,11 @@ export class DieView {
         if (wx < x0 - eps || wx > x1 + eps || wy < y0 - eps || wy > y1 + eps) continue;
         const netId = batch.cpuNetIds[idx];
         if (netId < 0) continue;
-        return { id: netId, name: this.netNameById.get(netId) ?? `n${netId}` };
+        return {
+          id: netId,
+          name: this.netNameById.get(netId) ?? `n${netId}`,
+          extracted: !this.unextracted.has(netId),
+        };
       }
     }
     return null;

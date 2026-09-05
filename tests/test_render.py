@@ -174,6 +174,32 @@ def test_net_names_match_the_real_netlist(sample, sample_netlist):
         assert net in rendered_names
 
 
+def test_unextracted_nets_are_exactly_the_ones_the_netlist_lacks(sample, sample_netlist):
+    """The die view names metal the netlist never saw, and must say which
+
+    Tracing finds every distinct piece of metal; extraction keeps only what
+    lands on a logic cell's pin, so intra-cell li1 wiring (most of the die's
+    nets, by count) gets an `n<id>` fallback name that looks exactly like a
+    real net's. Right-clicking one used to offer "Open in Cone Walker", which
+    could only answer `no such net`. This field is how the viewer tells them
+    apart.
+    """
+    conn = trace_design(sample, {})
+    nl, net_names = build_with_net_ids(sample, conn, {})
+    bundle = render.build(sample, conn, net_names)
+    header = bundle.header
+
+    unextracted = header["unextracted_nets"]
+    assert unextracted == sorted(unextracted)
+    assert unextracted, "the sample has intra-cell wiring, so some net is unextracted"
+
+    flagged = {header["net_names"][str(i)] for i in unextracted}
+    assert flagged.isdisjoint(nl.nets)
+    named = {header["net_names"][str(i)] for i in range(header["n_nets"])} - flagged
+    assert named == set(nl.nets)
+    assert sample_netlist.nets.keys() == nl.nets.keys()
+
+
 def test_stack_has_the_real_sky130_numbers(sample_render):
     stack = {s["name"]: s for s in sample_render.header["stack"]}
     assert stack["li1"] == {"name": "li1", "z": 0.936, "thickness": 0.1, "via": False}

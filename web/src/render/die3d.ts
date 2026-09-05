@@ -134,6 +134,8 @@ interface LayerMesh {
 export interface NetHit3D {
   id: number;
   name: string;
+  /** False for metal the netlist has no entry for -- see `NetHit.extracted`. */
+  extracted: boolean;
 }
 
 function webgl2Available(): boolean {
@@ -155,6 +157,8 @@ export class Die3D {
   private readonly enabled = new Set<string>();
   private readonly netNameById = new Map<number, string>();
   private readonly netIdByName = new Map<string, number>();
+  /** Nets the netlist has no entry for -- see `RenderHeader.unextracted_nets`. */
+  private readonly unextracted = new Set<number>();
   private readonly plane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
   private readonly dieWidthUm: number;
   private readonly dieHeightUm: number;
@@ -208,6 +212,7 @@ export class Die3D {
       this.netNameById.set(n, name);
       this.netIdByName.set(name, n);
     }
+    for (const n of h.unextracted_nets ?? []) this.unextracted.add(n);
 
     const [bx0, by0, bx1, by1] = h.bbox;
     this.dieWidthUm = (bx1 - bx0) * h.dbu;
@@ -513,7 +518,11 @@ export class Die3D {
     if (!lm || instanceId === undefined) return null;
     const netId = lm.netIds[instanceId];
     if (netId < 0) return null;
-    return { id: netId, name: this.netNameById.get(netId) ?? `n${netId}` };
+    return {
+      id: netId,
+      name: this.netNameById.get(netId) ?? `n${netId}`,
+      extracted: !this.unextracted.has(netId),
+    };
   }
 
   /** Click-to-select: the pick, published for the panel to pin. */

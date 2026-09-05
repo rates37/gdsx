@@ -13,13 +13,20 @@
 import { labels } from "../store/labels";
 
 export interface NetTooltip {
-  /** Show (or move) the tooltip for `net`, at viewport coordinates. */
-  show(clientX: number, clientY: number, net: string): void;
+  /** Show (or move) the tooltip for `net`, at viewport coordinates. Pass
+   *  `extracted: false` for metal the netlist has no entry for, and the hint
+   *  line says so instead of advertising actions that cannot run. */
+  show(clientX: number, clientY: number, net: string, extracted?: boolean): void;
   hide(): void;
   dispose(): void;
 }
 
 const HINT = "click to select · right-click for actions";
+// An unextracted net is real metal that lands on no cell pin -- nearly always
+// li1 wiring inside a standard cell, occasionally a stray offcut of routing.
+// It has no driver, no cone and no netlist row, and saying so here is what
+// stops a player reading the greyed-out menu items as a bug.
+const HINT_UNEXTRACTED = "not in the netlist — reaches no cell pin";
 
 /** Mounts a tooltip into `wrap`, which must be a positioned element (both
  *  die views' canvas wrappers are `position: absolute; inset: 0`). */
@@ -38,6 +45,7 @@ export function netTooltip(wrap: HTMLElement): NetTooltip {
   wrap.append(element);
 
   let current: string | null = null;
+  let currentExtracted = true;
 
   function paint(): void {
     if (current === null) return;
@@ -45,6 +53,8 @@ export function netTooltip(wrap: HTMLElement): NetTooltip {
     nameEl.textContent = label ?? current;
     rawEl.textContent = label === null ? "" : current;
     rawEl.hidden = label === null;
+    hintEl.textContent = currentExtracted ? HINT : HINT_UNEXTRACTED;
+    element.classList.toggle("die-tooltip-unextracted", !currentExtracted);
   }
 
   // A rename while the tooltip is open should be visible immediately -- the
@@ -53,9 +63,10 @@ export function netTooltip(wrap: HTMLElement): NetTooltip {
   const unsubscribe = labels.subscribe(paint);
 
   return {
-    show(clientX, clientY, net) {
-      if (net !== current) {
+    show(clientX, clientY, net, extracted = true) {
+      if (net !== current || extracted !== currentExtracted) {
         current = net;
+        currentExtracted = extracted;
         paint();
       }
       element.hidden = false;

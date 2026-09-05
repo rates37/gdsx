@@ -185,17 +185,18 @@ export function mountDie3D(
           return;
         }
         highlightBus.set({ name: hover.hit.name });
-        tip.show(hover.x, hover.y, hover.hit.name);
+        tip.show(hover.x, hover.y, hover.hit.name, hover.hit.extracted);
       };
 
       v.onNetPick = (hit) => {
         highlightBus.pin(hit ? { name: hit.name } : null);
-        if (hit) coneRootBus.open(hit.name);
+        // See the 2D view: an unextracted net has nothing to walk.
+        if (hit?.extracted) coneRootBus.open(hit.name);
       };
 
       v.onNetContext = (x, y, hit) => {
         if (hit) highlightBus.pin({ name: hit.name });
-        openNetMenu(x, y, hit?.name ?? null, {
+        openNetMenu(x, y, hit, {
           onFocusPanel: opts.onFocusPanel,
           // The layer-by-layer sweep is this view's alone, so it is offered
           // where the pick happened as well as on the button in the corner.

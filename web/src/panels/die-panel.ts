@@ -224,7 +224,7 @@ export function mountDie2D(
       canvas.addEventListener("pointermove", (e) => {
         const hit = view.pickNet(e.clientX, e.clientY);
         highlightBus.set(hit ? { name: hit.name } : null);
-        if (hit) tip.show(e.clientX, e.clientY, hit.name);
+        if (hit) tip.show(e.clientX, e.clientY, hit.name, hit.extracted);
         else tip.hide();
       });
       canvas.addEventListener("pointerleave", () => {
@@ -258,14 +258,17 @@ export function mountDie2D(
         // re-root the Cone Walker on it. Focus stays here -- the player is
         // looking at the die, and yanking them to another tab on every click
         // would make the die view unusable for browsing.
-        if (hit) coneRootBus.open(hit.name);
+        // Only for a net extraction actually produced -- re-rooting the Cone
+        // Walker on a wire the netlist has never heard of just fills it with
+        // "no such net".
+        if (hit?.extracted) coneRootBus.open(hit.name);
       });
 
       canvas.addEventListener("contextmenu", (e) => {
         e.preventDefault();
         const hit = view.pickNet(e.clientX, e.clientY);
         if (hit) highlightBus.pin({ name: hit.name });
-        openNetMenu(e.clientX, e.clientY, hit?.name ?? null, {
+        openNetMenu(e.clientX, e.clientY, hit, {
           onFocusPanel: opts.onFocusPanel,
         });
       });

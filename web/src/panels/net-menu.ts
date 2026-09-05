@@ -18,6 +18,16 @@ import { coneRootBus } from "../store/selection";
 import { highlightBus } from "../store/highlight";
 import { labels } from "../store/labels";
 
+/** The bit of a die pick this menu needs: the net's name, and whether the
+ *  netlist knows it at all. Both views' hit types are assignable to this. */
+export interface NetPick {
+  name: string;
+  /** False for traced metal that reaches no logic cell pin. It is drawn and
+   *  named like any other net, but extraction dropped it, so every panel
+   *  that asks Python about a net would answer "no such net". */
+  extracted: boolean;
+}
+
 export interface NetMenuOptions {
   /** Brings a workspace panel to the front. Absent = no navigation items. */
   onFocusPanel?: (id: string) => void;
@@ -26,18 +36,18 @@ export interface NetMenuOptions {
 }
 
 /**
- * Opens the menu for `net` at viewport coordinates `(x, y)`. Pass `null` for
- * the net when the click landed on empty die: the menu then offers only what
+ * Opens the menu for `pick` at viewport coordinates `(x, y)`. Pass `null` for
+ * the pick when the click landed on empty die: the menu then offers only what
  * still makes sense there, and nothing at all if there is no selection to
  * clear.
  */
 export function openNetMenu(
   x: number,
   y: number,
-  net: string | null,
+  pick: NetPick | null,
   opts: NetMenuOptions = {},
 ): void {
-  if (net === null) {
+  if (pick === null) {
     if (highlightBus.pinned() === null) return;
     openContextMenu(x, y, [
       { label: "Clear selection", onSelect: () => highlightBus.pin(null) },
@@ -45,22 +55,40 @@ export function openNetMenu(
     return;
   }
 
-  const entries: MenuEntry[] = [
-    {
-      label: "Open in Cone Walker",
-      onSelect: () => {
-        coneRootBus.open(net);
-        opts.onFocusPanel?.("cone-walker");
-      },
-    },
-    {
-      label: "Show in Netlist Browser",
-      onSelect: () => {
-        coneRootBus.open(net);
-        opts.onFocusPanel?.("netlist");
-      },
-    },
-  ];
+  const net = pick.name;
+
+  // Not every piece of metal on the die survives extraction: a net that
+  // reaches no logic cell's pin -- nearly always li1 wiring inside a standard
+  // cell -- is drawn and pickable but absent from the netlist. Offering to
+  // open it in a panel that can only answer "no such net" is worse than
+  // saying so here, so the two navigation items stay visible and greyed,
+  // with the reason in their place.
+  const entries: MenuEntry[] = pick.extracted
+    ? [
+        {
+          label: "Open in Cone Walker",
+          onSelect: () => {
+            coneRootBus.open(net);
+            opts.onFocusPanel?.("cone-walker");
+          },
+        },
+        {
+          label: "Show in Netlist Browser",
+          onSelect: () => {
+            coneRootBus.open(net);
+            opts.onFocusPanel?.("netlist");
+          },
+        },
+      ]
+    : [
+        { label: "Open in Cone Walker", onSelect: () => {}, disabled: true },
+        { label: "Show in Netlist Browser", onSelect: () => {}, disabled: true },
+        {
+          label: "not in the netlist — reaches no cell pin",
+          onSelect: () => {},
+          disabled: true,
+        },
+      ];
 
   if (opts.extra?.length) entries.push("separator", ...opts.extra);
 

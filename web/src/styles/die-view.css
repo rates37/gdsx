@@ -243,3 +243,9 @@
   font-size: 10px;
   margin-top: 3px;
 }
+
+/* Metal the netlist has no entry for: the hint is a fact about the wire, not
+   a list of things to try, so it reads as a warning rather than a footnote. */
+.die-tooltip-unextracted .die-tooltip-hint {
+  color: var(--df-gold);
+}

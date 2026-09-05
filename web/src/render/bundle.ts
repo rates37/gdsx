@@ -48,6 +48,12 @@ export interface RenderHeader {
   cell_names: string[];
   n_nets: number;
   net_names: Record<string, string>;
+  /** Net ids that tracing found but extraction dropped: metal that reaches no
+   *  logic cell pin, so it has no entry in the netlist even though it is
+   *  drawn, pickable, and carries an `n<id>`-shaped name like any other net.
+   *  Absent in bundles baked before this field existed, where the viewer has
+   *  no way to tell and must assume every net is extracted. */
+  unextracted_nets?: number[];
   n_shapes: number;
   net_of_shape: Slice;
   net_shapes: { offsets: Slice; ids: Slice };
