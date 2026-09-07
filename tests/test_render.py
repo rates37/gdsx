@@ -7,7 +7,7 @@ import struct
 import pytest
 
 from gdsx import render
-from gdsx.netlist import build_with_net_ids, trace_design
+from gdsx.netlist import build_with_net_ids, named_placements, trace_design
 
 
 @pytest.fixture(scope="session")
@@ -198,6 +198,72 @@ def test_unextracted_nets_are_exactly_the_ones_the_netlist_lacks(sample, sample_
     named = {header["net_names"][str(i)] for i in range(header["n_nets"])} - flagged
     assert named == set(nl.nets)
     assert sample_netlist.nets.keys() == nl.nets.keys()
+
+
+def test_every_unextracted_net_names_the_cell_it_lives_in(sample, sample_netlist):
+    """"Not in the netlist" is a report of absence; the cell name is the thing
+
+    Every net extraction drops turns out to sit wholly inside one standard
+    cell's footprint -- it is that cell's internal wiring, not stray metal --
+    so the bundle says which cell, and the die view can name it instead of
+    only saying what it is not. The owner may be a fill, tap or decap cell,
+    which is why it is named from `named_placements` rather than looked up in
+    the netlist, where those cells do not appear.
+    """
+    conn = trace_design(sample, {})
+    _, net_names = build_with_net_ids(sample, conn, {})
+    header = render.build(sample, conn, net_names).header
+
+    owners = header["unextracted_owner"]
+    assert len(owners) == len(header["unextracted_nets"])
+
+    footprints = {
+        name: trans * sample.layout.cell_bbox(cell)
+        for cell, trans, name in named_placements(sample)
+    }
+    assert set(owners) <= footprints.keys() | {""}
+
+    # Brute force the same question the bucketed lookup answers, so a bug in
+    # the bucketing shows up as a disagreement rather than as a plausible
+    # wrong cell name.
+    extent: dict[int, list[int]] = {}
+    for index in conn.index.values():
+        for cluster, cid in zip(index.clusters, index.ids):
+            bb = cluster.bbox
+            got = extent.setdefault(
+                conn.uf.find(cid), [bb.left, bb.bottom, bb.right, bb.top]
+            )
+            got[:] = [
+                min(got[0], bb.left),
+                min(got[1], bb.bottom),
+                max(got[2], bb.right),
+                max(got[3], bb.top),
+            ]
+
+    unextracted_raw = [raw for raw in sorted(conn.nets) if raw not in net_names]
+    assert len(unextracted_raw) == len(owners)
+    for raw, owner in zip(unextracted_raw, owners):
+        left, bottom, right, top = extent[raw]
+        holding = sorted(
+            (
+                (box.right - box.left) * (box.top - box.bottom),
+                name,
+            )
+            for name, box in footprints.items()
+            if box.left <= left
+            and box.bottom <= bottom
+            and box.right >= right
+            and box.top >= top
+        )
+        assert owner == (holding[0][1] if holding else "")
+
+    # Nearly all of them are intra-cell wiring; the handful without an owner
+    # are top-level metal (the sample's met2 rings) that lands on no pin.
+    assert sum(1 for o in owners if o) > 0.9 * len(owners)
+
+    # A real net crosses between cells, so nothing extraction kept could have
+    # been given an owner by the same containment rule.
+    assert set(owners).isdisjoint(sample_netlist.nets)
 
 
 def test_stack_has_the_real_sky130_numbers(sample_render):

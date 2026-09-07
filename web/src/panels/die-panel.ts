@@ -224,7 +224,7 @@ export function mountDie2D(
       canvas.addEventListener("pointermove", (e) => {
         const hit = view.pickNet(e.clientX, e.clientY);
         highlightBus.set(hit ? { name: hit.name } : null);
-        if (hit) tip.show(e.clientX, e.clientY, hit.name, hit.extracted);
+        if (hit) tip.show(e.clientX, e.clientY, hit.name, hit.extracted, hit.owner);
         else tip.hide();
       });
       canvas.addEventListener("pointerleave", () => {

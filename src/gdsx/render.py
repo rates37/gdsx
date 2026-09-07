@@ -31,10 +31,13 @@ from .connectivity import Connectivity
 from .geo import clusters as geo_clusters
 from .geo import types as g
 from .loader import Design
+from .netlist import named_placements
 
 #: Bumped whenever the bundle layout changes. Cached bundles invalidate on it.
 #: 2 added the device-level layers and the `layer_kind` map.
-SCHEMA_VERSION = 2
+#: 3 added `unextracted_owner`, naming the cell a piece of intra-cell metal
+#: belongs to.
+SCHEMA_VERSION = 3
 
 #: L0 full detail, L1 small-rect collapse, L2 cells only (no per-layer geometry).
 LOD_LEVELS = 3
@@ -255,6 +258,67 @@ def _device(
     return by_layer
 
 
+#: Grid pitch of the placement lookup `_owners` builds, in database units
+#: (5 um -- the same bucket size `connectivity.PointIndex` uses, and a few
+#: standard-cell widths).
+OWNER_BUCKET = 5000
+
+
+def _owners(
+    design: Design, conn: Connectivity, raw_nets: list[int]
+) -> list[str]:
+    """For each net in `raw_nets`, the instance wholly containing its metal
+
+    `""` where no single placement does, which is what a net that crosses
+    between cells -- ordinary top-level routing -- gives. Ties (a net inside
+    two overlapping footprints) go to the smaller cell, then to the lower
+    name, so the answer does not depend on placement iteration order.
+    """
+    # Every placement, bucketed by the grid squares its footprint covers.
+    buckets: dict[tuple[int, int], list[tuple[int, str, g.Box]]] = defaultdict(list)
+    for cell_name, trans, inst_name in named_placements(design):
+        box = trans * design.layout.cell_bbox(cell_name)
+        if box.empty():
+            continue
+        area = (box.right - box.left) * (box.top - box.bottom)
+        entry = (area, inst_name, box)
+        for bx in range(box.left // OWNER_BUCKET, box.right // OWNER_BUCKET + 1):
+            for by in range(box.bottom // OWNER_BUCKET, box.top // OWNER_BUCKET + 1):
+                buckets[(bx, by)].append(entry)
+
+    # The extent of each net's metal, over every layer it reaches.
+    extent: dict[int, list[int]] = {}
+    for idx in conn.index.values():
+        for cluster, cid in zip(idx.clusters, idx.ids):
+            bb = cluster.bbox
+            seen = extent.get(conn.uf.find(cid))
+            if seen is None:
+                extent[conn.uf.find(cid)] = [bb.left, bb.bottom, bb.right, bb.top]
+            else:
+                seen[0] = min(seen[0], bb.left)
+                seen[1] = min(seen[1], bb.bottom)
+                seen[2] = max(seen[2], bb.right)
+                seen[3] = max(seen[3], bb.top)
+
+    out: list[str] = []
+    for raw in raw_nets:
+        left, bottom, right, top = extent[raw]
+        # A footprint containing the whole extent contains its bottom-left
+        # corner, so that one bucket holds every candidate.
+        found = [
+            entry
+            for entry in buckets.get(
+                (left // OWNER_BUCKET, bottom // OWNER_BUCKET), ()
+            )
+            if entry[2].left <= left
+            and entry[2].bottom <= bottom
+            and entry[2].right >= right
+            and entry[2].top >= top
+        ]
+        out.append(min(found)[1] if found else "")
+    return out
+
+
 def build(
     design: Design,
     conn: Connectivity,
@@ -333,7 +397,15 @@ def build(
     # viewer can offer "open this in the netlist" only where that will work.
     # (The fallback cannot collide with a real name: both are `n<raw id>`
     # over the same ids, so the same string always means the same net.)
-    unextracted = [dense_of[raw] for raw in raw_roots if raw not in net_names]
+    unextracted_raw = [raw for raw in raw_roots if raw not in net_names]
+    unextracted = [dense_of[raw] for raw in unextracted_raw]
+
+    # Nearly all of these sit wholly inside one standard cell -- they *are*
+    # that cell's internal wiring -- so naming the cell turns "not in the
+    # netlist" from a report of absence into a description of the thing. The
+    # rest (top-level metal that lands on no pin, such as the sample's met2
+    # rings) get "", and the viewer falls back to the generic wording.
+    unextracted_owner = _owners(design, conn, unextracted_raw)
 
     net_of_shape = [
         dense_of[raw] if raw is not None else -1 for raw in shape_net_raw
@@ -401,6 +473,9 @@ def build(
         "net_names": net_names_out,
         # Dense ids with no counterpart in the netlist (see above). Sorted.
         "unextracted_nets": unextracted,
+        # Parallel to `unextracted_nets`: the instance whose footprint wholly
+        # contains that net's metal, or "" if no single one does.
+        "unextracted_owner": unextracted_owner,
         "n_shapes": len(shape_net_raw),
         "net_of_shape": blob.add_i32(net_of_shape, stride=1),
         "net_shapes": {

@@ -54,6 +54,12 @@ export interface RenderHeader {
    *  Absent in bundles baked before this field existed, where the viewer has
    *  no way to tell and must assume every net is extracted. */
   unextracted_nets?: number[];
+  /** Parallel to `unextracted_nets`: the instance whose footprint wholly
+   *  contains that net's metal, so the viewer can say *what* the net is
+   *  ("internal wiring of dfrtp_2_4") rather than only what it is not. `""`
+   *  where no single cell contains it -- top-level metal that lands on no
+   *  pin. Absent in bundles baked before this field existed. */
+  unextracted_owner?: string[];
   n_shapes: number;
   net_of_shape: Slice;
   net_shapes: { offsets: Slice; ids: Slice };

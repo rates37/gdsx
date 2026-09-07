@@ -185,7 +185,13 @@ export function mountDie3D(
           return;
         }
         highlightBus.set({ name: hover.hit.name });
-        tip.show(hover.x, hover.y, hover.hit.name, hover.hit.extracted);
+        tip.show(
+          hover.x,
+          hover.y,
+          hover.hit.name,
+          hover.hit.extracted,
+          hover.hit.owner,
+        );
       };
 
       v.onNetPick = (hit) => {

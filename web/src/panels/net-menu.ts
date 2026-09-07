@@ -26,6 +26,25 @@ export interface NetPick {
    *  named like any other net, but extraction dropped it, so every panel
    *  that asks Python about a net would answer "no such net". */
   extracted: boolean;
+  /** When `extracted` is false, the instance whose footprint contains this
+   *  metal. Empty when the bundle cannot say. */
+  owner?: string;
+}
+
+/**
+ * Why an unextracted net is unextracted, in one line.
+ *
+ * Almost every net extraction drops is the internal wiring of one standard
+ * cell, and saying *that* is the difference between the player reading a
+ * description and reading a bug report. `owner` is empty for the rest --
+ * top-level metal that lands on no pin, and any bundle baked before the
+ * cell name was recorded -- where all that can honestly be said is the
+ * mechanism.
+ */
+export function unextractedReason(owner: string | undefined): string {
+  return owner
+    ? `internal wiring of ${owner} — not part of the netlist`
+    : "internal cell wiring — reaches no cell pin";
 }
 
 export interface NetMenuOptions {
@@ -84,7 +103,7 @@ export function openNetMenu(
         { label: "Open in Cone Walker", onSelect: () => {}, disabled: true },
         { label: "Show in Netlist Browser", onSelect: () => {}, disabled: true },
         {
-          label: "not in the netlist — reaches no cell pin",
+          label: unextractedReason(pick.owner),
           onSelect: () => {},
           disabled: true,
         },

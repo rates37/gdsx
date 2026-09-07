@@ -18,6 +18,34 @@ from .pins import PinOracle, abstract_shapes, bond_pins, direction_of
 Progress = Callable[[str, int, int], None]
 
 
+def _placement_key(item: tuple[str, object]) -> tuple:
+    """Canonical placement order: cell name, then position, then orientation.
+
+    Net numbering and instance numbering both hang off this, so it lives in
+    one place rather than being spelled out at each call site.
+    """
+    return (item[0], item[1].disp.y, item[1].disp.x, str(item[1]))
+
+
+def named_placements(design: Design) -> list[tuple[str, object, str]]:
+    """Every placement in canonical order, each with the name it is known by.
+
+    The name is the cell's short name plus a per-cell-name occurrence
+    counter, e.g. `dfrtp_2_4`. `build_with_net_ids` uses it for the netlist's
+    logic instances; `render.py` uses it to say which cell a piece of
+    intra-cell metal belongs to, and that includes the fill, tap and decap
+    cells the netlist leaves out. Counters are per cell name, so numbering a
+    non-logic cell here cannot shift a logic cell's number.
+    """
+    counters: dict[str, int] = defaultdict(int)
+    out: list[tuple[str, object, str]] = []
+    for cell_name, trans in sorted(design.instances(), key=_placement_key):
+        counters[cell_name] += 1
+        short = cell_name.split("__", 1)[-1]
+        out.append((cell_name, trans, f"{short}_{counters[cell_name]}"))
+    return out
+
+
 def _is_driven(nl: Netlist, net: str) -> bool:
     """True if any cell output pin sits on this net"""
     cells = {inst.name: inst.cell for inst in nl.instances}
@@ -97,19 +125,14 @@ def build_with_net_ids(
     # A pin often carries several labels, so collect refs in a set, one entry
     # per instance pin
     members: dict[int, set[str]] = defaultdict(set)
-    placements = sorted(
-        design.instances(), key=lambda t: (t[0], t[1].disp.y, t[1].disp.x, str(t[1]))
-    )
+    placements = named_placements(design)
 
-    counters: dict[str, int] = defaultdict(int)
-    for i, (cell_name, trans) in enumerate(placements):
+    for i, (cell_name, trans, inst_name) in enumerate(placements):
         if progress is not None and i % _RESOLVE_CHUNK == 0:
             progress("resolve", i, len(placements))
         if not tech.is_logic_cell(cell_name):
             continue
-        counters[cell_name] += 1
-        short = cell_name.split("__", 1)[1]
-        inst = Instance(name=f"{short}_{counters[cell_name]}", cell=cell_name)
+        inst = Instance(name=inst_name, cell=cell_name)
 
         by_pin: dict[str, set[int]] = defaultdict(set)
         for pin in oracle.pins(cell_name):

@@ -119,6 +119,10 @@ export interface NetHit {
   /** False for metal the netlist has no entry for: it is drawn and pickable,
    *  but nothing that asks Python about a *net* will find it. */
   extracted: boolean;
+  /** When `extracted` is false, the instance whose footprint contains this
+   *  metal -- it is that cell's internal wiring. Empty when the bundle
+   *  cannot say (top-level metal, or a bundle baked before the field). */
+  owner: string;
 }
 
 export interface ViewState {
@@ -148,8 +152,9 @@ export class DieView {
   private readonly netOfShape: Int32Array;
   private readonly netNameById = new Map<number, string>();
   private readonly netIdByName = new Map<string, number>();
-  /** Nets the netlist has no entry for -- see `RenderHeader.unextracted_nets`. */
-  private readonly unextracted = new Set<number>();
+  /** Nets the netlist has no entry for, each mapped to the cell it lives
+   *  inside (`""` if unknown) -- see `RenderHeader.unextracted_nets`. */
+  private readonly unextracted = new Map<number, string>();
   /** -1 = nothing selected. */
   private highlightedNet = -1;
 
@@ -199,7 +204,10 @@ export class DieView {
       this.netNameById.set(n, name);
       this.netIdByName.set(name, n);
     }
-    for (const n of h.unextracted_nets ?? []) this.unextracted.add(n);
+    const owners = h.unextracted_owner ?? [];
+    (h.unextracted_nets ?? []).forEach((n, i) =>
+      this.unextracted.set(n, owners[i] ?? ""),
+    );
 
     const quad = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
@@ -479,6 +487,7 @@ export class DieView {
           id: netId,
           name: this.netNameById.get(netId) ?? `n${netId}`,
           extracted: !this.unextracted.has(netId),
+          owner: this.unextracted.get(netId) ?? "",
         };
       }
     }

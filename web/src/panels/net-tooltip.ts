@@ -11,22 +11,30 @@
 // hiding it behind a nickname makes the two impossible to line up.
 
 import { labels } from "../store/labels";
+// An unextracted net is real metal that lands on no cell pin -- nearly always
+// li1 wiring inside a standard cell. It has no driver, no cone and no netlist
+// row, and naming the cell it belongs to is what stops a player reading the
+// greyed-out menu items as a bug. The menu says the same sentence, from the
+// same function, so the two cannot drift.
+import { unextractedReason } from "./net-menu";
 
 export interface NetTooltip {
   /** Show (or move) the tooltip for `net`, at viewport coordinates. Pass
    *  `extracted: false` for metal the netlist has no entry for, and the hint
-   *  line says so instead of advertising actions that cannot run. */
-  show(clientX: number, clientY: number, net: string, extracted?: boolean): void;
+   *  line says so instead of advertising actions that cannot run. `owner`
+   *  names the cell that metal lives inside, when the bundle knows it. */
+  show(
+    clientX: number,
+    clientY: number,
+    net: string,
+    extracted?: boolean,
+    owner?: string,
+  ): void;
   hide(): void;
   dispose(): void;
 }
 
 const HINT = "click to select · right-click for actions";
-// An unextracted net is real metal that lands on no cell pin -- nearly always
-// li1 wiring inside a standard cell, occasionally a stray offcut of routing.
-// It has no driver, no cone and no netlist row, and saying so here is what
-// stops a player reading the greyed-out menu items as a bug.
-const HINT_UNEXTRACTED = "not in the netlist — reaches no cell pin";
 
 /** Mounts a tooltip into `wrap`, which must be a positioned element (both
  *  die views' canvas wrappers are `position: absolute; inset: 0`). */
@@ -46,6 +54,7 @@ export function netTooltip(wrap: HTMLElement): NetTooltip {
 
   let current: string | null = null;
   let currentExtracted = true;
+  let currentOwner = "";
 
   function paint(): void {
     if (current === null) return;
@@ -53,7 +62,7 @@ export function netTooltip(wrap: HTMLElement): NetTooltip {
     nameEl.textContent = label ?? current;
     rawEl.textContent = label === null ? "" : current;
     rawEl.hidden = label === null;
-    hintEl.textContent = currentExtracted ? HINT : HINT_UNEXTRACTED;
+    hintEl.textContent = currentExtracted ? HINT : unextractedReason(currentOwner);
     element.classList.toggle("die-tooltip-unextracted", !currentExtracted);
   }
 
@@ -63,10 +72,11 @@ export function netTooltip(wrap: HTMLElement): NetTooltip {
   const unsubscribe = labels.subscribe(paint);
 
   return {
-    show(clientX, clientY, net, extracted = true) {
-      if (net !== current || extracted !== currentExtracted) {
+    show(clientX, clientY, net, extracted = true, owner = "") {
+      if (net !== current || extracted !== currentExtracted || owner !== currentOwner) {
         current = net;
         currentExtracted = extracted;
+        currentOwner = owner;
         paint();
       }
       element.hidden = false;
