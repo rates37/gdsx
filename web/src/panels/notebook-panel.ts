@@ -45,14 +45,14 @@ import { generateWriteup, type WriteupSession } from "../notebook/writeup";
 import { ModelStore } from "../model/store";
 
 const KIND_LABELS: Record<ClaimKind, string> = {
-  structural: "Structural — a net's driver",
-  support: "Support — what a flop's D depends on",
-  function: "Function — what a flop's D computes",
-  role: "Role — what a register group is",
-  invariant: "Invariant — when a net is 1",
-  requirement: "Requirement — what an output needs",
-  timing: "Timing — which cycles an event lands on",
-  constraint: "Constraint — what every key satisfies",
+  structural: "Structural: a net's driver",
+  support: "Support: what a flop's D depends on",
+  function: "Function: what a flop's D computes",
+  role: "Role: what a register group is",
+  invariant: "Invariant: when a net is 1",
+  requirement: "Requirement: what an output needs",
+  timing: "Timing: which cycles an event lands on",
+  constraint: "Constraint: what every key satisfies",
 };
 
 function el(tag: string, className?: string, text?: string): HTMLElement {
@@ -147,7 +147,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
       container.classList.add("nb-panel");
       container.innerHTML = `
         <div class="nb-toolbar">
-          <span class="nb-coverage">coverage —</span>
+          <span class="nb-coverage">coverage …</span>
           <span class="nb-spacer"></span>
           <button class="nb-new" type="button" disabled>+ new claim</button>
           <button class="nb-export" type="button">export write-up</button>
@@ -370,7 +370,7 @@ export function notebookPanel(options: NotebookPanelOptions): PanelDef {
         const records = notebook.all();
         if (records.length === 0) {
           listEl.append(
-            el("div", "nb-empty", "no claims yet — the notebook is what gets scored"),
+            el("div", "nb-empty", "no claims yet. The notebook is what gets scored"),
           );
         }
         for (const record of [...records].reverse()) listEl.append(renderRecord(record));
@@ -776,7 +776,7 @@ const FORMS: Record<ClaimKind, Builder> = {
     predicate.classList.add("nb-wide");
     body.append(field("any key that latches", output), field("satisfies", predicate));
     const measures = Object.entries(vocabulary.measures)
-      .map(([name, what]) => `${name}(port) — ${what}`)
+      .map(([name, what]) => `${name}(port): ${what}`)
       .join("\n");
     const hint = el("div", "nb-hint", measures);
     hint.style.whiteSpace = "pre-line";

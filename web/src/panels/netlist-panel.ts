@@ -56,7 +56,7 @@ function driverText(net: NetView): string {
     case "undriven":
       return "undriven";
     default:
-      return "—";
+      return "unknown";
   }
 }
 

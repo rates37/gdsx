@@ -95,21 +95,21 @@ function renderClaim(record: ClaimRecord): string {
   if (current) {
     const style = verdictStyle(current.verdict);
     const heading = style.strike ? `~~${text}~~` : `**${text}**`;
-    lines.push(`- ${heading} — ${style.label}`);
+    lines.push(`- ${heading}: ${style.label}`);
     if (current.notes.length) lines.push(`  - assumptions: ${current.notes.join("; ")}`);
     if (current.call) lines.push(`  - \`${current.call}\``);
     if (record.history.length > 1) {
       lines.push(`  - earlier: ${record.history.slice(0, -1).map(verdictLine).join(", ")}`);
     }
   } else {
-    lines.push(`- **${text}** — not yet verified`);
+    lines.push(`- **${text}**: not yet verified`);
   }
   return lines.join("\n");
 }
 
 function renderEvidence(record: EvidenceRecord): string {
   const lines: string[] = [];
-  lines.push(`### ${record.recipe} — ${when(record.at)}`);
+  lines.push(`### ${record.recipe}: ${when(record.at)}`);
   lines.push("");
   lines.push(record.summary);
   lines.push("");
@@ -272,7 +272,7 @@ export function generateWriteup(
   const out: string[] = [];
 
   // ---- 1. result banner --------------------------------------------------
-  out.push(`# ${opts.puzzleId} — write-up`);
+  out.push(`# ${opts.puzzleId} write-up`);
   out.push("");
   out.push(...renderResult(simStore, opts, accepted));
   out.push("---");

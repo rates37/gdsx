@@ -21,8 +21,8 @@ const TIMEOUT_MS: Record<Language, number> = {
 export class ModelTimeout extends Error {
   constructor(readonly ms: number) {
     super(
-      `the model did not finish within ${Math.round(ms / 1000)}s and was stopped — ` +
-        `an infinite loop, or too much work per vector`,
+      `the model did not finish within ${Math.round(ms / 1000)}s and was stopped. ` +
+        `Either an infinite loop, or too much work per vector`,
     );
   }
 }
@@ -109,14 +109,14 @@ export function starterFor(observable: string | null): Record<Language, string> 
   const pyKey = observable === null ? "# an observable" : JSON.stringify(observable);
   return {
     javascript: `// pulses is a Set of cycle numbers where the key port is high.
-// Return the observables you claim to predict — every name must be a
+// Return the observables you claim to predict. Every name must be a
 // real net or flop of the design, because that is what it is checked against.
 function evaluate(pulses) {
   return { ${jsKey}: 0 };
 }
 `,
     python: `# pulses is a set of cycle numbers where the key port is high.
-# Return the observables you claim to predict — every name must be a
+# Return the observables you claim to predict. Every name must be a
 # real net or flop of the design, because that is what it is checked against.
 def evaluate(pulses):
     return {${pyKey}: 0}

@@ -63,7 +63,7 @@ export function renderRequirements(
       "div",
       "rq-summary",
       `${view.net} == ${view.value}: ` +
-        (view.consistent ? "consistent" : "INCONSISTENT — conflicting forced values"),
+        (view.consistent ? "consistent" : "INCONSISTENT: conflicting forced values"),
     ),
   );
   if (!view.consistent && view.conflicts.length) {
@@ -75,12 +75,12 @@ export function renderRequirements(
     el(
       "div",
       "rq-section-title",
-      `forced (${view.leaves.length}) — every way of reaching ${view.value} needs these`,
+      `forced (${view.leaves.length}): every way of reaching ${view.value} needs these`,
     ),
   );
   for (const leaf of view.leaves) leavesBox.append(leafRow(leaf, opts));
   if (view.leaves.length === 0) {
-    leavesBox.append(el("div", "rq-hint", "nothing is forced — every path is a choice"));
+    leavesBox.append(el("div", "rq-hint", "nothing is forced, every path is a choice"));
   }
   host.append(leavesBox);
 
@@ -89,18 +89,18 @@ export function renderRequirements(
     el(
       "div",
       "rq-section-title",
-      `choices (${view.choices.length}) — an OR: any ONE option below suffices, none is forced`,
+      `choices (${view.choices.length}): an OR, so any ONE option below suffices and none is forced`,
     ),
   );
   if (view.choices.length === 0) {
-    choicesBox.append(el("div", "rq-hint", "none — the tree is pure AND/OR and fully resolved"));
+    choicesBox.append(el("div", "rq-hint", "none: the tree is pure AND/OR and fully resolved"));
   }
   for (const choice of view.choices) {
     const cbox = el("div", "rq-choice");
     cbox.append(el("div", "rq-choice-head", `${choice.net} == ${choice.value}, satisfied by any of:`));
     for (const option of choice.options) {
       const line = el("div", "rq-choice-option");
-      line.append(el("span", "rq-choice-bullet", "— "));
+      line.append(el("span", "rq-choice-bullet", "· "));
       if (option.literals.length === 0) {
         line.append(el("span", "rq-hint", "(always true)"));
       }

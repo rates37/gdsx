@@ -426,14 +426,14 @@ export function selfChecks(columns: readonly string[], rows: readonly MatrixRow[
   if (unreactive.length) {
     warnings.push(
       `${unreactive.length} watched element(s) never reacted to any run: ` +
-        `${preview(unreactive)} — the wrong elements are being watched, or the ` +
+        `${preview(unreactive)}. The wrong elements are being watched, or the ` +
         `perturbation never reaches them`,
     );
   }
   const silent = rows.filter((row) => row.marked === 0).map((row) => row.label);
   if (silent.length) {
     warnings.push(
-      `${silent.length} run(s) moved no watched element: ${preview(silent)} — an ` +
+      `${silent.length} run(s) moved no watched element: ${preview(silent)}. Either an ` +
         `element was missed, or the window is shorter than the design's write window`,
     );
   }

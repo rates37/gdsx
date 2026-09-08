@@ -8,7 +8,7 @@
 import type { MenuGroup, Workspace } from "./workspace.ts";
 import type { HintTier, PuzzleChecks } from "../puzzles/catalog.ts";
 import type { Submission, Verdict } from "../puzzles/answer-check.ts";
-import type { ScoreCard } from "../notebook/scoring.ts";
+import { POINTS, type ScoreCard } from "../notebook/scoring.ts";
 
 /** The guided-walkthrough button's wiring. Supplied by main.ts, which owns
  *  the Guide; the toolbar only renders a button for it. Absent when the
@@ -16,8 +16,9 @@ import type { ScoreCard } from "../notebook/scoring.ts";
 export interface GuideControl {
   /** True when the walkthrough is already on screen. */
   isOpen: () => boolean;
-  /** Open it, restart it, or -- from another level -- switch to the tutorial
-   *  puzzle and open it there. */
+  /** Open it, close it, or -- from another level -- switch to the tutorial
+   *  puzzle and open it there. This used to claim it restarted too, which
+   *  nothing here ever asked it to do; `restart` is now its own control. */
   toggle: () => void;
   /** Re-renders the button when the guide opens or closes by other means. */
   subscribe: (fn: () => void) => void;
@@ -181,7 +182,7 @@ export function attachToolbar(
     <span class="gdsx-solved"></span>
     <div class="gdsx-toolbar-spacer"></div>
     <span class="gdsx-ready-wrap"></span>
-    <button class="gdsx-notebook-btn" type="button" title="your notebook — the only scored surface in the game">
+    <button class="gdsx-notebook-btn" type="button" title="your notebook, the only scored surface in the game">
       notebook
     </button>
     <span class="gdsx-submit-slot"></span>
@@ -281,7 +282,7 @@ function attachSolvedChip(host: HTMLSpanElement): (state: SolvedState) => void {
     host.title = [
       state.solvedOn ? `first solved ${state.solvedOn}` : "solved",
       `${state.attempts} ${plural}`,
-      state.score === undefined ? null : "best score — see the Notebook's write-up for the breakdown",
+      state.score === undefined ? null : "best score, see the Notebook's write-up for the breakdown",
     ]
       .filter((part) => part !== null)
       .join(" · ");
@@ -519,8 +520,13 @@ function attachHintsButton(slot: HTMLSpanElement, hints?: HintsControl): void {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "gdsx-hints-btn";
+  // The price, in points, taken from the scoring table rather than restated:
+  // "costs points" is not enough to decide on, and a number written out here
+  // would be a second copy of `hintPenalty` free to drift from the first.
+  const cost = POINTS.hintPenalty;
   btn.title =
-    "tiered hints -- each is an analysis you could have run yourself. Revealing one costs points and never blocks you.";
+    `tiered hints. Each is an analysis you could have run yourself. Revealing one ` +
+    `costs ${cost} points off your score for this puzzle, and never blocks you.`;
 
   const popover = document.createElement("div");
   popover.className = "gdsx-hints-popover";
@@ -568,7 +574,7 @@ function attachHintsButton(slot: HTMLSpanElement, hints?: HintsControl): void {
       revealBtn.hidden = true;
     } else {
       revealBtn.hidden = false;
-      revealBtn.textContent = `reveal hint ${revealed + 1} of ${control.tiers.length} — costs points`;
+      revealBtn.textContent = `reveal hint ${revealed + 1} of ${control.tiers.length} (costs ${cost} points)`;
     }
   }
 
@@ -789,7 +795,7 @@ function attachSubmitButton(slot: HTMLSpanElement, submit?: SubmitControl): void
       .then(async (verdict) => {
         const parts = [verdict.accepted ? "✓ accepted" : `✗ ${verdict.reason}`];
         if (verdict.observed) parts.push(`observed: ${verdict.observed}`);
-        let text = parts.join(" — ");
+        let text = parts.join(" · ");
         if (verdict.accepted) {
           // The score, which only exists now that the solve is recorded --
           // and only here. This replaces the sentence that used to explain

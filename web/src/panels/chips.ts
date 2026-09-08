@@ -39,7 +39,7 @@ function labelHint(kind: LabelKind, name: string): string {
   const what = kind === "net" ? "net" : "cell";
   return label === null
     ? `${name}\ndouble-click to label this ${what}`
-    : `${name}\nlabelled "${label}" — double-click to rename`;
+    : `${name}\nlabelled "${label}", double-click to rename`;
 }
 
 /** Applies a chip's current text and tooltip from the glossary. */

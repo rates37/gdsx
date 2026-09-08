@@ -83,7 +83,7 @@ export function mountConstraints(
   container.classList.add("cs-panel");
   container.innerHTML = `
       <div class="cs-toolbar">
-        <span class="cs-note">this panel scores nothing — the points are in deriving the rows, not in solving them. A notebook claim is about the design, and the design settles it; a row here is about the key, and nothing settles it — rows are conjoined and searched.</span>
+        <span class="cs-note">this panel scores nothing. The points are in deriving the rows, not in solving them. A notebook claim is about the design, and the design settles it. A row here is about the key, and nothing settles it: rows are conjoined and searched.</span>
         <span class="py-call-slot"></span>
       </div>
       <div class="cs-add">
@@ -124,7 +124,7 @@ export function mountConstraints(
           <input type="number" class="cs-s-de" placeholder="de" />
           <button type="button" class="cs-s-add">+ add</button>
         </div>
-        <div class="cs-gen-note">both start blank on purpose — the numbers are yours to measure, not the app's to know</div>
+        <div class="cs-gen-note">both start blank on purpose. The numbers are yours to measure, not the app's to know</div>
       </div>
       <div class="cs-rows"></div>
       <div class="cs-summary"></div>
@@ -287,7 +287,7 @@ export function mountConstraints(
         el(
           "div",
           "cs-warning",
-          `⚠ measured but never given a row: ${system.unconstrained.join(", ")} — a row you should have and don't`,
+          `⚠ measured but never given a row: ${system.unconstrained.join(", ")}, a row you should have and don't`,
         ),
       );
     }
@@ -344,7 +344,7 @@ export function mountConstraints(
       const n = typed(pN);
       const k = typed(pK);
       if (from === null || to === null || n === null || k === null) {
-        complain("fill every field — the partition needs a range, a divisor and a count");
+        complain("fill every field: the partition needs a range, a divisor and a count");
         return;
       }
       if (to < from || n < 1 || k < 0) {
@@ -383,7 +383,7 @@ export function mountConstraints(
       const dp = typed(sDp);
       const de = typed(sDe);
       if (from === null || to === null || len === null || dp === null || de === null) {
-        complain("fill every field — the spacing rule needs a range, an epoch length and both deltas");
+        complain("fill every field: the spacing rule needs a range, an epoch length and both deltas");
         return;
       }
       if (to < from || len < 1 || dp < 0 || de < 0) {
@@ -392,7 +392,7 @@ export function mountConstraints(
       }
       const rows = spacingRows(from, to, len, dp, de);
       if (!rows.length) {
-        complain("those deltas forbid nothing — no pair of cycles in that range is that close");
+        complain("those deltas forbid nothing: no pair of cycles in that range is that close");
         return;
       }
       clearComplaint();
@@ -424,7 +424,7 @@ export function mountConstraints(
     }
     store.setPattern(port, bits);
     const wrote = `loaded ${cycles.length - dropped} pulses onto ${port}`;
-    return dropped ? `${wrote} — ${dropped} fell outside the ${store.cycles}-cycle run` : wrote;
+    return dropped ? `${wrote}, ${dropped} fell outside the ${store.cycles}-cycle run` : wrote;
   }
 
   solveBtn.addEventListener("click", async () => {
@@ -440,7 +440,7 @@ export function mountConstraints(
         // The verdict the whole panel exists to reach: not "here is an
         // answer" but "here is the answer, and the search ran to exhaustion
         // to say so".
-        solveStatus.textContent = "exactly 1 solution — these rules have a unique answer";
+        solveStatus.textContent = "exactly 1 solution: these rules have a unique answer";
       } else {
         solveStatus.textContent = `exactly ${data.solutions.length} solution(s)`;
       }

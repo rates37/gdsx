@@ -18,7 +18,7 @@
 //
 // Usage: node --experimental-strip-types web/scripts/test-guide.mjs
 
-import { STEPS, GUIDE_PUZZLE_ID } from "../src/guide/steps.ts";
+import { STEPS, ACTS, GUIDE_PUZZLE_ID } from "../src/guide/steps.ts";
 import { PANEL_IDS, PANEL_SECTIONS, isPanelId } from "../src/panels/ids.ts";
 
 let checks = 0;
@@ -80,6 +80,39 @@ for (const step of STEPS) {
     step.done === undefined || step.goal !== undefined,
     `step "${step.id}" has a done() check but no goal line, so nothing tells the player what it wants`,
   );
+}
+
+// ---- 2b. the acts partition the steps ----------------------------------
+// Same silent-staleness problem as the panel ids: an act naming a step id
+// that has been renamed away contributes no boundary, and `actOf` quietly
+// folds its steps into the act before it. The header then labels a step with
+// the wrong movement, which no other check would notice.
+
+const stepIds = new Set(STEPS.map((s) => s.id));
+check(ACTS.length > 0, "there is at least one act");
+check(
+  ACTS[0]?.from === STEPS[0].id,
+  `the first act must start at the first step ("${STEPS[0].id}"), or the ` +
+    `opening steps belong to no act. It starts at "${ACTS[0]?.from}".`,
+);
+let previousStart = -1;
+for (const act of ACTS) {
+  check(
+    typeof act.label === "string" && act.label.trim().length > 0,
+    `act "${act.from}" has a label`,
+  );
+  check(
+    stepIds.has(act.from),
+    `act "${act.label}" starts at step "${act.from}", which is not a step id. ` +
+      `Its steps would silently be folded into the act before it.`,
+  );
+  const start = STEPS.findIndex((s) => s.id === act.from);
+  check(
+    start > previousStart,
+    `act "${act.label}" starts at or before the act preceding it, so one of ` +
+      `them labels no steps at all.`,
+  );
+  previousStart = start;
 }
 
 // ---- 3. every panel the guide can reach is covered ---------------------

@@ -108,7 +108,7 @@ export function mountDie3D(
         view = new Die3D(canvas, bundle);
       } catch (err) {
         loading.textContent =
-          "3D unavailable — switch back to 2D. " +
+          "3D unavailable. Switch back to 2D. " +
           "(" +
           (err instanceof Error ? err.message : String(err)) +
           ")";

@@ -803,12 +803,25 @@ body {
   border-radius: var(--df-radius);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
 }
+/* The header doubles as the drag handle (guide.ts `startDrag`), hence the
+   grab cursor and the suppressed text selection -- dragging a card by a
+   strip of text otherwise selects the text instead of moving anything. */
 .guide-head {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--df-edge-2);
+  cursor: grab;
+  user-select: none;
+}
+.guide-dragging .guide-head {
+  cursor: grabbing;
+}
+.guide-dragging {
+  /* No transition on a dragged card, and no pointer events reaching the
+     panels underneath it mid-drag. */
+  user-select: none;
 }
 .guide-collapsed .guide-head {
   border-bottom: 0;
@@ -819,9 +832,26 @@ body {
   letter-spacing: 0.1em;
   color: var(--df-gold);
 }
+/* Which of the four movements this step belongs to. Truncates rather than
+   wrapping: the header is one line, and the count must not be pushed off it
+   by a long act name. */
+.guide-act {
+  font-size: 11px;
+  color: var(--df-ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .guide-count {
   color: var(--df-dim);
   font-size: 11px;
+  white-space: nowrap;
+}
+.guide-restart {
+  margin-left: auto;
+}
+.guide-restart + .guide-collapse {
+  margin-left: 0;
 }
 .guide-collapse {
   margin-left: auto;

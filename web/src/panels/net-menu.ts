@@ -43,8 +43,8 @@ export interface NetPick {
  */
 export function unextractedReason(owner: string | undefined): string {
   return owner
-    ? `internal wiring of ${owner} — not part of the netlist`
-    : "internal cell wiring — reaches no cell pin";
+    ? `internal wiring of ${owner}, not part of the netlist`
+    : "internal cell wiring, reaches no cell pin";
 }
 
 export interface NetMenuOptions {

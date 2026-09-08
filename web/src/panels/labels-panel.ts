@@ -63,8 +63,8 @@ export function mountLabels(container: HTMLElement): Mounted {
           el(
             "div",
             "labels-empty",
-            "No labels yet. Double-click any net or cell name — in the netlist " +
-              "browser, the cone walker, the waveform — to give it a name you'll " +
+            "No labels yet. Double-click any net or cell name (in the netlist " +
+              "browser, the cone walker, the waveform) to give it a name you'll " +
               "recognise. The extracted name is kept and shown alongside.",
           ),
         );

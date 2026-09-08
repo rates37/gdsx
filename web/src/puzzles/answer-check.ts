@@ -97,7 +97,7 @@ function checkLatch(checks: Extract<PuzzleChecks, { kind: "latch" }>, store: Sim
     return {
       accepted: false,
       observed: `${checks.net} ${held} ${checks.value} at cycle ${at}`,
-      reason: `too late — the deadline is cycle ${checks.byCycle}`,
+      reason: `too late: the deadline is cycle ${checks.byCycle}`,
     };
   }
   return {

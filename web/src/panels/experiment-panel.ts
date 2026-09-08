@@ -391,7 +391,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         const ctx = contextOf();
         const params = paramsOf(ctx);
         if (params.to <= params.from && recipeBox.value !== "gap") {
-          statusEl.textContent = "the window is empty — check the cycle range";
+          statusEl.textContent = "the window is empty: check the cycle range";
           statusEl.className = "xp-status bad";
           return;
         }
@@ -672,7 +672,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
             send.title =
               `this recipe's runs each perturb more than one cycle, so what moved ` +
               `${element} is not a set of candidate cycles a constraint row can be ` +
-              `built from — use the single-pulse or bit-flip sweep for that`;
+              `built from. Use the single-pulse or bit-flip sweep for that`;
           } else {
             send.title = `send "${element} moves at ${cycles.join(", ")}" to the Constraints panel`;
             send.addEventListener("click", () => {
@@ -719,7 +719,7 @@ export function experimentPanel(options: ExperimentPanelOptions): PanelDef {
         const cell = row.cells[ax.columnIndex(at)];
         readoutEl.textContent =
           result.cellKind === "changed"
-            ? `${row.label} × ${columnText} — ${cell ? "moved" : "unchanged"} (final value, vs the baseline)`
+            ? `${row.label} × ${columnText}: ${cell ? "moved" : "unchanged"} (final value, vs the baseline)`
             : `${row.label} × ${columnText} = ${cell}`;
         highlightBus.set({ name: column });
         draw();

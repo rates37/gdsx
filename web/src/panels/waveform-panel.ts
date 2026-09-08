@@ -100,7 +100,7 @@ export function waveformPanel(options: WaveformOptions): PanelDef {
           <input class="wave-search" type="text" placeholder="add net or flop…" />
           <div class="wave-suggest" hidden></div>
           <div class="wave-toolbar-right">
-            <label class="wave-cursor" title="the shared cursor — ← and → step it, shift for ten">
+            <label class="wave-cursor" title="the shared cursor. ← and → step it, shift for ten">
               cycle
               <input class="wave-cycle" type="number" min="0" step="1" value="0" />
             </label>

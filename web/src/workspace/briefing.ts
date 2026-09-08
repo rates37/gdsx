@@ -99,7 +99,7 @@ export function createBriefing(options: BriefingOptions): BriefingHandle {
   const dialog = document.createElement("dialog");
   dialog.className = "briefing";
   dialog.dataset.puzzle = brief.id;
-  dialog.setAttribute("aria-label", `${brief.title} — briefing`);
+  dialog.setAttribute("aria-label", `${brief.title} briefing`);
 
   // ---- head: the mark, the band of metadata, the title, the goal ----
   const head = el("div", "briefing-head");

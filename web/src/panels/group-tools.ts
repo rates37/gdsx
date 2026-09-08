@@ -67,7 +67,7 @@ export function mountGroupTools(container: HTMLElement, opts: GroupToolsOptions)
 
       // ---- weights --------------------------------------------------
       const weightsBox = el("div", "rd-section");
-      weightsBox.append(el("div", "rd-section-title", "bit weights — drive this stimulus and watch for one-hot states"));
+      weightsBox.append(el("div", "rd-section-title", "bit weights: drive this stimulus and watch for one-hot states"));
       const wStim = stimulusRow(inputs);
       const wCyclesLabel = el("label", "rd-inline", "cycles ");
       const wCycles = document.createElement("input");
@@ -95,7 +95,7 @@ export function mountGroupTools(container: HTMLElement, opts: GroupToolsOptions)
 
       // ---- orbit ------------------------------------------------------
       const orbitBox = el("div", "rd-section");
-      orbitBox.append(el("div", "rd-section-title", "orbit — apply a stimulus repeatedly from reset"));
+      orbitBox.append(el("div", "rd-section-title", "orbit: apply a stimulus repeatedly from reset"));
       const oStim = stimulusRow(inputs);
       const oRunBtn = document.createElement("button");
       oRunBtn.type = "button";
@@ -136,8 +136,8 @@ export function mountGroupTools(container: HTMLElement, opts: GroupToolsOptions)
                 "div",
                 "rd-hint",
                 data.kind === "unknown"
-                  ? "a real cycle was found, but it fits none of the named shapes — not claimable"
-                  : `"${data.kind}" is not one of the notebook's role claim kinds yet — described here, not claimable`,
+                  ? "a real cycle was found, but it fits none of the named shapes, so it is not claimable"
+                  : `"${data.kind}" is not one of the notebook's role claim kinds yet, so it is described here but not claimable`,
               ),
             );
           }
@@ -153,7 +153,7 @@ export function mountGroupTools(container: HTMLElement, opts: GroupToolsOptions)
 
       // ---- select values ------------------------------------------------
       const selBox = el("div", "rd-section");
-      selBox.append(el("div", "rd-section-title", "select values — which control-flop settings make this group react"));
+      selBox.append(el("div", "rd-section-title", "select values: which control-flop settings make this group react"));
       const controlInput = document.createElement("input");
       controlInput.type = "text";
       controlInput.placeholder = "control flop names, comma separated";
@@ -207,13 +207,13 @@ export function mountGroupTools(container: HTMLElement, opts: GroupToolsOptions)
       const line = el("div", "rd-weight-line");
       line.append(instanceChip(flop, { onClick: false }));
       if (!w || w.confidence === "unknown") {
-        const v = el("span", "rd-weight-unknown", " — (unknown: neither observed nor uniquely determined by elimination)");
+        const v = el("span", "rd-weight-unknown", " (unknown: neither observed nor uniquely determined by elimination)");
         line.append(v);
       } else if (w.confidence === "observed") {
         line.append(el("span", "rd-weight-value", ` = ${w.value}`), el("span", "rd-weight-tag", " observed"));
       } else {
         const v = el("span", "rd-weight-value rd-by-elimination", ` = ${w.value}`);
-        v.title = "inferred by elimination, not sighted directly one-hot in this window — not the same claim as an observed weight";
+        v.title = "inferred by elimination, not sighted directly one-hot in this window. Not the same claim as an observed weight";
         const tag = el("span", "rd-weight-tag rd-by-elimination", " by elimination");
         tag.title = v.title;
         line.append(v, tag);

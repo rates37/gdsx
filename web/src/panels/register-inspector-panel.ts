@@ -207,7 +207,7 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
         detailBody.append(flopsBox);
 
         const truthBox = el("div", "ri-section ri-truth-section");
-        truthBox.append(el("div", "ri-section-title", "truth table — click a flop above"));
+        truthBox.append(el("div", "ri-section-title", "truth table: click a flop above"));
         detailBody.append(truthBox);
 
         // Bit weights, orbit and select values, against the register this
@@ -235,7 +235,7 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
       async function loadTruthTable(flop: string): Promise<void> {
         if (!design) return;
         const box = detailBody.querySelector(".ri-truth-section") as HTMLDivElement;
-        box.replaceChildren(el("div", "ri-section-title", `truth table — ${flop}`));
+        box.replaceChildren(el("div", "ri-section-title", `truth table: ${flop}`));
         box.append(el("div", "ri-hint", "computing…"));
         try {
           const { data: inst } = await design.instances([flop]);
@@ -248,7 +248,7 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
           renderTruthTable(box, flop, table);
         } catch (err) {
           box.replaceChildren(
-            el("div", "ri-section-title", `truth table — ${flop}`),
+            el("div", "ri-section-title", `truth table: ${flop}`),
             el("div", "ri-hint bad", err instanceof Error ? err.message : String(err)),
           );
         }
@@ -256,11 +256,11 @@ export function registerInspectorPanel(options: RegisterInspectorOptions): Panel
 
       function renderTruthTable(box: HTMLDivElement, flop: string, table: ReturnType<typeof computeTruthTable>): void {
         box.replaceChildren();
-        box.append(el("div", "ri-section-title", `truth table — D(${flop}) over ${table.free.length} leaves`));
+        box.append(el("div", "ri-section-title", `truth table: D(${flop}) over ${table.free.length} leaves`));
         const note =
           table.method === "exhaustive"
             ? `exhaustive: all ${table.cases} case${table.cases === 1 ? "" : "s"} enumerated`
-            : `SAMPLED: ${table.rows.length} of 2^${table.free.length} cases — this is not exhaustive, do not read it as one`;
+            : `SAMPLED: ${table.rows.length} of 2^${table.free.length} cases. This is not exhaustive, do not read it as one`;
         box.append(el("div", table.method === "exhaustive" ? "ri-truth-note" : "ri-truth-note ri-sampled", note));
         if (table.truncated && table.method === "exhaustive") {
           box.append(el("div", "ri-hint", `showing the first ${table.rows.length} of ${table.cases} rows`));

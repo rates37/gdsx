@@ -230,7 +230,7 @@ function settingsButton(puzzleCount: number, onDone: () => void): HTMLElement {
     void confirmDestructive({
       title: "Clear all progress?",
       body: [
-        `This deletes your progress on all ${puzzleCount} puzzles — every notebook, ` +
+        `This deletes your progress on all ${puzzleCount} puzzles: every notebook, ` +
           `label, model, saved evidence file, sticky-flop classification, ` +
           `driven sequence and solved record.`,
         "It also clears the app's own state: your saved panel layout, the guided " +
@@ -347,6 +347,6 @@ export function mountMenu(host: HTMLElement, opts: MenuOptions): { redraw: () =>
   };
 
   draw();
-  document.title = "GATECRASHER — levels";
+  document.title = "GATECRASHER · levels";
   return { redraw: draw };
 }

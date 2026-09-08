@@ -245,13 +245,13 @@ export function badgeView(store: ModelStore): BadgeView {
       label: "nothing was tested",
       detail:
         `the design held ${latest.watch.join(", ")} at one value for all ` +
-        `${latest.vectors} vectors, so agreeing with it proves nothing — ` +
-        `generate keys that actually move it, or watch something that moves`,
+        `${latest.vectors} vectors, so agreeing with it proves nothing. ` +
+        `Generate keys that actually move it, or watch something that moves`,
     };
   }
   return {
     tone: "amber",
-    label: `agreed on all ${latest.vectors} — ${VALIDATION_VECTORS} needed for the badge`,
+    label: `agreed on all ${latest.vectors}, ${VALIDATION_VECTORS} needed for the badge`,
     detail: "run more vectors to earn the badge",
   };
 }

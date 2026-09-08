@@ -64,6 +64,44 @@ const qq = (selector: string): number => document.querySelectorAll(selector).len
 
 export const GUIDE_PUZZLE_ID = "0-first-light";
 
+/**
+ * The walkthrough in four movements, named for what the player is doing
+ * rather than for which panel is on screen.
+ *
+ * Twenty-one steps in a flat list reads as one long corridor: the count
+ * ("7 / 21") says how far along you are but nothing about where you are.
+ * The acts are what the steps already fall into, made visible -- the card
+ * shows the current one beside the count, and the jump menu groups by them.
+ *
+ * Declared as boundaries rather than as a field on every step so that adding
+ * a step in the middle of an act needs no edit here at all. `from` is a step
+ * id, checked by scripts/test-guide.mjs, and the first act must start at the
+ * first step or the opening steps would belong to no act.
+ */
+export interface GuideAct {
+  label: string;
+  /** Id of the step this act opens on. */
+  from: string;
+}
+
+export const ACTS: GuideAct[] = [
+  { label: "Read the die", from: "intro" },
+  { label: "Find the structure", from: "registers" },
+  { label: "Derive the answer", from: "flatten" },
+  { label: "The wider toolkit", from: "experiments" },
+];
+
+/** Which act a step index sits in. Falls back to the first act, so a
+ *  mis-declared boundary costs a wrong label rather than a crash. */
+export function actOf(index: number): GuideAct {
+  let current = ACTS[0];
+  for (const act of ACTS) {
+    const start = STEPS.findIndex((step) => step.id === act.from);
+    if (start >= 0 && start <= index) current = act;
+  }
+  return current;
+}
+
 export const STEPS: GuideStep[] = [
   {
     id: "intro",

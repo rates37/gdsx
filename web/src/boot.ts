@@ -156,7 +156,7 @@ export async function bootWorkspace(
   onCleared(puzzle.id, () => {
     location.reload();
   });
-  document.title = `GATECRASHER — ${puzzle.title}`;
+  document.title = `GATECRASHER · ${puzzle.title}`;
 
   startEngagementClock(puzzle.id);
 

@@ -147,7 +147,7 @@ export async function loadCatalog(fetchImpl: typeof fetch = fetch): Promise<Puzz
     if (!data.puzzles?.length) throw new Error("catalog lists no puzzles");
     return data.puzzles;
   } catch (err) {
-    console.warn(`gdsx: no puzzle catalog at ${INDEX_URL} — run \`npm run sync-assets\``, err);
+    console.warn(`gdsx: no puzzle catalog at ${INDEX_URL}, run \`npm run sync-assets\``, err);
     return [];
   }
 }

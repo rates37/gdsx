@@ -166,7 +166,7 @@ export function mountStickyFlops(
         const suggestion = suggestions.get(s.flop) ?? null;
         if (suggestion) {
           const tag = el("span", "sf-suggestion-tag", `suggests: ${suggestion}`);
-          tag.title = `the win condition needs this flop at ${suggestion === "checkpoint" ? "" : "the opposite of "}its latched value — a suggestion, not a decision`;
+          tag.title = `the win condition needs this flop at ${suggestion === "checkpoint" ? "" : "the opposite of "}its latched value. A suggestion, not a decision`;
           row.append(tag);
         }
 
@@ -259,8 +259,8 @@ export function mountStickyFlops(
         if (disposed || win === null || sticky.length === 0) return;
         const named = sticky.filter((s) => win!.flops.has(s.flop)).length;
         captionEl.textContent =
-          `required = what the win condition (${win.net}) needs this flop's Q to hold — ` +
-          `named for ${named} of ${sticky.length} sticky flops, blank for the rest`;
+          `required = what the win condition (${win.net}) needs this flop's Q to hold. ` +
+          `Named for ${named} of ${sticky.length} sticky flops, blank for the rest`;
         captionEl.hidden = false;
         render();
         suggestBtn.hidden = false;

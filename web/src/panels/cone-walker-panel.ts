@@ -111,7 +111,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
           <span class="py-call-slot"></span>
         </div>
         <div class="cw-flatten-bar">
-          <span class="cw-focus">focus: <span class="cw-focus-net">—</span></span>
+          <span class="cw-focus">focus: <span class="cw-focus-net">none</span></span>
           <button class="cw-label-btn" type="button" disabled title="give the focused net a name you'll recognise">label</button>
           <button class="cw-flatten-btn" type="button" disabled>flatten AND/OR tree</button>
           <div class="cw-value-toggle">
@@ -235,7 +235,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
           });
           row.append(btn);
           row.append(netSpan(node.net));
-          row.append(el("span", "cw-truncated-label", "truncated — click ··· to load deeper"));
+          row.append(el("span", "cw-truncated-label", "truncated: click ··· to load deeper"));
         } else {
           const hasChildren = node.children.length > 0;
           const toggle = el(
@@ -339,7 +339,7 @@ export function coneWalkerPanel(options: ConeWalkerPanelOptions): PanelDef {
             el(
               "span",
               "cw-flatten-caption-text",
-              "no stimulus has been driven — every ✓/✗ below is against idle (every input held at 0)",
+              "no stimulus has been driven, so every ✓/✗ below is against idle (every input held at 0)",
             ),
           );
           return;

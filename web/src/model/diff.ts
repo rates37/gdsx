@@ -146,7 +146,7 @@ export function compare(
   if (watch.length === 0) {
     throw new ObservableError(
       [],
-      "the model returned no observables — return at least {'success': 0 or 1}",
+      "the model returned no observables. Return at least {'success': 0 or 1}",
     );
   }
   const unknown = unknownObservables(ctx, watch);
@@ -154,7 +154,7 @@ export function compare(
     throw new ObservableError(
       unknown,
       `the design has no signal named ${unknown.join(", ")}, so it cannot be ` +
-        `compared — every observable must be a real net or flop`,
+        `compared. Every observable must be a real net or flop`,
     );
   }
 

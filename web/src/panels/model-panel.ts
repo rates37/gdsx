@@ -265,7 +265,7 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
               "div",
               "mb-vacuous",
               `⚠ the design held ${report.constant.join(", ")} at one value for all ` +
-                `${report.vectors} vectors — agreement about ${
+                `${report.vectors} vectors, so agreement about ${
                   report.constant.length === 1 ? "it" : "those"
                 } tested nothing`,
             ),
@@ -275,7 +275,7 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
         if (report.first) {
           const first = report.first;
           const box = el("div", "mb-divergence");
-          box.append(el("div", "mb-divergence-head", `first divergence — vector ${first.index}`));
+          box.append(el("div", "mb-divergence-head", `first divergence: vector ${first.index}`));
           box.append(
             el(
               "div",
@@ -304,7 +304,7 @@ export function modelPanel(options: ModelPanelOptions): PanelDef {
             el(
               "div",
               "mb-agreed",
-              `no divergence in ${report.vectors} vectors — which is agreement, not a proof`,
+              `no divergence in ${report.vectors} vectors, which is agreement, not a proof`,
             ),
           );
         }

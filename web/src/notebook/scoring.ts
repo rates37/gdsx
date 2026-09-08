@@ -396,7 +396,7 @@ export function scoreCard(input: ScoreInput): ScoreCard {
     available: POINTS.modelValidated,
     note:
       model === null
-        ? "no model agreed with the gate tape all the way through — the " +
+        ? "no model agreed with the gate tape all the way through. It is the " +
           "highest-scoring thing you can build"
         : `your model agreed with the gate tape on all ${model.vectors} vectors of ` +
           `its best run, against ${VALIDATION_VECTORS} for full marks`,
@@ -417,7 +417,7 @@ export function scoreCard(input: ScoreInput): ScoreCard {
       available: POINTS.modelScope,
       note:
         model === null
-          ? `nothing to measure — the puzzle's own signals are ${required.join(", ")}`
+          ? `nothing to measure. The puzzle's own signals are ${required.join(", ")}`
           : `${covered.length} of the puzzle's ${required.length} own signals ` +
             `(${required.join(", ")}) were modelled and moved`,
     });
@@ -431,8 +431,8 @@ export function scoreCard(input: ScoreInput): ScoreCard {
     available: POINTS.coverageMax,
     note:
       found === null
-        ? "not measured — open the Notebook to see it"
-        : `${asPercent(found.fraction)} explained — ${coverageText(found)}`,
+        ? "not measured. Open the Notebook to see it"
+        : `${asPercent(found.fraction)} explained: ${coverageText(found)}`,
   });
 
   const claimsEarned = Math.min(POINTS.claimsMax, input.claimPoints);
@@ -443,7 +443,7 @@ export function scoreCard(input: ScoreInput): ScoreCard {
     note:
       input.claimPoints > POINTS.claimsMax
         ? `${input.claimPoints} claim points, capped at ${POINTS.claimsMax}`
-        : `${input.claimPoints} claim points — a disproof scores nearly as much as a proof`,
+        : `${input.claimPoints} claim points. A disproof scores nearly as much as a proof`,
   });
 
   lines.push({
