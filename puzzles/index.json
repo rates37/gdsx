@@ -1,0 +1,571 @@
+{
+  "schema_version": 1,
+  "puzzles": [
+    {
+      "id": "0-first-light",
+      "dir": "0-first-light",
+      "title": "First Light",
+      "blurb": "Guided. Six flops, one comparator, one lock, and a walkthrough of every tool.",
+      "difficulty": "easy",
+      "backstory": [
+        "A small die, first out of the imaging rig. The fab keeps parts like this around to focus it. Nothing on this one is intentionally hidden.",
+        "Start here. Try to use every tool in the kit at least once, to get a feel for them."
+      ],
+      "parMinutes": 15,
+      "answerKind": "sequence",
+      "toolsEnabled": [
+        "die",
+        "netlist",
+        "cone",
+        "requirements",
+        "registers",
+        "register-decoder",
+        "sticky",
+        "waveform",
+        "sequence",
+        "experiments",
+        "sensitivity",
+        "constraints",
+        "notebook",
+        "model",
+        "labels",
+        "repl"
+      ],
+      "assets": {
+        "netlist": "puzzles/0-first-light/netlist.json",
+        "render": "puzzles/0-first-light/render.bin",
+        "tape": "puzzles/0-first-light/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "I": 0,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "rst_n": 1
+        },
+        "cycles": 32,
+        "keyPort": "I",
+        "trackPorts": [
+          "I"
+        ],
+        "successNet": "success"
+      },
+      "checks": {
+        "kind": "latch",
+        "net": "success",
+        "value": 1,
+        "byCycle": 6,
+        "sticky": true
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "13 instances, 7 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "7 of 7 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 1 register groups; the largest is reg_dfrtp_2_1 (7 members)"
+        },
+        {
+          "tier": 3,
+          "text": "success is driven by one flop (dfrtp_2_7); its D cone has 7 leaves"
+        },
+        {
+          "tier": 4,
+          "text": "Flatten the success cone. Six leaves, each forced to a value, and they are the word in shift order."
+        }
+      ]
+    },
+    {
+      "id": "1-warm-start",
+      "dir": "1-warm-start",
+      "title": "Warm Start",
+      "blurb": "An accumulator with a non-zero reset. Read O when success goes high.",
+      "difficulty": "easy",
+      "backstory": [
+        "A crate of controllers turns up from a liquidator. No datasheet, no part number, no schematic. One works.",
+        "Power it up. Hold reset as long as you like, then let go. There is already a number in it. Someone put that number in at the mask level, and no reset will clear it."
+      ],
+      "parMinutes": 20,
+      "answerKind": "constant",
+      "toolsEnabled": [
+        "die",
+        "netlist",
+        "registers",
+        "cone",
+        "waveform",
+        "repl"
+      ],
+      "assets": {
+        "netlist": "puzzles/1-warm-start/netlist.json",
+        "render": "puzzles/1-warm-start/render.bin",
+        "tape": "puzzles/1-warm-start/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "enable": 1,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "enable": 1,
+          "rst_n": 1
+        },
+        "cycles": 540,
+        "keyPort": null,
+        "trackPorts": [],
+        "successNet": "success"
+      },
+      "checks": {
+        "kind": "bus-at",
+        "bus": [
+          "O[7]",
+          "O[6]",
+          "O[5]",
+          "O[4]",
+          "O[3]",
+          "O[2]",
+          "O[1]",
+          "O[0]"
+        ],
+        "when": {
+          "net": "success",
+          "value": 1
+        }
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "80 instances, 23 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "11 of 23 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 1 register groups; the largest is reg_dfrtp_2_8 (23 members)"
+        },
+        {
+          "tier": 4,
+          "text": "The accumulator does not advance on every cycle. Orbit the two-bit group before extrapolating."
+        }
+      ]
+    },
+    {
+      "id": "2-polynomial",
+      "dir": "2-polynomial",
+      "title": "Polynomial",
+      "blurb": "A free-running 32-bit register with no lock. Recover its feedback polynomial and jump its state ahead a trillion cycles.",
+      "difficulty": "medium",
+      "backstory": [
+        "Two radios stay in step by starting from the same seed and stepping it the same number of times. This die is the part that steps.",
+        "Yours has been off for a while. The other one has not. To catch up you need the state it will be in by now. You do not have a trillion cycles to spare."
+      ],
+      "parMinutes": 30,
+      "answerKind": "parameter",
+      "toolsEnabled": [
+        "die",
+        "netlist",
+        "registers",
+        "cone",
+        "waveform",
+        "repl"
+      ],
+      "assets": {
+        "netlist": "puzzles/2-polynomial/netlist.json",
+        "render": "puzzles/2-polynomial/render.bin",
+        "tape": "puzzles/2-polynomial/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "enable": 1,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "enable": 1,
+          "rst_n": 1
+        },
+        "cycles": 4116,
+        "keyPort": null,
+        "trackPorts": [],
+        "successNet": null
+      },
+      "checks": {
+        "kind": "digest",
+        "fields": [
+          {
+            "name": "polynomial",
+            "hash": "9959e1f43ca003adea32ba5f0cc9242ffa4fa42b0dc64f4b616fe8dc3147783f"
+          },
+          {
+            "name": "state_at_cycle_1e12",
+            "hash": "ebd20f29c5b8cbe637d77e7399d2fde0268eef8ff55fad08155253bd509f827f"
+          }
+        ]
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "91 instances, 32 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "0 of 32 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 1 register groups; the largest is reg_dfstp_2_11 (32 members)"
+        },
+        {
+          "tier": 4,
+          "text": "The 32 flops form a single chain once you look past each one's own clock-enable mux (every flop's D is mux(enable, hold-at-Q, real-next-value); the real-next-value is the interesting input). Three flops take their real-next-value from an XOR instead of the neighbouring stage's Q -- those are the taps, and the XOR's other input is the same flop in all three cases."
+        }
+      ]
+    },
+    {
+      "id": "3-gatekeeper",
+      "dir": "3-gatekeeper",
+      "title": "Gatekeeper",
+      "blurb": "A command-driven register file with one privileged register. Find the command sequence that unlocks it.",
+      "difficulty": "medium",
+      "backstory": [
+        "You are given a dead board with a live chip on it. This is the service processor's mailbox: an address bus, a data bus, sixteen registers, and a mode field nobody wrote down.",
+        "Fifteen registers respond to anything you write. The sixteenth stays shut unless the commands arrive in the right order. Nothing on the pins changes when you get part of it right, so guessing at the board will not get you there."
+      ],
+      "parMinutes": 35,
+      "answerKind": "sequence",
+      "toolsEnabled": [
+        "die",
+        "netlist",
+        "registers",
+        "cone",
+        "waveform",
+        "repl"
+      ],
+      "assets": {
+        "netlist": "puzzles/3-gatekeeper/netlist.json",
+        "render": "puzzles/3-gatekeeper/render.bin",
+        "tape": "puzzles/3-gatekeeper/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "mode[3]": 0,
+          "mode[2]": 0,
+          "mode[1]": 0,
+          "mode[0]": 0,
+          "addr[2]": 0,
+          "addr[1]": 0,
+          "addr[0]": 0,
+          "go": 0,
+          "D[7]": 0,
+          "D[6]": 0,
+          "D[5]": 0,
+          "D[4]": 0,
+          "D[3]": 0,
+          "D[2]": 0,
+          "D[1]": 0,
+          "D[0]": 0,
+          "enable": 1,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "rst_n": 1
+        },
+        "cycles": 36,
+        "keyPort": "mode[3]",
+        "trackPorts": [
+          "mode[3]",
+          "mode[2]",
+          "mode[1]",
+          "mode[0]",
+          "addr[2]",
+          "addr[1]",
+          "addr[0]",
+          "go",
+          "D[7]",
+          "D[6]",
+          "D[5]",
+          "D[4]",
+          "D[3]",
+          "D[2]",
+          "D[1]",
+          "D[0]",
+          "enable"
+        ],
+        "successNet": "success"
+      },
+      "checks": {
+        "kind": "latch",
+        "net": "success",
+        "value": 1,
+        "byCycle": 5,
+        "sticky": true
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "296 instances, 68 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "4 of 68 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 57 register groups; the largest is reg_dfrtp_2_67 (12 members)"
+        },
+        {
+          "tier": 3,
+          "text": "success is driven by one flop (dfrtp_2_66); its D cone has 9 leaves"
+        },
+        {
+          "tier": 4,
+          "text": "Seven of the eight banks share one write enable and the eighth does not. Every extra term in that eighth enable is itself a register, so keep justifying backwards until each term is grounded in an input word or in a count of cycles -- and do not assume the address field names the register a command acts on."
+        }
+      ]
+    },
+    {
+      "id": "4-nine-lives",
+      "dir": "4-nine-lives",
+      "title": "Nine Lives",
+      "blurb": "A one-hot state machine with nine lives, one word it accepts, and three states it never leaves.",
+      "difficulty": "hard",
+      "backstory": [
+        "An access-control decoder, off the back of a door reader. It reads a stream of symbols and raises one line for one particular word.",
+        "Nine flops, one per state. Some of those states have no exit. Land on one and the clock keeps running, but the line will never go high again. Work the machine out before you drive it."
+      ],
+      "parMinutes": 45,
+      "answerKind": "sequence",
+      "toolsEnabled": [
+        "die",
+        "netlist",
+        "registers",
+        "cone",
+        "waveform",
+        "repl"
+      ],
+      "assets": {
+        "netlist": "puzzles/4-nine-lives/netlist.json",
+        "render": "puzzles/4-nine-lives/render.bin",
+        "tape": "puzzles/4-nine-lives/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "I[1]": 0,
+          "I[0]": 0,
+          "enable": 1,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "rst_n": 1
+        },
+        "cycles": 36,
+        "keyPort": "I[1]",
+        "trackPorts": [
+          "I[1]",
+          "I[0]",
+          "enable"
+        ],
+        "successNet": "success"
+      },
+      "checks": {
+        "kind": "latch",
+        "net": "success",
+        "value": 1,
+        "byCycle": 5,
+        "sticky": true
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "79 instances, 15 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "9 of 15 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 1 register groups; the largest is reg_dfstp_2_1 (15 members)"
+        },
+        {
+          "tier": 3,
+          "text": "success is driven by one flop (dfrtp_2_12); its D cone has 8 leaves"
+        },
+        {
+          "tier": 4,
+          "text": "Recover the transition relation before you drive anything: for each of the nine state flops, evaluate its D under each of the four symbols with that flop's own state asserted. Thirty-six evaluations give you a graph, and the question is then which of its states can reach flop 8 -- three of them cannot reach anything outside themselves. Then read the success cone rather than assuming what it says: it names the counter as well as the state."
+        }
+      ]
+    },
+    {
+      "id": "5-magic-number",
+      "dir": "5-magic-number",
+      "title": "Magic Number",
+      "blurb": "A 32-bit serial comparator and four decoys, laid out so the die view actively misleads.",
+      "difficulty": "hard",
+      "backstory": [
+        "The constant isn't in a ROM. It is not in a fuse bank. It is wired into the gates. And the floor plan was drawn by someone who knew you would look at the picture first.",
+        "Five comparators sit in a row: same width, same cells, same spacing. Four are decoys. You probably can't tell them apart by eye."
+      ],
+      "parMinutes": 40,
+      "answerKind": "constant",
+      "toolsEnabled": [
+        "die",
+        "netlist",
+        "registers",
+        "cone",
+        "waveform",
+        "repl"
+      ],
+      "assets": {
+        "netlist": "puzzles/5-magic-number/netlist.json",
+        "render": "puzzles/5-magic-number/render.bin",
+        "tape": "puzzles/5-magic-number/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "enable": 1,
+          "I": 0,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "enable": 1,
+          "rst_n": 1
+        },
+        "cycles": 60,
+        "keyPort": "I",
+        "trackPorts": [
+          "I"
+        ],
+        "successNet": "success"
+      },
+      "checks": {
+        "kind": "digest",
+        "fields": [
+          {
+            "name": "value",
+            "hash": "2275368c663141cd9f85358f54d6071fc1a10118444660f9bb8f3cfa46e36b32"
+          }
+        ]
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "189 instances, 40 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "4 of 40 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 1 register groups; the largest is reg_dfrtp_2_24 (40 members)"
+        },
+        {
+          "tier": 4,
+          "text": "Five wide equality comparators, one lock. Which of them the die view puts next to which tells you nothing; read the success cone instead."
+        }
+      ]
+    },
+    {
+      "id": "original-puzzle",
+      "dir": "original-puzzle",
+      "title": "Original Puzzle",
+      "blurb": "One data input, one clock, one reset and a success flag. Find the sequence that raises it and recover the hidden message.",
+      "difficulty": "hard",
+      "backstory": [
+        "This puzzle is the one that inspired this game, from the Jane Street challenge: https://blog.janestreet.com/can-you-reverse-engineer-an-asic/"
+      ],
+      "parMinutes": 120,
+      "answerKind": "sequence",
+      "toolsEnabled": [
+        "cone",
+        "guards",
+        "registers",
+        "fsm",
+        "sensitivity"
+      ],
+      "assets": {
+        "netlist": "puzzles/original-puzzle/netlist.json",
+        "render": "puzzles/original-puzzle/render.bin",
+        "tape": "puzzles/original-puzzle/tape.bin"
+      },
+      "driver": {
+        "clockPort": "clk",
+        "resetPort": "rst_n",
+        "resetVector": {
+          "clk": 0,
+          "enable": 1,
+          "I": 0,
+          "rst_n": 0
+        },
+        "resetCycles": 1,
+        "initialLevels": {
+          "enable": 1,
+          "rst_n": 1
+        },
+        "cycles": 141,
+        "keyPort": "I",
+        "trackPorts": [
+          "I"
+        ],
+        "successNet": "success"
+      },
+      "checks": {
+        "kind": "latch",
+        "net": "success",
+        "value": 1,
+        "byCycle": 121,
+        "sticky": true
+      },
+      "hints": [
+        {
+          "tier": 0,
+          "text": "728 instances, 92 sequential"
+        },
+        {
+          "tier": 1,
+          "text": "17 of 92 registers have no recovered freeze condition"
+        },
+        {
+          "tier": 2,
+          "text": "the flops form 2 register groups; the largest is reg_dfrtp_2_40 (88 members)"
+        },
+        {
+          "tier": 3,
+          "text": "success is driven by one flop (dfrtp_2_83); its D cone has 57 leaves"
+        }
+      ]
+    }
+  ]
+}
