@@ -76,7 +76,11 @@ function renderBody(text: string): HTMLElement {
   for (const part of text.split(/(\{\{.*?\}\})/g)) {
     if (part.startsWith("{{") && part.endsWith("}}")) {
       const code = document.createElement("code");
-      code.textContent = part.slice(2, -2);
+      // Trimmed, so a span whose own content contains braces can be written
+      // with padding -- `{{ { } }}` -- and still come out as `{ }`. Without
+      // the padding the non-greedy delimiter match ends one brace early and
+      // the surplus `}` lands in the body text.
+      code.textContent = part.slice(2, -2).trim();
       p.append(code);
     } else if (part) {
       p.append(document.createTextNode(part));
